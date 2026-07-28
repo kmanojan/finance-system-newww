@@ -9,10 +9,15 @@ use Illuminate\Http\Request;
 
 class FixedAssetController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $assets = FixedAsset::orderBy('asset_code')->get();
-        return response()->json(['success' => true, 'data' => $assets]);
+
+        if ($request->wantsJson() || $request->is('api/*')) {
+            return response()->json(['success' => true, 'data' => $assets]);
+        }
+
+        return view('assets.fixed_assets', compact('assets'));
     }
 
     public function store(Request $request)
@@ -34,7 +39,11 @@ class FixedAssetController extends Controller
             'salvage_value' => $validated['salvage_value'] ?? 0.00,
         ]));
 
-        return response()->json(['success' => true, 'message' => 'Fixed asset registered.', 'data' => $asset], 201);
+        if ($request->wantsJson() || $request->is('api/*')) {
+            return response()->json(['success' => true, 'message' => 'Fixed asset registered.', 'data' => $asset], 201);
+        }
+
+        return back()->with('success', 'Fixed asset registered successfully.');
     }
 
     public function runDepreciation(Request $request, $id)
@@ -44,10 +53,14 @@ class FixedAssetController extends Controller
 
         $amount = DepreciationService::processMonthlyDepreciation($asset, $postingDate);
 
-        return response()->json([
-            'success' => true,
-            'message' => "Depreciation of LKR {$amount} posted for asset {$asset->asset_code}.",
-            'data' => $asset->fresh(),
-        ]);
+        if ($request->wantsJson() || $request->is('api/*')) {
+            return response()->json([
+                'success' => true,
+                'message' => "Depreciation of LKR {$amount} posted for asset {$asset->asset_code}.",
+                'data' => $asset->fresh(),
+            ]);
+        }
+
+        return back()->with('success', "Depreciation of LKR {$amount} posted for asset {$asset->asset_code}.");
     }
 }

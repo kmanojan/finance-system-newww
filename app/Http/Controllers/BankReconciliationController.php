@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\BankStatementImport;
 use App\Services\BankReconciliationService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class BankReconciliationController extends Controller
 {
@@ -18,7 +19,14 @@ class BankReconciliationController extends Controller
         }
 
         $statements = $query->orderBy('statement_date', 'desc')->get();
-        return response()->json(['success' => true, 'data' => $statements]);
+        
+        if ($request->wantsJson() || $request->is('api/*')) {
+            return response()->json(['success' => true, 'data' => $statements]);
+        }
+
+        $bankAccounts = DB::table('bank_accounts')->get();
+
+        return view('treasury.bank_reconciliation', compact('statements', 'bankAccounts'));
     }
 
     public function autoMatch(Request $request)
@@ -29,10 +37,14 @@ class BankReconciliationController extends Controller
 
         $res = BankReconciliationService::autoMatch($validated['bank_account_id']);
 
-        return response()->json([
-            'success' => true,
-            'message' => "Auto-matching completed. Processed: {$res['total_processed']}, Matched: {$res['matched_count']}.",
-            'data' => $res
-        ]);
+        if ($request->wantsJson() || $request->is('api/*')) {
+            return response()->json([
+                'success' => true,
+                'message' => "Auto-matching completed. Processed: {$res['total_processed']}, Matched: {$res['matched_count']}.",
+                'data' => $res
+            ]);
+        }
+
+        return back()->with('success', "Auto-matching completed. Processed: {$res['total_processed']}, Matched: {$res['matched_count']}.");
     }
 }
