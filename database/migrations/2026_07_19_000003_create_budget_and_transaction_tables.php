@@ -55,6 +55,11 @@ return new class extends Migration
                 $table->date('transaction_date');
                 $table->text('description')->nullable();
                 $table->string('reference_no')->nullable();
+                $table->string('payment_status', 50)->default('completed');
+                $table->date('due_date')->nullable();
+                $table->foreignId('party_id')->nullable()->constrained('parties')->nullOnDelete();
+                $table->foreignId('project_id')->nullable()->constrained('projects')->nullOnDelete();
+                $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
                 $table->boolean('reconciled')->default(false);
                 $table->timestamps();
             });
