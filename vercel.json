@@ -48,7 +48,7 @@
         "PHP_VERSION": "8.3",
         "LOG_CHANNEL": "stderr",
         "APP_ENV": "production",
-        "APP_DEBUG": "true",
+        "APP_DEBUG": "false",
         "APP_KEY": "base64:iLZV770wUkLwBVJQe7YcaZuzGVoU1NI/B611YUD8gp4=",
         "APP_CONFIG_CACHE": "/tmp/storage/framework/cache/config.php",
         "APP_EVENTS_CACHE": "/tmp/storage/framework/cache/events.php",
