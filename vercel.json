@@ -28,10 +28,10 @@
     ],
     "env": {
         "DB_CONNECTION": "pgsql",
-        "DB_HOST": "db.ztqbhrrzpxnndrrchfdt.supabase.co",
+        "DB_HOST": "aws-0-ap-southeast-1.pooler.supabase.com",
         "DB_PORT": "6543",
         "DB_DATABASE": "postgres",
-        "DB_USERNAME": "postgres",
+        "DB_USERNAME": "postgres.ztqbhrrzpxnndrrchfdt",
         "SESSION_DRIVER": "cookie",
         "PHP_VERSION": "8.3",
         "LOG_CHANNEL": "stderr",
