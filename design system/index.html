@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HR Premium Design System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lexend+Deca:wght@200;300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link href="styles.css" rel="stylesheet">
+    <!-- Ionicons for clean vector icons -->
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+</head>
+
+<body>
+
+    <!-- Mobile Header -->
+    <div class="mobile-header">
+        <div class="logo">
+            <span>J</span>
+        </div>
+        <button class="mobile-menu-btn" id="mobileMenuBtn">
+            <ion-icon name="menu-outline"></ion-icon>
+        </button>
+    </div>
+
+    <div class="app-layout">
+        <!-- Primary Navbar (Leftmost layer) -->
+        <aside class="sidebar-primary" id="sidebarPrimary">
+            <div class="sidebar-top">
+                <div class="logo">
+                    <span>J</span>
+                </div>
+                <nav class="nav-icons">
+                    <a href="#" class="nav-item active">
+                        <ion-icon name="briefcase-outline"></ion-icon>
+                        <span>Recruit</span>
+                    </a>
+                    <a href="#" class="nav-item">
+                        <ion-icon name="cash-outline"></ion-icon>
+                        <span>Billing</span>
+                    </a>
+                    <a href="#" class="nav-item">
+                        <ion-icon name="settings-outline"></ion-icon>
+                        <span>Settings</span>
+                    </a>
+                </nav>
+            </div>
+            <div class="sidebar-bottom">
+                <div class="user-avatar">
+                    <span>Joboro</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Secondary Navbar -->
+        <aside class="sidebar-secondary" id="sidebarSecondary">
+            <h2 class="sidebar-title">Recruit</h2>
+            <nav class="nav-links">
+                <a href="#" class="nav-link active">Vacancies</a>
+                <a href="#" class="nav-link">Talent Pool</a>
+                <a href="#" class="nav-link">Talent CRM</a>
+            </nav>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <div class="content-card">
+
+                <!-- Page Header -->
+                <header class="page-header">
+                    <div class="header-titles">
+                        <h1>Vacancies</h1>
+                        <p class="subtitle">Create and manage vacancies, and track applicants across all <span>hiring
+                                stages</span></p>
+                    </div>
+                    <button class="btn btn-primary btn-pill mobile-hide">New Vacancy</button>
+                </header>
+
+                <!-- Action Toolbar -->
+                <div class="toolbar">
+                    <div class="toolbar-left">
+                        <button class="btn btn-primary-gradient btn-pill">
+                            <ion-icon name="trending-up-outline"></ion-icon>
+                            Build your Career Page
+                        </button>
+                        <button class="btn btn-outline btn-pill">
+                            <ion-icon name="link-outline"></ion-icon>
+                            Copy Link
+                        </button>
+                    </div>
+                    <div class="toolbar-right">
+                        <div class="search-input">
+                            <ion-icon name="search-outline"></ion-icon>
+                            <input type="text" placeholder="Search by Vacancy Title">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Data Table -->
+                <div class="data-table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Work Mode</th>
+                                <th>Closing Date</th>
+                                <th>Application Count</th>
+                                <th>Status</th>
+                                <th>Share Vacancy Link</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td data-label="Title"><span class="font-medium">Financial Manager</span></td>
+                                <td data-label="Work Mode"><span class="text-muted">Remote</span></td>
+                                <td data-label="Closing Date"><span class="text-muted">2026-03-04</span></td>
+                                <td data-label="Application Count"><span class="text-muted">0</span></td>
+                                <td data-label="Status"><span class="badge badge-draft">Draft</span></td>
+                                <td data-label="Share Vacancy Link"><a href="#" class="btn-share"><ion-icon
+                                            name="arrow-redo-outline"></ion-icon> Share</a></td>
+                                <td data-label="Action">
+                                    <div class="actions">
+                                        <button class="action-btn" title="View"><ion-icon
+                                                name="eye-outline"></ion-icon></button>
+                                        <button class="action-btn" title="Edit"><ion-icon
+                                                name="create-outline"></ion-icon></button>
+                                        <button class="action-btn" title="Delete"><ion-icon
+                                                name="trash-outline"></ion-icon></button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td data-label="Title"><span class="font-medium">Software Engineer - Java L3</span></td>
+                                <td data-label="Work Mode"><span class="text-muted">In-Office</span></td>
+                                <td data-label="Closing Date"><span class="text-muted">2026-02-28</span></td>
+                                <td data-label="Application Count"><span class="text-muted">0</span></td>
+                                <td data-label="Status"><span class="badge badge-draft">Draft</span></td>
+                                <td data-label="Share Vacancy Link"><a href="#" class="btn-share"><ion-icon
+                                            name="arrow-redo-outline"></ion-icon> Share</a></td>
+                                <td data-label="Action">
+                                    <div class="actions">
+                                        <button class="action-btn" title="View"><ion-icon
+                                                name="eye-outline"></ion-icon></button>
+                                        <button class="action-btn" title="Edit"><ion-icon
+                                                name="create-outline"></ion-icon></button>
+                                        <button class="action-btn" title="Delete"><ion-icon
+                                                name="trash-outline"></ion-icon></button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td data-label="Title"><span class="font-medium">Customer Care Officer</span></td>
+                                <td data-label="Work Mode"><span class="text-muted">Remote</span></td>
+                                <td data-label="Closing Date"><span class="text-muted">2026-02-28</span></td>
+                                <td data-label="Application Count"><span class="text-muted">2</span></td>
+                                <td data-label="Status"><span class="badge badge-draft">Draft</span></td>
+                                <td data-label="Share Vacancy Link"><a href="#" class="btn-share"><ion-icon
+                                            name="arrow-redo-outline"></ion-icon> Share</a></td>
+                                <td data-label="Action">
+                                    <div class="actions">
+                                        <button class="action-btn" title="View"><ion-icon
+                                                name="eye-outline"></ion-icon></button>
+                                        <button class="action-btn" title="Edit"><ion-icon
+                                                name="create-outline"></ion-icon></button>
+                                        <button class="action-btn" title="Delete"><ion-icon
+                                                name="trash-outline"></ion-icon></button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td data-label="Title"><span class="font-medium">HR Manager</span></td>
+                                <td data-label="Work Mode"><span class="text-muted">In-Office</span></td>
+                                <td data-label="Closing Date"><span class="text-muted">2026-02-26</span></td>
+                                <td data-label="Application Count"><span class="text-muted">1</span></td>
+                                <td data-label="Status"><span class="badge badge-draft">Draft</span></td>
+                                <td data-label="Share Vacancy Link"><a href="#" class="btn-share"><ion-icon
+                                            name="arrow-redo-outline"></ion-icon> Share</a></td>
+                                <td data-label="Action">
+                                    <div class="actions">
+                                        <button class="action-btn" title="View"><ion-icon
+                                                name="eye-outline"></ion-icon></button>
+                                        <button class="action-btn" title="Edit"><ion-icon
+                                                name="create-outline"></ion-icon></button>
+                                        <button class="action-btn" title="Delete"><ion-icon
+                                                name="trash-outline"></ion-icon></button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td data-label="Title"><span class="font-medium">Customer Care Officer - L3</span></td>
+                                <td data-label="Work Mode"><span class="text-muted">In-Office</span></td>
+                                <td data-label="Closing Date"><span class="text-muted">2026-02-28</span></td>
+                                <td data-label="Application Count"><span class="text-muted">1</span></td>
+                                <td data-label="Status"><span class="badge badge-draft">Draft</span></td>
+                                <td data-label="Share Vacancy Link"><a href="#" class="btn-share"><ion-icon
+                                            name="arrow-redo-outline"></ion-icon> Share</a></td>
+                                <td data-label="Action">
+                                    <div class="actions">
+                                        <button class="action-btn" title="View"><ion-icon
+                                                name="eye-outline"></ion-icon></button>
+                                        <button class="action-btn" title="Edit"><ion-icon
+                                                name="create-outline"></ion-icon></button>
+                                        <button class="action-btn" title="Delete"><ion-icon
+                                                name="trash-outline"></ion-icon></button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td data-label="Title"><span class="font-medium">Customer Care Officer - L2</span></td>
+                                <td data-label="Work Mode"><span class="text-muted">In-Office</span></td>
+                                <td data-label="Closing Date"><span class="text-muted">2026-02-28</span></td>
+                                <td data-label="Application Count"><span class="text-muted">1</span></td>
+                                <td data-label="Status"><span class="badge badge-draft">Draft</span></td>
+                                <td data-label="Share Vacancy Link"><a href="#" class="btn-share"><ion-icon
+                                            name="arrow-redo-outline"></ion-icon> Share</a></td>
+                                <td data-label="Action">
+                                    <div class="actions">
+                                        <button class="action-btn" title="View"><ion-icon
+                                                name="eye-outline"></ion-icon></button>
+                                        <button class="action-btn" title="Edit"><ion-icon
+                                                name="create-outline"></ion-icon></button>
+                                        <button class="action-btn" title="Delete"><ion-icon
+                                                name="trash-outline"></ion-icon></button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td data-label="Title"><span class="font-medium">Receptionist</span></td>
+                                <td data-label="Work Mode"><span class="text-muted">In-Office</span></td>
+                                <td data-label="Closing Date"><span class="text-muted">2026-02-15</span></td>
+                                <td data-label="Application Count"><span class="text-muted">1</span></td>
+                                <td data-label="Status"><span class="badge badge-expired">Expired</span></td>
+                                <td data-label="Share Vacancy Link"><a href="#" class="btn-share"><ion-icon
+                                            name="arrow-redo-outline"></ion-icon> Share</a></td>
+                                <td data-label="Action">
+                                    <div class="actions">
+                                        <button class="action-btn" title="View"><ion-icon
+                                                name="eye-outline"></ion-icon></button>
+                                        <button class="action-btn" title="Edit"><ion-icon
+                                                name="create-outline"></ion-icon></button>
+                                        <button class="action-btn" title="Delete"><ion-icon
+                                                name="trash-outline"></ion-icon></button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td data-label="Title"><span class="font-medium">Software Engineer - Javascript
+                                        L2</span></td>
+                                <td data-label="Work Mode"><span class="text-muted">In-Office</span></td>
+                                <td data-label="Closing Date"><span class="text-muted">2026-02-15</span></td>
+                                <td data-label="Application Count"><span class="text-muted">0</span></td>
+                                <td data-label="Status"><span class="badge badge-expired">Expired</span></td>
+                                <td data-label="Share Vacancy Link"><a href="#" class="btn-share"><ion-icon
+                                            name="arrow-redo-outline"></ion-icon> Share</a></td>
+                                <td data-label="Action">
+                                    <div class="actions">
+                                        <button class="action-btn" title="View"><ion-icon
+                                                name="eye-outline"></ion-icon></button>
+                                        <button class="action-btn" title="Edit"><ion-icon
+                                                name="create-outline"></ion-icon></button>
+                                        <button class="action-btn" title="Delete"><ion-icon
+                                                name="trash-outline"></ion-icon></button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td data-label="Title"><span class="font-medium">Software Engineer - React L2</span>
+                                </td>
+                                <td data-label="Work Mode"><span class="text-muted">In-Office</span></td>
+                                <td data-label="Closing Date"><span class="text-muted">2026-02-08</span></td>
+                                <td data-label="Application Count"><span class="text-muted">5</span></td>
+                                <td data-label="Status"><span class="badge badge-expired">Expired</span></td>
+                                <td data-label="Share Vacancy Link"><a href="#" class="btn-share"><ion-icon
+                                            name="arrow-redo-outline"></ion-icon> Share</a></td>
+                                <td data-label="Action">
+                                    <div class="actions">
+                                        <button class="action-btn" title="View"><ion-icon
+                                                name="eye-outline"></ion-icon></button>
+                                        <button class="action-btn" title="Edit"><ion-icon
+                                                name="create-outline"></ion-icon></button>
+                                        <button class="action-btn" title="Delete"><ion-icon
+                                                name="trash-outline"></ion-icon></button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td data-label="Title"><span class="font-medium">Business Analyst</span></td>
+                                <td data-label="Work Mode"><span class="text-muted">Remote</span></td>
+                                <td data-label="Closing Date"><span class="text-muted">2025-12-31</span></td>
+                                <td data-label="Application Count"><span class="text-muted">1</span></td>
+                                <td data-label="Status"><span class="badge badge-expired">Expired</span></td>
+                                <td data-label="Share Vacancy Link"><a href="#" class="btn-share"><ion-icon
+                                            name="arrow-redo-outline"></ion-icon> Share</a></td>
+                                <td data-label="Action">
+                                    <div class="actions">
+                                        <button class="action-btn" title="View"><ion-icon
+                                                name="eye-outline"></ion-icon></button>
+                                        <button class="action-btn" title="Edit"><ion-icon
+                                                name="create-outline"></ion-icon></button>
+                                        <button class="action-btn" title="Delete"><ion-icon
+                                                name="trash-outline"></ion-icon></button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div class="pagination">
+                    <span class="page-info">1-10 of 54</span>
+                    <button class="btn-page"><ion-icon name="chevron-back-outline"></ion-icon></button>
+                    <button class="btn-page active"><ion-icon name="chevron-forward-outline"></ion-icon></button>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>

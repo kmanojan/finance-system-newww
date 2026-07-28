@@ -1,0 +1,680 @@
+@extends('layouts.app')
+@section('title', 'Loan Details - ' . $loan->lender_name)
+
+@section('secondary-sidebar')
+<aside class="sidebar-secondary" id="sidebarSecondary">
+    <h2 class="sidebar-title">Loan Management</h2>
+    <nav class="nav-links">
+        <a href="/loans" class="nav-link {{ request()->is('loans') ? 'active' : '' }}">
+            <ion-icon name="cash-outline"></ion-icon> Active Loans
+        </a>
+        <a href="/loans/schedules" class="nav-link {{ request()->is('loans/schedules') ? 'active' : '' }}">
+            <ion-icon name="calendar-outline"></ion-icon> Schedules
+        </a>
+        <a href="/loans/settlements" class="nav-link {{ request()->is('loans/settlements') ? 'active' : '' }}">
+            <ion-icon name="checkmark-done-circle-outline"></ion-icon> Settlements
+        </a>
+    </nav>
+</aside>
+@endsection
+
+@section('content')
+@php
+    $totalDraws = $principalRecords->where('record_type', 'draw')->sum('amount');
+    $totalRepaid = $principalRecords->where('record_type', 'repayment')->sum('amount');
+    $totalBorrowed = $loan->principal_amount + $totalDraws;
+    
+    $totalInterestPaid = $schedules->sum('paid_amount');
+    $totalInterestDue = $schedules->whereIn('status', ['pending', 'partially_paid', 'overdue'])->sum(function($s) {
+        return max(0, $s->interest_amount - ($s->paid_amount ?? 0));
+    });
+    $totalContractedInterest = $schedules->sum('interest_amount');
+    if ($totalContractedInterest == 0 && !empty($loan->interest_amount) && $loan->interest_method === 'fixed_amount') {
+        $totalContractedInterest = $loan->interest_amount;
+    } elseif ($totalContractedInterest == 0 && !empty($loan->total_interest)) {
+        $totalContractedInterest = $loan->total_interest;
+    }
+
+    // Total Obligation (Principal + Scheduled Interest)
+    $totalLoanObligation = $totalBorrowed + $totalContractedInterest;
+    
+    // Total Paid so far (Principal Repaid + Interest Paid)
+    $totalPaidAll = $totalRepaid + $totalInterestPaid;
+    
+    // Total Remaining Balance Owed (Outstanding Principal + Pending Interest)
+    $totalRemainingPayable = $loan->outstanding_principal + $totalInterestDue;
+    
+    $overallRepaymentPct = $totalLoanObligation > 0 ? min(100, round(($totalPaidAll / $totalLoanObligation) * 100, 1)) : 0;
+@endphp
+
+<!-- Page Header -->
+<header class="page-header" style="margin-bottom: 1.5rem;">
+    <div class="header-titles">
+        <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem;">
+            <a href="/loans" style="color:var(--text-muted); text-decoration:none; font-size:0.85rem; display:flex; align-items:center; gap:0.3rem;">
+                <ion-icon name="arrow-back-outline"></ion-icon> Back to Loans
+            </a>
+        </div>
+        <div style="display:flex; align-items:center; gap:1rem; flex-wrap:wrap;">
+            <h1 style="margin:0; font-size:1.75rem; font-weight:800; color:var(--text-heading);">Loan: {{ $loan->lender_name }}</h1>
+            @if($loan->status === 'active')
+                <span class="badge" style="background:var(--primary-light); color:var(--primary); font-weight:600; padding:0.35rem 0.8rem; font-size:0.85rem;">Active Loan</span>
+            @elseif($loan->status === 'settled')
+                <span class="badge" style="background:#dcfce7; color:#166534; font-weight:600; padding:0.35rem 0.8rem; font-size:0.85rem;">Settled</span>
+            @elseif($loan->status === 'closed')
+                <span class="badge" style="background:#f1f5f9; color:#475569; font-weight:600; padding:0.35rem 0.8rem; font-size:0.85rem;">Closed</span>
+            @else
+                <span class="badge" style="background:#fef3c7; color:#b45309; font-weight:600; padding:0.35rem 0.8rem; font-size:0.85rem;">Pending Activation</span>
+            @endif
+        </div>
+        <p class="subtitle" style="margin-top:0.3rem;">{{ $loan->purpose ?? 'General Loan Facility' }} | Initial Principal: {{ $loan->currency }} {{ number_format($loan->principal_amount, 2) }}</p>
+    </div>
+    
+    <div class="header-actions" style="display: flex; align-items: center; gap: 0.75rem; flex-wrap:wrap;">
+        @if($loan->status === 'pending')
+            <form action="/loans/{{ $loan->id }}/activate" method="POST" onsubmit="return confirm('Activate this loan and generate its interest schedule?');" style="margin: 0;">
+                @csrf
+                <button type="submit" class="btn btn-primary-gradient btn-pill">
+                    <ion-icon name="play-outline" style="vertical-align:middle;"></ion-icon> Activate Loan & Generate Schedule
+                </button>
+            </form>
+        @elseif($loan->status === 'active')
+            <form action="/loans/{{ $loan->id }}/settle-fully" method="POST" onsubmit="return confirm('Settle remaining principal of {{ $loan->currency }} {{ number_format($loan->outstanding_principal, 2) }}?');" style="margin: 0;">
+                @csrf
+                <button type="submit" class="btn btn-primary-gradient btn-pill">
+                    <ion-icon name="checkmark-done-outline" style="vertical-align:middle;"></ion-icon> Settle Principal Fully
+                </button>
+            </form>
+        @endif
+        <button class="btn btn-outline btn-pill" onclick="openModal('changeStatusModal')">
+            <ion-icon name="create-outline" style="vertical-align:middle;"></ion-icon> Change Status
+        </button>
+        <form action="/loans/{{ $loan->id }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this loan and all associated schedules and records? This action cannot be undone.');" style="margin: 0; display:inline;">
+            @csrf
+            @method('DELETE')
+            <button type="submit" class="btn btn-outline btn-pill" style="color:var(--danger); border-color:var(--danger);">
+                <ion-icon name="trash-outline" style="vertical-align:middle;"></ion-icon> Delete Loan
+            </button>
+        </form>
+    </div>
+</header>
+
+<!-- Total Loan Settlement Progress Banner -->
+<div class="glass-card" style="background: var(--bg-card); border: 1px solid var(--border); border-left: 6px solid var(--primary); margin-bottom: 1.5rem; padding: 1.25rem 1.5rem; border-radius: 12px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+        <div>
+            <span style="font-size:0.8rem; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-muted); display:flex; align-items:center; gap:0.4rem;">
+                <ion-icon name="analytics-outline" style="color:var(--primary);"></ion-icon> Total Loan Settlement Realization
+            </span>
+            <h2 style="font-size:1.8rem; font-weight:800; color:var(--text-heading); margin:0.2rem 0 0 0;">
+                {{ $loan->currency }} {{ number_format($totalRemainingPayable, 2) }}
+                <small style="font-size:0.85rem; font-weight:500; color:var(--danger);">(Total Remaining Payable: Principal {{ number_format($loan->outstanding_principal, 2) }} + Interest {{ number_format($totalInterestDue, 2) }})</small>
+            </h2>
+        </div>
+        <div style="display:flex; gap:1rem; align-items:center;">
+            <div style="background:var(--primary-light); padding:0.5rem 1rem; border-radius:10px; text-align:center;">
+                <span style="font-size:0.7rem; color:var(--primary); font-weight:600; text-transform:uppercase;">Overall Settled Rate</span>
+                <div style="font-size:1.25rem; font-weight:700; color:var(--primary);">{{ $overallRepaymentPct }}%</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress Bar -->
+    <div style="margin-top: 1rem;">
+        <div style="display:flex; justify-content:space-between; font-size:0.8rem; font-weight:600; color:var(--text-main); margin-bottom:0.3rem;">
+            <span>Total Paid To Date: {{ $loan->currency }} {{ number_format($totalPaidAll, 2) }}</span>
+            <span>Total Loan Obligation (Principal + Interest): {{ $loan->currency }} {{ number_format($totalLoanObligation, 2) }}</span>
+        </div>
+        <div style="background:var(--bg-page); border-radius:8px; height:10px; overflow:hidden; border:1px solid var(--border-light);">
+            <div style="width:{{ $overallRepaymentPct }}%; background: linear-gradient(90deg, #10b981, #059669); height:100%; border-radius:8px; transition:width 0.8s ease;"></div>
+        </div>
+    </div>
+</div>
+
+<!-- 4 KPI Metric Cards Grid -->
+<div class="metric-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:1.25rem; margin-bottom:1.5rem;">
+    <!-- Tile 1: Total Loan Obligation (Payable) -->
+    <div class="metric-card" style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); padding: 1.25rem; border-radius: 12px; color: white;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h3 style="margin:0; font-size:0.85rem; font-weight:600; opacity:0.9;">Total Loan Obligation</h3>
+            <ion-icon name="calculator-outline" style="font-size:1.3rem; opacity:0.85;"></ion-icon>
+        </div>
+        <div class="value" style="font-size:1.5rem; font-weight:700; margin-top:0.3rem;">{{ $loan->currency }} {{ number_format($totalLoanObligation, 2) }}</div>
+        <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">Principal ({{ number_format($totalBorrowed, 2) }}) + Interest ({{ number_format($totalContractedInterest, 2) }})</div>
+    </div>
+
+    <!-- Tile 2: Total Remaining Balance Payable -->
+    <div class="metric-card" style="background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%); padding: 1.25rem; border-radius: 12px; color: white;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h3 style="margin:0; font-size:0.85rem; font-weight:600; opacity:0.9;">Total Remaining Payable</h3>
+            <ion-icon name="alert-circle-outline" style="font-size:1.3rem; opacity:0.85;"></ion-icon>
+        </div>
+        <div class="value" style="font-size:1.5rem; font-weight:700; margin-top:0.3rem;">{{ $loan->currency }} {{ number_format($totalRemainingPayable, 2) }}</div>
+        <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">Rem. Principal + Rem. Interest</div>
+    </div>
+
+    <!-- Tile 3: Outstanding Principal -->
+    <div class="metric-card" style="background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%); padding: 1.25rem; border-radius: 12px; color: white;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h3 style="margin:0; font-size:0.85rem; font-weight:600; opacity:0.9;">Outstanding Principal</h3>
+            <ion-icon name="wallet-outline" style="font-size:1.3rem; opacity:0.85;"></ion-icon>
+        </div>
+        <div class="value" style="font-size:1.5rem; font-weight:700; margin-top:0.3rem;">{{ $loan->currency }} {{ number_format($loan->outstanding_principal, 2) }}</div>
+        <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">Repaid: {{ $loan->currency }} {{ number_format($totalRepaid, 2) }}</div>
+    </div>
+
+    <!-- Tile 4: Total Amount Paid To Date -->
+    <div class="metric-card" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); padding: 1.25rem; border-radius: 12px; color: white;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h3 style="margin:0; font-size:0.85rem; font-weight:600; opacity:0.9;">Total Paid To Date</h3>
+            <ion-icon name="checkmark-circle-outline" style="font-size:1.3rem; opacity:0.85;"></ion-icon>
+        </div>
+        <div class="value" style="font-size:1.5rem; font-weight:700; margin-top:0.3rem;">{{ $loan->currency }} {{ number_format($totalPaidAll, 2) }}</div>
+        <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">Principal ({{ number_format($totalRepaid, 2) }}) + Interest ({{ number_format($totalInterestPaid, 2) }})</div>
+    </div>
+</div>
+
+<!-- Main Details Grid -->
+<div class="details-grid" style="display:grid; grid-template-columns: 320px 1fr; gap:1.5rem; align-items:start;">
+    <!-- Left Sidebar: Info & Actions -->
+    <div style="display:flex; flex-direction:column; gap:1.25rem;">
+        <!-- Loan Terms Card -->
+        <div class="card" style="padding:1.25rem;">
+            <h3 style="font-size:1rem; margin:0 0 1rem 0; color:var(--text-heading); font-weight:700; display:flex; align-items:center; gap:0.4rem;">
+                <ion-icon name="document-text-outline" style="color:var(--primary);"></ion-icon> Loan Terms & Breakdown
+            </h3>
+            
+            <div style="display:flex; flex-direction:column; gap:0.75rem; font-size:0.85rem;">
+                <div style="display:flex; justify-content:space-between; border-bottom:1px dashed var(--border); padding-bottom:0.5rem; background:var(--primary-light); padding:0.5rem; border-radius:6px;">
+                    <span style="font-weight:600; color:var(--primary);">Total Loan Obligation:</span>
+                    <strong style="color:var(--primary); font-size:0.95rem;">{{ $loan->currency }} {{ number_format($totalLoanObligation, 2) }}</strong>
+                </div>
+
+                <div style="display:flex; justify-content:space-between; border-bottom:1px dashed var(--border); padding-bottom:0.5rem;">
+                    <span class="text-muted">Interest Method:</span>
+                    <strong style="color:var(--text-heading); text-align:right;">
+                        @if($loan->interest_method === 'fixed_amount') Fixed Amount
+                        @elseif($loan->interest_method === 'percentage_rate') Percentage ({{ ucfirst($loan->rate_basis ?? 'flat') }})
+                        @elseif($loan->interest_method === 'equal_installments') Equal Installments
+                        @elseif($loan->interest_method === 'custom_schedule') Custom Schedule
+                        @else No Interest @endif
+                    </strong>
+                </div>
+
+                @if($loan->interest_method === 'fixed_amount')
+                    <div style="display:flex; justify-content:space-between; border-bottom:1px dashed var(--border); padding-bottom:0.5rem;">
+                        <span class="text-muted">Fixed Interest Amount:</span>
+                        <strong style="color:var(--text-heading);">{{ $loan->currency }} {{ number_format($loan->interest_amount, 2) }}</strong>
+                    </div>
+                @endif
+
+                @if($loan->interest_method === 'percentage_rate')
+                    <div style="display:flex; justify-content:space-between; border-bottom:1px dashed var(--border); padding-bottom:0.5rem;">
+                        <span class="text-muted">Interest Rate:</span>
+                        <strong style="color:var(--primary);">{{ $loan->interest_rate }}%</strong>
+                    </div>
+                @endif
+
+                @if(!in_array($loan->interest_method, ['no_interest', 'custom_schedule']))
+                    <div style="display:flex; justify-content:space-between; border-bottom:1px dashed var(--border); padding-bottom:0.5rem;">
+                        <span class="text-muted">Frequency:</span>
+                        <strong style="color:var(--text-heading);">{{ ucfirst($loan->frequency ?? 'monthly') }} (Day {{ $loan->due_day ?? '1' }})</strong>
+                    </div>
+                @endif
+
+                <div style="display:flex; justify-content:space-between; border-bottom:1px dashed var(--border); padding-bottom:0.5rem;">
+                    <span class="text-muted">Claimed / Start Date:</span>
+                    <strong style="color:var(--text-heading);">{{ $loan->claimed_date ?? 'N/A' }}</strong>
+                </div>
+
+                <div style="display:flex; justify-content:space-between; border-bottom:1px dashed var(--border); padding-bottom:0.5rem;">
+                    <span class="text-muted">Term (Months):</span>
+                    <strong style="color:var(--text-heading);">{{ $loan->term_months ?? '-' }} Months</strong>
+                </div>
+            </div>
+
+            @if($loan->status === 'active')
+                <div style="margin-top: 1.25rem; display:flex; flex-direction:column; gap:0.5rem;">
+                    <button class="btn btn-primary" style="width:100%; font-size:0.85rem;" onclick="openModal('recordRepaymentModal')">
+                        <ion-icon name="arrow-down-circle-outline"></ion-icon> Record Principal Repayment
+                    </button>
+                    <button class="btn btn-outline" style="width:100%; font-size:0.85rem;" onclick="openModal('addDrawModal')">
+                        <ion-icon name="add-circle-outline"></ion-icon> Add Additional Draw
+                    </button>
+                </div>
+            @endif
+        </div>
+
+        <!-- Attachments Card -->
+        <div class="card" style="padding:1.25rem;">
+            <h3 style="font-size:1rem; margin:0 0 1rem 0; color:var(--text-heading); font-weight:700; display:flex; align-items:center; gap:0.4rem;">
+                <ion-icon name="attach-outline" style="color:var(--primary);"></ion-icon> Attachments & Documents
+            </h3>
+            @if(isset($attachments) && $attachments->count() > 0)
+                <ul style="list-style:none; padding:0; margin:0;">
+                    @foreach($attachments as $attachment)
+                        <li style="margin-bottom:0.5rem; display:flex; align-items:center; gap:0.5rem; background:var(--bg-page); padding:0.5rem 0.75rem; border-radius:8px; border:1px solid var(--border-light);">
+                            <ion-icon name="document-attach-outline" style="color:var(--primary); font-size:1.1rem; flex-shrink:0;"></ion-icon>
+                            <a href="{{ Storage::url($attachment->file_path) }}" target="_blank" style="color:var(--text-heading); text-decoration:none; font-size:0.85rem; word-break: break-all; font-weight:500;">
+                                {{ $attachment->file_name }}
+                            </a>
+                        </li>
+                    @endforeach
+                </ul>
+            @else
+                <div style="text-align:center; padding:1.5rem 0; color:var(--text-muted);">
+                    <ion-icon name="folder-open-outline" style="font-size:2rem; opacity:0.4; margin-bottom:0.3rem;"></ion-icon>
+                    <p style="margin:0; font-size:0.85rem;">No attachments uploaded.</p>
+                </div>
+            @endif
+        </div>
+    </div>
+
+    <!-- Right Main Tabbed Content -->
+    <div class="loan-details-content" style="min-width:0;">
+        <!-- Navigation Tabs -->
+        <div style="background:var(--bg-card); border-radius:12px; border:1px solid var(--border); padding:0.5rem 0.5rem 0 0.5rem; margin-bottom:1rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-light); padding-right:0.5rem;">
+                <div style="display:flex; gap:1rem;">
+                    <button type="button" onclick="switchTab('schedule')" id="tab-schedule" style="padding:0.75rem 1.25rem; font-weight:600; color:var(--primary); border:none; background:transparent; border-bottom:3px solid var(--primary); cursor:pointer; font-size:0.9rem; display:flex; align-items:center; gap:0.4rem;">
+                        <ion-icon name="calendar-outline"></ion-icon> Interest Schedule
+                        <span class="badge" style="background:var(--primary-light); color:var(--primary); border-radius:12px; padding:0.1rem 0.5rem; font-size:0.75rem;">{{ $schedules->count() }}</span>
+                    </button>
+                    <button type="button" onclick="switchTab('principal')" id="tab-principal" style="padding:0.75rem 1.25rem; font-weight:500; color:var(--text-muted); border:none; background:transparent; border-bottom:3px solid transparent; cursor:pointer; font-size:0.9rem; display:flex; align-items:center; gap:0.4rem;">
+                        <ion-icon name="swap-vertical-outline"></ion-icon> Principal Records
+                        <span class="badge" style="background:var(--bg-page); color:var(--text-muted); border-radius:12px; padding:0.1rem 0.5rem; font-size:0.75rem;">{{ $principalRecords->count() }}</span>
+                    </button>
+                </div>
+                <button type="button" onclick="openModal('addScheduleModal')" class="btn btn-outline" style="font-size:0.8rem; padding:0.35rem 0.75rem; border-radius:6px; display:flex; align-items:center; gap:0.3rem;">
+                    <ion-icon name="add-outline"></ion-icon> Add Interest Row
+                </button>
+            </div>
+        </div>
+
+        <!-- TAB 1: Interest Schedule -->
+        <div id="content-schedule">
+            <div class="card" style="padding:0; overflow:visible; background:var(--bg-card); border-radius:12px; border:1px solid var(--border);">
+                <table class="data-table" style="margin:0; width:100%; border-collapse:collapse;">
+                    <thead style="background:var(--bg-page); border-bottom:1px solid var(--border);">
+                        <tr>
+                            <th style="padding: 0.85rem 1rem; text-align:left; font-size:0.8rem; color:var(--text-muted);">Due Date</th>
+                            <th style="padding: 0.85rem 1rem; text-align:right; font-size:0.8rem; color:var(--text-muted);">Amount Due</th>
+                            <th style="padding: 0.85rem 1rem; text-align:right; font-size:0.8rem; color:var(--text-muted);">Paid Amount</th>
+                            <th style="padding: 0.85rem 1rem; text-align:right; font-size:0.8rem; color:var(--text-muted);">Remaining</th>
+                            <th style="padding: 0.85rem 1rem; text-align:center; font-size:0.8rem; color:var(--text-muted);">Status</th>
+                            <th style="padding: 0.85rem 1rem; text-align:center; font-size:0.8rem; color:var(--text-muted);">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($schedules as $sched)
+                        @php
+                            $paidAmt = $sched->paid_amount ?? 0;
+                            $remAmt = max(0, $sched->interest_amount - $paidAmt);
+                        @endphp
+                        <tr style="border-bottom: 1px solid var(--border-light);">
+                            <td style="padding: 0.85rem 1rem; text-align:left;">
+                                <span class="font-medium {{ \Carbon\Carbon::parse($sched->due_date)->isPast() && in_array($sched->status, ['pending', 'partially_paid']) ? 'text-danger' : '' }}" style="font-size:0.85rem;">
+                                    {{ $sched->due_date }}
+                                </span>
+                            </td>
+                            <td style="padding: 0.85rem 1rem; text-align:right; font-weight:600; color:var(--text-heading); font-size:0.85rem;">
+                                {{ $loan->currency }} {{ number_format($sched->interest_amount, 2) }}
+                            </td>
+                            <td style="padding: 0.85rem 1rem; text-align:right; color:var(--success); font-weight:500; font-size:0.85rem;">
+                                {{ $loan->currency }} {{ number_format($paidAmt, 2) }}
+                            </td>
+                            <td style="padding: 0.85rem 1rem; text-align:right; color:{{ $remAmt > 0 ? 'var(--danger)' : 'var(--text-muted)' }}; font-weight:500; font-size:0.85rem;">
+                                {{ $loan->currency }} {{ number_format($remAmt, 2) }}
+                            </td>
+                            <td style="padding: 0.85rem 1rem; text-align:center;">
+                                @if($sched->status === 'paid')
+                                    <span class="badge" style="background:#dcfce7; color:#166534; font-weight:600;">Paid</span>
+                                @elseif($sched->status === 'skipped')
+                                    <span class="badge" style="background:#f1f5f9; color:#475569; font-weight:600;">Skipped</span>
+                                @elseif($sched->status === 'partially_paid')
+                                    <span class="badge" style="background:#fef3c7; color:#b45309; font-weight:600;">Partially Paid</span>
+                                @elseif(\Carbon\Carbon::parse($sched->due_date)->isPast())
+                                    <span class="badge" style="background:#fee2e2; color:#991b1b; font-weight:600;">Overdue</span>
+                                @else
+                                    <span class="badge" style="background:#e2e8f0; color:#334155; font-weight:600;">Pending</span>
+                                @endif
+                            </td>
+                            <td style="padding: 0.85rem 1rem; text-align:center; position:relative;">
+                                @if(in_array($sched->status, ['pending', 'partially_paid', 'overdue']))
+                                <div class="dropdown" style="position:relative; display:inline-block;">
+                                    <button type="button" class="action-btn" onclick="toggleDropdown('sched-actions-{{ $sched->id }}', event)" style="background:var(--bg-page); border:1px solid var(--border); border-radius:6px; padding:0.35rem 0.65rem; cursor:pointer; color:var(--text-heading); display:inline-flex; align-items:center; justify-content:center;">
+                                        <ion-icon name="ellipsis-horizontal-outline" style="font-size:1.1rem;"></ion-icon>
+                                    </button>
+                                    <div class="dropdown-menu" id="sched-actions-{{ $sched->id }}" style="position:absolute; right:0; top:100%; z-index:1000; background:var(--bg-card); border:1px solid var(--border); box-shadow:var(--shadow-card); border-radius:8px; min-width:165px; text-align:left; display:none; margin-top:0.25rem;">
+                                        <a href="javascript:void(0)" onclick="openSettleModal({{ $sched->id }}, {{ $remAmt }})" style="display:flex; align-items:center; gap:0.5rem; padding:0.55rem 0.85rem; color:var(--text-main); font-size:0.85rem; text-decoration:none;">
+                                            <ion-icon name="cash-outline" style="color:var(--success); font-size:1rem;"></ion-icon> Settle Payment
+                                        </a>
+                                        <a href="javascript:void(0)" onclick="openEditInterestModal({{ $sched->id }}, {{ $sched->interest_amount }})" style="display:flex; align-items:center; gap:0.5rem; padding:0.55rem 0.85rem; color:var(--text-main); font-size:0.85rem; text-decoration:none;">
+                                            <ion-icon name="create-outline" style="color:var(--primary); font-size:1rem;"></ion-icon> Edit Amount
+                                        </a>
+                                        <form action="/loans/{{ $loan->id }}/schedule/{{ $sched->id }}/skip" method="POST" style="margin:0;">
+                                            @csrf
+                                            <button type="submit" style="display:flex; align-items:center; gap:0.5rem; width:100%; text-align:left; background:none; border:none; padding:0.55rem 0.85rem; cursor:pointer; color:var(--text-muted); font-size:0.85rem;">
+                                                <ion-icon name="close-circle-outline" style="font-size:1rem;"></ion-icon> Mark Not Needed
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                                @else
+                                    <span class="text-muted" style="font-size:0.8rem;">Completed</span>
+                                @endif
+                            </td>
+                        </tr>
+                        @endforeach
+
+                        @if($schedules->isEmpty())
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-4" style="padding:2.5rem; text-align:center;">
+                                <ion-icon name="calendar-outline" style="font-size:2.5rem; opacity:0.4; margin-bottom:0.5rem;"></ion-icon><br>
+                                @if($loan->status === 'pending')
+                                    Loan is currently pending. Activate the loan above to generate the interest payment schedule.
+                                @else
+                                    No interest schedules found for this loan.
+                                @endif
+                            </td>
+                        </tr>
+                        @endif
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TAB 2: Principal Records -->
+        <div id="content-principal" style="display:none;">
+            <div class="card" style="padding:0; overflow:visible; background:var(--bg-card); border-radius:12px; border:1px solid var(--border);">
+                <table class="data-table" style="margin:0; width:100%; border-collapse:collapse;">
+                    <thead style="background:var(--bg-page); border-bottom:1px solid var(--border);">
+                        <tr>
+                            <th style="padding: 0.85rem 1rem; text-align:left; font-size:0.8rem; color:var(--text-muted);">Date</th>
+                            <th style="padding: 0.85rem 1rem; text-align:left; font-size:0.8rem; color:var(--text-muted);">Type</th>
+                            <th style="padding: 0.85rem 1rem; text-align:right; font-size:0.8rem; color:var(--text-muted);">Amount</th>
+                            <th style="padding: 0.85rem 1rem; text-align:center; font-size:0.8rem; color:var(--text-muted);">Payment Mode</th>
+                            <th style="padding: 0.85rem 1rem; text-align:left; font-size:0.8rem; color:var(--text-muted);">Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($principalRecords as $record)
+                        <tr style="border-bottom: 1px solid var(--border-light);">
+                            <td style="padding: 0.85rem 1rem; font-weight:500; text-align:left; font-size:0.85rem;">{{ $record->record_date }}</td>
+                            <td style="padding: 0.85rem 1rem; text-align:left;">
+                                @if($record->record_type === 'repayment')
+                                    <span style="color:var(--success); font-weight:600; display:inline-flex; align-items:center; gap:0.3rem; font-size:0.85rem;">
+                                        <ion-icon name="arrow-down-circle-outline" style="font-size:1.1rem;"></ion-icon> Principal Repayment
+                                    </span>
+                                @else
+                                    <span style="color:var(--danger); font-weight:600; display:inline-flex; align-items:center; gap:0.3rem; font-size:0.85rem;">
+                                        <ion-icon name="arrow-up-circle-outline" style="font-size:1.1rem;"></ion-icon> Additional Draw
+                                    </span>
+                                @endif
+                            </td>
+                            <td style="padding: 0.85rem 1rem; font-weight:700; color:var(--text-heading); text-align:right; font-size:0.85rem;">
+                                {{ $loan->currency }} {{ number_format($record->amount, 2) }}
+                            </td>
+                            <td style="padding: 0.85rem 1rem; text-align:center;">
+                                <span class="badge" style="background:var(--bg-page); color:var(--text-heading); border:1px solid var(--border);">
+                                    {{ $record->payment_mode ?? 'Default' }}
+                                </span>
+                            </td>
+                            <td class="text-muted" style="padding: 0.85rem 1rem; text-align:left; font-size:0.85rem;">{{ $record->notes ?? '-' }}</td>
+                        </tr>
+                        @endforeach
+
+                        @if($principalRecords->isEmpty())
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-4" style="padding:2.5rem; text-align:center;">
+                                <ion-icon name="swap-vertical-outline" style="font-size:2.5rem; opacity:0.4; margin-bottom:0.3rem;"></ion-icon><br>
+                                No principal repayments or draw records logged yet.
+                            </td>
+                        </tr>
+                        @endif
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+@endsection
+
+@section('modals')
+<!-- Add Interest Schedule Modal -->
+<div class="modal-backdrop" id="addScheduleModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3 class="modal-title">Add Interest Schedule Row</h3>
+            <button type="button" class="btn-close" onclick="closeModal('addScheduleModal')">&times;</button>
+        </div>
+        <form action="/loans/{{ $loan->id }}/schedule" method="POST">
+            @csrf
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Due Date</label>
+                    <input type="date" name="due_date" class="form-control" value="{{ date('Y-m-d') }}" required>
+                </div>
+                <div class="form-group" style="margin-top:1rem;">
+                    <label class="form-label">Interest Amount ({{ $loan->currency }})</label>
+                    <x-amount-input name="interest_amount" required="true" />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="closeModal('addScheduleModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary-gradient">Add Schedule Row</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Change Status Modal -->
+<div class="modal-backdrop" id="changeStatusModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3 class="modal-title">Change Loan Status</h3>
+            <button type="button" class="btn-close" onclick="closeModal('changeStatusModal')">&times;</button>
+        </div>
+        <form action="/loans/{{ $loan->id }}/status" method="POST">
+            @csrf
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">New Status</label>
+                    <select name="status" class="form-control" required>
+                        <option value="pending" {{ $loan->status === 'pending' ? 'selected' : '' }}>Pending</option>
+                        <option value="active" {{ $loan->status === 'active' ? 'selected' : '' }}>Active</option>
+                        <option value="closed" {{ $loan->status === 'closed' ? 'selected' : '' }}>Closed</option>
+                        <option value="settled" {{ $loan->status === 'settled' ? 'selected' : '' }}>Settled</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="closeModal('changeStatusModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary-gradient">Save Status</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Settle Interest Modal -->
+<div class="modal-backdrop" id="settleModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3 class="modal-title">Settle Interest Payment</h3>
+            <button type="button" class="btn-close" onclick="closeModal('settleModal')">&times;</button>
+        </div>
+        <form id="settleForm" method="POST">
+            @csrf
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Amount Paid ({{ $loan->currency }})</label>
+                    <x-amount-input name="paid_amount" id="settle_amount" required="true" />
+                </div>
+                <div class="form-group" style="margin-top:1rem;">
+                    <label class="form-label">Date Paid</label>
+                    <input type="date" name="paid_date" class="form-control" value="{{ date('Y-m-d') }}" required>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="closeModal('settleModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary-gradient">Record Payment</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Amount Modal -->
+<div class="modal-backdrop" id="editAmountModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3 class="modal-title">Override Interest Amount</h3>
+            <button type="button" class="btn-close" onclick="closeModal('editAmountModal')">&times;</button>
+        </div>
+        <form id="editAmountForm" method="POST">
+            @csrf
+            <div class="modal-body">
+                <p class="text-muted" style="margin-top:0; font-size:0.85rem;">Change the calculated or fixed interest amount for this specific period only.</p>
+                <div class="form-group">
+                    <label class="form-label">New Amount ({{ $loan->currency }})</label>
+                    <x-amount-input name="interest_amount" id="edit_interest_amount" required="true" />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="closeModal('editAmountModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary-gradient">Update Amount</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Record Repayment Modal -->
+<div class="modal-backdrop" id="recordRepaymentModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3 class="modal-title">Record Principal Repayment</h3>
+            <button type="button" class="btn-close" onclick="closeModal('recordRepaymentModal')">&times;</button>
+        </div>
+        <form action="/loans/{{ $loan->id }}/repayment" method="POST">
+            @csrf
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Repayment Amount ({{ $loan->currency }})</label>
+                    <x-amount-input name="amount" required="true" />
+                </div>
+                <div class="form-group" style="margin-top:1rem;">
+                    <label class="form-label">Date</label>
+                    <input type="date" name="record_date" class="form-control" value="{{ date('Y-m-d') }}" required>
+                </div>
+                <div style="margin-top: 1rem;">
+                    <x-payment-modes />
+                </div>
+                <div class="form-group" style="margin-top:1rem;">
+                    <label class="form-label">Notes</label>
+                    <input type="text" name="notes" class="form-control" placeholder="E.g. Bank Transfer / Monthly principal portion">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="closeModal('recordRepaymentModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary-gradient">Record Repayment</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Add Draw Modal -->
+<div class="modal-backdrop" id="addDrawModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3 class="modal-title">Record Additional Draw</h3>
+            <button type="button" class="btn-close" onclick="closeModal('addDrawModal')">&times;</button>
+        </div>
+        <form action="/loans/{{ $loan->id }}/draw" method="POST">
+            @csrf
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Amount Borrowed ({{ $loan->currency }})</label>
+                    <x-amount-input name="amount" required="true" />
+                </div>
+                <div class="form-group" style="margin-top:1rem;">
+                    <label class="form-label">Date</label>
+                    <input type="date" name="record_date" class="form-control" value="{{ date('Y-m-d') }}" required>
+                </div>
+                <div class="form-group" style="margin-top:1rem;">
+                    <label class="form-label">Notes</label>
+                    <input type="text" name="notes" class="form-control" placeholder="E.g. Additional facility draw down">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="closeModal('addDrawModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary-gradient">Record Draw</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function switchTab(tab) {
+    document.getElementById('content-schedule').style.display = tab === 'schedule' ? 'block' : 'none';
+    document.getElementById('content-principal').style.display = tab === 'principal' ? 'block' : 'none';
+    
+    const tabSched = document.getElementById('tab-schedule');
+    const tabPrinc = document.getElementById('tab-principal');
+
+    if (tab === 'schedule') {
+        tabSched.style.color = 'var(--primary)';
+        tabSched.style.borderBottom = '3px solid var(--primary)';
+        tabSched.style.fontWeight = '600';
+        
+        tabPrinc.style.color = 'var(--text-muted)';
+        tabPrinc.style.borderBottom = '3px solid transparent';
+        tabPrinc.style.fontWeight = '500';
+    } else {
+        tabPrinc.style.color = 'var(--primary)';
+        tabPrinc.style.borderBottom = '3px solid var(--primary)';
+        tabPrinc.style.fontWeight = '600';
+        
+        tabSched.style.color = 'var(--text-muted)';
+        tabSched.style.borderBottom = '3px solid transparent';
+        tabSched.style.fontWeight = '500';
+    }
+}
+
+function toggleDropdown(id, event) {
+    if (event) {
+        event.stopPropagation();
+    }
+    const el = document.getElementById(id);
+    const isShowing = el && el.style.display === 'block';
+    
+    document.querySelectorAll('.dropdown-menu').forEach(menu => {
+        menu.style.display = 'none';
+    });
+    
+    if (el && !isShowing) {
+        el.style.display = 'block';
+    }
+}
+
+window.addEventListener('click', function(event) {
+    if (!event.target.closest('.dropdown')) {
+        document.querySelectorAll('.dropdown-menu').forEach(el => {
+            el.style.display = 'none';
+        });
+    }
+});
+
+function openSettleModal(id, suggestedAmount) {
+    document.getElementById('settleForm').action = "/loans/{{ $loan->id }}/schedule/" + id + "/settle";
+    document.getElementById('settle_amount').nextElementSibling.value = suggestedAmount;
+    if (typeof formatAmountBlur === 'function') formatAmountBlur(document.getElementById('settle_amount'));
+    openModal('settleModal');
+}
+
+function openEditInterestModal(id, currentAmount) {
+    document.getElementById('editAmountForm').action = "/loans/{{ $loan->id }}/schedule/" + id + "/edit";
+    document.getElementById('edit_interest_amount').nextElementSibling.value = currentAmount;
+    if (typeof formatAmountBlur === 'function') formatAmountBlur(document.getElementById('edit_interest_amount'));
+    openModal('editAmountModal');
+}
+</script>
+@endsection
