@@ -27,6 +27,10 @@ return new class extends Migration
                 $table->string('frequency', 50)->nullable();
                 $table->string('guarantor')->nullable();
                 $table->text('collateral')->nullable();
+                $table->decimal('outstanding_principal', 15, 2)->default(0);
+                $table->decimal('monthly_installment', 15, 2)->default(0);
+                $table->date('start_date')->nullable();
+                $table->date('maturity_date')->nullable();
                 $table->string('status', 50)->default('active');
                 $table->timestamps();
             });
