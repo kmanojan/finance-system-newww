@@ -30,6 +30,20 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 Route::get('/share/{token}', [ShareLinkController::class, 'showPublic']);
 Route::post('/share/{token}/password', [ShareLinkController::class, 'verifyPassword']);
 
+// Dynamic Upload File Serving (Vercel Serverless Compatible)
+Route::get('/uploads/{path}', function ($path) {
+    $tmpFile = '/tmp/uploads/' . $path;
+    $publicFile = public_path('uploads/' . $path);
+
+    $filePath = file_exists($tmpFile) ? $tmpFile : (file_exists($publicFile) ? $publicFile : null);
+
+    if (!$filePath) {
+        abort(404);
+    }
+
+    return response()->file($filePath);
+})->where('path', '.*');
+
 // Protected Routes
 Route::middleware(['auth'])->group(function () {
     Route::get('/', function () {
