@@ -62,6 +62,7 @@ return new class extends Migration
                 $table->id();
                 $table->foreignId('project_id')->constrained('projects')->cascadeOnDelete();
                 $table->foreignId('party_id')->constrained('parties')->cascadeOnDelete();
+                $table->foreignId('recipient_id')->nullable()->constrained('parties')->nullOnDelete();
                 $table->string('commission_type', 50);
                 $table->decimal('percentage_value', 5, 2)->nullable();
                 $table->string('calculation_basis', 100)->nullable();
