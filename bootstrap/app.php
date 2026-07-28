@@ -4,6 +4,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Config;
 
 $app = Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -21,8 +22,7 @@ $app = Application::configure(basePath: dirname(__DIR__))
     })->create();
 
 // Use writable /tmp storage directory in serverless environment
-if (isset($_ENV['VERCEL']) || isset($_SERVER['VERCEL']) || true) {
-    $app->useStoragePath('/tmp/storage');
-}
+$app->useStoragePath('/tmp/storage');
+config(['view.compiled' => '/tmp/storage/framework/views']);
 
 return $app;
