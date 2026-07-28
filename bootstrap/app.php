@@ -20,7 +20,26 @@ $app = Application::configure(basePath: dirname(__DIR__))
         );
     })->create();
 
-// Use writable /tmp storage directory in serverless environment
-$app->useStoragePath('/tmp/storage');
+// Use writable /tmp storage directory in serverless environment (e.g. Vercel)
+if (isset($_ENV['VERCEL']) || isset($_SERVER['VERCEL']) || getenv('VERCEL')) {
+    $app->useStoragePath('/tmp/storage');
+}
+
+// Ensure required storage subdirectories exist to prevent file write errors
+$storagePath = $app->storagePath();
+$directories = [
+    $storagePath . '/app/private',
+    $storagePath . '/app/public',
+    $storagePath . '/framework/cache/data',
+    $storagePath . '/framework/sessions',
+    $storagePath . '/framework/views',
+    $storagePath . '/logs',
+];
+
+foreach ($directories as $directory) {
+    if (!is_dir($directory)) {
+        @mkdir($directory, 0755, true);
+    }
+}
 
 return $app;

@@ -2,7 +2,8 @@
 
 // Prepare writable directories in /tmp for Vercel serverless environment
 $directories = [
-    '/tmp/storage/app',
+    '/tmp/storage/app/private',
+    '/tmp/storage/app/public',
     '/tmp/storage/framework/cache/data',
     '/tmp/storage/framework/sessions',
     '/tmp/storage/framework/views',
