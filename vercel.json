@@ -5,7 +5,7 @@
     "outputDirectory": "dist",
     "functions": {
         "api/index.php": {
-            "runtime": "vercel-php@8.3"
+            "runtime": "vercel-php@0.7.3"
         }
     },
     "routes": [
@@ -27,6 +27,7 @@
         }
     ],
     "env": {
+        "PHP_VERSION": "8.3",
         "APP_ENV": "production",
         "APP_DEBUG": "false",
         "APP_CONFIG_CACHE": "/tmp/storage/framework/cache/config.php",
