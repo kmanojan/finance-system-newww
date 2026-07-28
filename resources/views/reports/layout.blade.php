@@ -64,8 +64,12 @@
             <a href="{{ route('reports.client_statement') }}" class="nav-link {{ Route::currentRouteName() === 'reports.client_statement' ? 'active' : '' }}">
                 <ion-icon name="receipt-outline"></ion-icon> Client Statement
             </a>
+            <a href="{{ route('reports.party_ledger') }}" class="nav-link {{ Route::currentRouteName() === 'reports.party_ledger' ? 'active' : '' }}">
+                <ion-icon name="people-circle-outline"></ion-icon> Party Payables & Full Ledger
+            </a>
         </nav>
     </div>
+
 
 </aside>
 @endsection

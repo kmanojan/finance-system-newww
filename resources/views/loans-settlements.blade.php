@@ -14,8 +14,12 @@
         <a href="/loans/settlements" class="nav-link {{ request()->is('loans/settlements') ? 'active' : '' }}">
             <ion-icon name="checkmark-done-circle-outline"></ion-icon> Settlements
         </a>
+        <a href="/loans/party-report" class="nav-link {{ request()->is('loans/party-report') ? 'active' : '' }}">
+            <ion-icon name="pie-chart-outline"></ion-icon> Party Payables & Paids
+        </a>
     </nav>
 </aside>
+
 @endsection
 
 @section('content')

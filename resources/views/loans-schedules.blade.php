@@ -8,8 +8,10 @@
         <a href="/loans" class="nav-link {{ request()->is('loans') ? 'active' : '' }}">Active Loans</a>
         <a href="/loans/schedules" class="nav-link {{ request()->is('loans/schedules') ? 'active' : '' }}">Schedules</a>
         <a href="/loans/settlements" class="nav-link {{ request()->is('loans/settlements') ? 'active' : '' }}">Settlements</a>
+        <a href="/loans/party-report" class="nav-link {{ request()->is('loans/party-report') ? 'active' : '' }}">Party Payables & Paids</a>
     </nav>
 </aside>
+
 @endsection
 
 @section('content')

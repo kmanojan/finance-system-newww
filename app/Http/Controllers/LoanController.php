@@ -115,8 +115,11 @@ class LoanController extends Controller
         $activeLoansCount = $loans->where('status', 'active')->count();
         $settledLoansCount = $loans->where('status', 'settled')->count();
         
+        $parties = DB::table('parties')->orderBy('name')->get();
+
         return view('loans', compact(
             'loans', 
+            'parties',
             'totalBorrowed', 
             'totalPrincipalRepaid', 
             'totalInterestPaid',
@@ -128,6 +131,7 @@ class LoanController extends Controller
             'settledLoansCount'
         ));
     }
+
 
     public function schedules()
     {
@@ -242,10 +246,21 @@ class LoanController extends Controller
         $data = $request->except(['_token', 'attachments', 'custom_dates', 'custom_amounts']);
         $data['created_at'] = now();
         $data['updated_at'] = now();
+
+        if ($request->filled('party_id')) {
+            $party = DB::table('parties')->where('id', $request->input('party_id'))->first();
+            if ($party) {
+                $data['party_id'] = $party->id;
+                if (empty($data['lender_name'])) {
+                    $data['lender_name'] = $party->name;
+                }
+            }
+        }
         
         if(empty($data['status'])) $data['status'] = 'pending';
 
         $loanId = DB::table('loans')->insertGetId($data);
+
 
         if ($request->hasFile('attachments')) {
             foreach ($request->file('attachments') as $file) {
@@ -692,4 +707,95 @@ class LoanController extends Controller
 
         return redirect('/loans')->with('success', 'Loan and all associated records deleted successfully!');
     }
+
+    public function partyReport(Request $request)
+    {
+        $query = DB::table('loans');
+        if ($request->filled('search')) {
+            $search = '%' . $request->input('search') . '%';
+            $query->where('lender_name', 'LIKE', $search);
+        }
+        $loans = $query->get();
+
+        // Group loans by party_id or lender_name
+        $grouped = $loans->groupBy(function($item) {
+            return $item->party_id ? 'party_' . $item->party_id : 'lender_' . preg_replace('/[^a-z0-9]/i', '_', strtolower($item->lender_name));
+        });
+
+        $partyReports = collect();
+        foreach ($grouped as $key => $partyLoans) {
+            $firstLoan = $partyLoans->first();
+            $partyId = $firstLoan->party_id;
+            $partyName = $firstLoan->lender_name;
+
+            if ($partyId) {
+                $p = DB::table('parties')->where('id', $partyId)->first();
+                if ($p) $partyName = $p->name;
+            }
+
+            $totalBorrowed = 0;
+            $totalPrincipalRepaid = 0;
+            $totalInterestPaid = 0;
+            $totalPendingInterest = 0;
+            $activeCount = 0;
+
+            foreach ($partyLoans as $loan) {
+                if ($loan->status === 'active') $activeCount++;
+
+                $repayments = DB::table('loan_principal_records')
+                    ->where('loan_id', $loan->id)
+                    ->where('record_type', 'repayment')
+                    ->sum('amount');
+                $draws = DB::table('loan_principal_records')
+                    ->where('loan_id', $loan->id)
+                    ->where('record_type', 'draw')
+                    ->sum('amount');
+
+                $totalBorrowed += ($loan->principal_amount + $draws);
+                $totalPrincipalRepaid += $repayments;
+
+                $interestPaid = DB::table('loan_interest_schedule')
+                    ->where('loan_id', $loan->id)
+                    ->sum('paid_amount');
+                $totalInterestPaid += $interestPaid;
+
+                $pendingSchedules = DB::table('loan_interest_schedule')
+                    ->where('loan_id', $loan->id)
+                    ->whereIn('status', ['pending', 'partially_paid', 'overdue'])
+                    ->get();
+
+                $pendingInt = 0;
+                foreach ($pendingSchedules as $s) {
+                    $pendingInt += max(0, $s->interest_amount - ($s->paid_amount ?? 0));
+                }
+                $totalPendingInterest += $pendingInt;
+            }
+
+            $outstandingPrincipal = max(0, $totalBorrowed - $totalPrincipalRepaid);
+            $totalPayables = $outstandingPrincipal + $totalPendingInterest;
+            $totalPaids = $totalPrincipalRepaid + $totalInterestPaid;
+
+            $partyReports->push((object)[
+                'party_id' => $partyId,
+                'party_name' => $partyName,
+                'loan_count' => $partyLoans->count(),
+                'active_count' => $activeCount,
+                'total_borrowed' => $totalBorrowed,
+                'total_principal_repaid' => $totalPrincipalRepaid,
+                'total_interest_paid' => $totalInterestPaid,
+                'total_paids' => $totalPaids,
+                'outstanding_principal' => $outstandingPrincipal,
+                'total_pending_interest' => $totalPendingInterest,
+                'total_payables' => $totalPayables,
+                'currency' => $firstLoan->currency ?? 'LKR',
+            ]);
+        }
+
+        $overallBorrowed = $partyReports->sum('total_borrowed');
+        $overallPaids = $partyReports->sum('total_paids');
+        $overallPayables = $partyReports->sum('total_payables');
+
+        return view('loans-party-report', compact('partyReports', 'overallBorrowed', 'overallPaids', 'overallPayables'));
+    }
 }
+

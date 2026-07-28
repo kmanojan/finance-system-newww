@@ -204,7 +204,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/loans', [LoanController::class, 'index']);
     Route::get('/loans/schedules', [LoanController::class, 'schedules']);
     Route::get('/loans/settlements', [LoanController::class, 'settlements']);
+    Route::get('/loans/party-report', [LoanController::class, 'partyReport']);
     Route::post('/loans', [LoanController::class, 'store']);
+
     Route::get('/loans/{id}', [LoanController::class, 'show']);
     Route::post('/loans/{id}/activate', [LoanController::class, 'activate']);
     Route::post('/loans/{id}/status', [LoanController::class, 'updateStatus']);
@@ -254,7 +256,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/client-statement', [\App\Http\Controllers\ReportController::class, 'clientStatement'])->name('reports.client_statement');
         Route::get('/bank-reconciliation', [\App\Http\Controllers\ReportController::class, 'bankReconciliation'])->name('reports.bank_reconciliation');
         Route::get('/expense-trend', [\App\Http\Controllers\ReportController::class, 'expenseTrend'])->name('reports.expense_trend');
+        Route::get('/party-ledger', [\App\Http\Controllers\ReportController::class, 'partyLedger'])->name('reports.party_ledger');
     });
+
     // Cost Allocations & Integrations
     Route::prefix('api')->group(function () {
         Route::get('/employees', [\App\Http\Controllers\EmployeeController::class, 'index']);

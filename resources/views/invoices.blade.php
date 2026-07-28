@@ -6,10 +6,12 @@
     <h2 class="sidebar-title">Invoicing</h2>
     <nav class="nav-links">
         <a href="#invoices-tab" class="nav-link active" onclick="switchTab('invoices-tab', this)">All Invoices</a>
+        <a href="/payables/vendor-bills" class="nav-link">Vendor Bills (AP)</a>
         <a href="#payments-tab" class="nav-link" onclick="switchTab('payments-tab', this)">Payments</a>
         <a href="#reminders-tab" class="nav-link" onclick="switchTab('reminders-tab', this)">Reminders</a>
     </nav>
 </aside>
+
 @endsection
 
 @section('content')

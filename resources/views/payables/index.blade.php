@@ -5,10 +5,12 @@
 <aside class="sidebar-secondary" id="sidebarSecondary">
     <h2 class="sidebar-title">Payables & AP</h2>
     <nav class="nav-links">
-        <a href="/payables/vendor-bills" class="nav-link active">Vendor Bills</a>
+        <a href="/invoices" class="nav-link">Client Invoices (AR)</a>
+        <a href="/payables/vendor-bills" class="nav-link active">Vendor Bills (AP)</a>
         <a href="/payables/purchase-orders" class="nav-link">Purchase Orders</a>
     </nav>
 </aside>
+
 @section('content')
 <header class="page-header" style="margin-bottom: 2rem;">
     <div class="header-titles">

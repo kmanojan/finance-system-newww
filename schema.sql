@@ -435,6 +435,7 @@ CREATE TABLE IF NOT EXISTS interactions (
 -- Loans
 CREATE TABLE IF NOT EXISTS loans (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    party_id INT DEFAULT NULL,
     lender_name VARCHAR(255) NOT NULL,
     principal_amount DECIMAL(15, 2) NOT NULL,
     currency VARCHAR(10) NOT NULL,
@@ -452,8 +453,10 @@ CREATE TABLE IF NOT EXISTS loans (
     collateral TEXT,
     status ENUM('pending', 'active', 'closed') DEFAULT 'active',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (party_id) REFERENCES parties(id)
 );
+
 
 CREATE TABLE IF NOT EXISTS loan_interest_schedule (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

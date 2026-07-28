@@ -14,8 +14,12 @@
         <a href="/loans/settlements" class="nav-link {{ request()->is('loans/settlements') ? 'active' : '' }}">
             <ion-icon name="checkmark-done-circle-outline"></ion-icon> Settlements
         </a>
+        <a href="/loans/party-report" class="nav-link {{ request()->is('loans/party-report') ? 'active' : '' }}">
+            <ion-icon name="pie-chart-outline"></ion-icon> Party Payables & Paids
+        </a>
     </nav>
 </aside>
+
 @endsection
 
 @section('content')
@@ -271,14 +275,23 @@
             <div class="modal-body">
                 <div class="form-row">
                     <div class="form-col">
-                        <label class="form-label">Lender Name</label>
-                        <input type="text" name="lender_name" class="form-control" required placeholder="E.g. Bank / Private Lender">
+                        <label class="form-label" style="font-weight:700;">Select Party / Lender</label>
+                        <x-party-selector name="party_id" :parties="$parties" placeholder="Search & select party..." />
                     </div>
                     <div class="form-col">
-                        <label class="form-label">Principal Amount</label>
+                        <label class="form-label" style="font-weight:700;">Lender Name / Entity *</label>
+                        <input type="text" name="lender_name" class="form-control" required placeholder="E.g. Commercial Bank / Director">
+                    </div>
+                </div>
+
+
+                <div class="form-row" style="margin-top:1.25rem;">
+                    <div class="form-col">
+                        <label class="form-label">Principal Amount *</label>
                         <x-amount-input name="principal_amount" required="true" />
                     </div>
                 </div>
+
 
                 <div class="form-row" style="margin-top:1.25rem;">
                     <div class="form-col">

@@ -10,8 +10,15 @@
         <a href="/cheques" class="nav-link {{ request()->is('cheques*') ? 'active' : '' }}">
             <ion-icon name="receipt-outline"></ion-icon> Cheques Tracking
         </a>
+        <a href="/treasury/bank-reconciliation" class="nav-link {{ request()->is('treasury*') ? 'active' : '' }}">
+            <ion-icon name="vault-outline"></ion-icon> Bank Reconciliation
+        </a>
+        <a href="/assets/fixed-assets" class="nav-link {{ request()->is('assets*') ? 'active' : '' }}">
+            <ion-icon name="desktop-outline"></ion-icon> Fixed Assets
+        </a>
         <a href="/activity-logs" class="nav-link {{ request()->is('activity-logs*') ? 'active' : '' }}">
             <ion-icon name="list-outline"></ion-icon> Audit & User Logs
         </a>
     </nav>
 </aside>
+

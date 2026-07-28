@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Party extends Model
 {
@@ -16,4 +17,9 @@ class Party extends Model
         'tax_id',
         'status',
     ];
+
+    public function loans(): HasMany
+    {
+        return $this->hasMany(Loan::class, 'party_id');
+    }
 }

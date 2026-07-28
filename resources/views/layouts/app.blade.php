@@ -93,30 +93,19 @@
                         <ion-icon name="cash-outline"></ion-icon>
                         <span>Ledger</span>
                     </a>
-                    <a href="/invoices" class="nav-item {{ request()->is('invoices*') ? 'active' : '' }}">
+                    <a href="/invoices" class="nav-item {{ request()->is('invoices*', 'payables*') ? 'active' : '' }}">
                         <ion-icon name="document-text-outline"></ion-icon>
                         <span>Invoices</span>
-                    </a>
-                    <a href="/payables/vendor-bills" class="nav-item {{ request()->is('payables*') ? 'active' : '' }}">
-                        <ion-icon name="receipt-outline"></ion-icon>
-                        <span>Payables</span>
-                    </a>
-                    <a href="/treasury/bank-reconciliation" class="nav-item {{ request()->is('treasury*') ? 'active' : '' }}">
-                        <ion-icon name="vault-outline"></ion-icon>
-                        <span>Treasury</span>
-                    </a>
-                    <a href="/assets/fixed-assets" class="nav-item {{ request()->is('assets*') ? 'active' : '' }}">
-                        <ion-icon name="desktop-outline"></ion-icon>
-                        <span>Assets</span>
                     </a>
                     <a href="/loans" class="nav-item {{ request()->is('loans*') ? 'active' : '' }}">
                         <ion-icon name="card-outline"></ion-icon>
                         <span>Loans</span>
                     </a>
-                    <a href="/reminders" class="nav-item {{ request()->is('reminders*', 'approvals*', 'cheques*', 'activity-logs*') ? 'active' : '' }}">
+                    <a href="/reminders" class="nav-item {{ request()->is('reminders*', 'approvals*', 'cheques*', 'activity-logs*', 'treasury*', 'assets*') ? 'active' : '' }}">
                         <ion-icon name="cog-outline"></ion-icon>
                         <span>Operations</span>
                     </a>
+
                     <a href="/reports" class="nav-item {{ request()->is('reports*') ? 'active' : '' }}">
                         <ion-icon name="pie-chart-outline"></ion-icon>
                         <span>Reports</span>

@@ -424,4 +424,222 @@ class ReportController extends Controller
 
         return view('reports.expense_trend', compact('from', 'to', 'months', 'trendData'));
     }
+
+    public function partyLedger(Request $request)
+    {
+        extract($this->getDateRange($request));
+        $selectedPartyId = $request->query('party_id');
+        $roleFilter = $request->query('role');
+
+        $partiesQuery = DB::table('parties');
+        if ($roleFilter && $roleFilter !== 'all') {
+            $partiesQuery->where('types', 'LIKE', '%' . $roleFilter . '%');
+        }
+        $parties = $partiesQuery->orderBy('name')->get();
+
+        $partySummaries = collect();
+
+        foreach ($parties as $p) {
+            // 1. AR Invoices & Payments (Client Role)
+            $clientInvoices = DB::table('invoices')->where('client_id', $p->id)->get();
+            $totalInvoiced = $clientInvoices->sum('grand_total');
+            $totalCollected = DB::table('payment_allocations')
+                ->whereIn('invoice_id', $clientInvoices->pluck('id'))
+                ->sum('amount');
+            $arBalance = max(0, $totalInvoiced - $totalCollected);
+
+            // 2. AP Vendor Bills & Bill Payments (Vendor Role)
+            $vendorBills = Schema::hasTable('vendor_bills') ? DB::table('vendor_bills')->where('vendor_id', $p->id)->get() : collect();
+            $totalVendorBills = $vendorBills->sum('amount');
+            $totalVendorPaid = $vendorBills->where('status', 'paid')->sum('amount');
+            $apBillsBalance = max(0, $totalVendorBills - $totalVendorPaid);
+
+            // 3. Loans Borrowings & Settlements (Lender / Director / Bank Role)
+            $partyLoans = Schema::hasTable('loans') ? DB::table('loans')->where('party_id', $p->id)->get() : collect();
+            if ($partyLoans->isEmpty()) {
+                $partyLoans = DB::table('loans')->where('lender_name', 'LIKE', '%' . $p->name . '%')->get();
+            }
+
+            $totalLoanBorrowed = 0;
+            $totalLoanRepaid = 0;
+            $totalInterestPaid = 0;
+            $totalPendingInterest = 0;
+
+            foreach ($partyLoans as $loan) {
+                $repayments = DB::table('loan_principal_records')
+                    ->where('loan_id', $loan->id)
+                    ->where('record_type', 'repayment')
+                    ->sum('amount');
+                $draws = DB::table('loan_principal_records')
+                    ->where('loan_id', $loan->id)
+                    ->where('record_type', 'draw')
+                    ->sum('amount');
+                $totalLoanBorrowed += ($loan->principal_amount + $draws);
+                $totalLoanRepaid += $repayments;
+
+                $intPaid = DB::table('loan_interest_schedule')
+                    ->where('loan_id', $loan->id)
+                    ->sum('paid_amount');
+                $totalInterestPaid += $intPaid;
+
+                $pendingScheds = DB::table('loan_interest_schedule')
+                    ->where('loan_id', $loan->id)
+                    ->whereIn('status', ['pending', 'partially_paid', 'overdue'])
+                    ->get();
+                foreach ($pendingScheds as $ps) {
+                    $totalPendingInterest += max(0, $ps->interest_amount - ($ps->paid_amount ?? 0));
+                }
+            }
+
+            $loanOutstandingPrincipal = max(0, $totalLoanBorrowed - $totalLoanRepaid);
+            $loanTotalPayable = $loanOutstandingPrincipal + $totalPendingInterest;
+            $loanTotalPaid = $totalLoanRepaid + $totalInterestPaid;
+
+            // 4. Project Partner Commissions
+            $partnerCommissions = Schema::hasTable('project_commissions') ? DB::table('project_commissions')->where('recipient_id', $p->id)->get() : collect();
+            $totalCommissionOwed = $partnerCommissions->sum('total_commission');
+            $totalCommissionPaid = Schema::hasTable('commission_payments') ? DB::table('commission_payments')->whereIn('commission_id', $partnerCommissions->pluck('id'))->sum('amount') : 0;
+            $commissionBalance = max(0, $totalCommissionOwed - $totalCommissionPaid);
+
+            // Combined Totals
+            $totalPayables = $apBillsBalance + $loanTotalPayable + $commissionBalance;
+            $totalPaids = $totalVendorPaid + $loanTotalPaid + $totalCommissionPaid;
+            $netBalance = $arBalance - $totalPayables;
+
+            $partySummaries->push((object)[
+                'id' => $p->id,
+                'name' => $p->name,
+                'types' => $p->types,
+                'contact_person' => $p->contact_person,
+                'email' => $p->email,
+                'phone' => $p->phone,
+                'total_invoiced' => $totalInvoiced,
+                'total_collected' => $totalCollected,
+                'ar_balance' => $arBalance,
+                'total_vendor_bills' => $totalVendorBills,
+                'total_vendor_paid' => $totalVendorPaid,
+                'ap_bills_balance' => $apBillsBalance,
+                'total_loan_borrowed' => $totalLoanBorrowed,
+                'loan_total_paid' => $loanTotalPaid,
+                'loan_total_payable' => $loanTotalPayable,
+                'total_commission_owed' => $totalCommissionOwed,
+                'total_commission_paid' => $totalCommissionPaid,
+                'commission_balance' => $commissionBalance,
+                'total_payables' => $totalPayables,
+                'total_paids' => $totalPaids,
+                'net_balance' => $netBalance,
+            ]);
+        }
+
+        // Full Detail Ledger Timeline for a Selected Party
+        $partyDetail = null;
+        $partyTimeline = collect();
+        if ($selectedPartyId) {
+            $partyDetail = $partySummaries->firstWhere('id', (int)$selectedPartyId);
+
+            if ($partyDetail) {
+                // 1. Client Invoices
+                $invs = DB::table('invoices')->where('client_id', $selectedPartyId)->get();
+                foreach ($invs as $inv) {
+                    $partyTimeline->push((object)[
+                        'date' => $inv->issue_date ?? $inv->created_at,
+                        'type' => 'Invoice Issued',
+                        'reference' => $inv->invoice_no,
+                        'debit' => $inv->grand_total,
+                        'credit' => 0,
+                        'description' => 'Client Invoice #' . $inv->invoice_no,
+                    ]);
+                }
+
+                // 2. Payments Collected
+                $pmts = DB::table('payments')
+                    ->join('payment_allocations', 'payments.id', '=', 'payment_allocations.payment_id')
+                    ->join('invoices', 'payment_allocations.invoice_id', '=', 'invoices.id')
+                    ->where('invoices.client_id', $selectedPartyId)
+                    ->select('payments.*', 'payment_allocations.amount as alloc_amount', 'invoices.invoice_no')
+                    ->get();
+                foreach ($pmts as $pmt) {
+                    $partyTimeline->push((object)[
+                        'date' => $pmt->payment_date,
+                        'type' => 'Payment Received',
+                        'reference' => $pmt->receipt_no ?? ('PMT-' . $pmt->id),
+                        'debit' => 0,
+                        'credit' => $pmt->alloc_amount,
+                        'description' => 'Client Payment for Invoice #' . $pmt->invoice_no,
+                    ]);
+                }
+
+                // 3. Vendor Bills
+                $bills = Schema::hasTable('vendor_bills') ? DB::table('vendor_bills')->where('vendor_id', $selectedPartyId)->get() : collect();
+                foreach ($bills as $b) {
+                    $partyTimeline->push((object)[
+                        'date' => $b->issue_date,
+                        'type' => 'Vendor Bill',
+                        'reference' => $b->bill_number,
+                        'debit' => 0,
+                        'credit' => $b->amount,
+                        'description' => 'Vendor Bill #' . $b->bill_number,
+                    ]);
+                }
+
+                // 4. Loans & Repayments
+                $loans = Schema::hasTable('loans') ? DB::table('loans')->where('party_id', $selectedPartyId)->orWhere('lender_name', 'LIKE', '%' . $partyDetail->name . '%')->get() : collect();
+                foreach ($loans as $l) {
+                    $partyTimeline->push((object)[
+                        'date' => $l->claimed_date ?? $l->created_at,
+                        'type' => 'Loan Facility Taken',
+                        'reference' => 'LOAN-' . $l->id,
+                        'debit' => 0,
+                        'credit' => $l->principal_amount,
+                        'description' => 'Loan Borrowed: ' . ($l->purpose ?? $l->lender_name),
+                    ]);
+
+                    $repayRecords = DB::table('loan_principal_records')->where('loan_id', $l->id)->get();
+                    foreach ($repayRecords as $pr) {
+                        $partyTimeline->push((object)[
+                            'date' => $pr->record_date,
+                            'type' => 'Loan ' . ucfirst($pr->record_type),
+                            'reference' => $pr->reference_no ?? ('LOAN-PRIN-' . $pr->id),
+                            'debit' => $pr->record_type === 'repayment' ? $pr->amount : 0,
+                            'credit' => $pr->record_type === 'draw' ? $pr->amount : 0,
+                            'description' => 'Loan Principal ' . ucfirst($pr->record_type),
+                        ]);
+                    }
+
+                    $intScheds = DB::table('loan_interest_schedule')->where('loan_id', $l->id)->where('paid_amount', '>', 0)->get();
+                    foreach ($intScheds as $is) {
+                        $partyTimeline->push((object)[
+                            'date' => $is->paid_date ?? $is->due_date,
+                            'type' => 'Loan Interest Paid',
+                            'reference' => 'LOAN-INT-' . $is->id,
+                            'debit' => $is->paid_amount,
+                            'credit' => 0,
+                            'description' => 'Loan Interest Settlement',
+                        ]);
+                    }
+                }
+
+                // 5. Commission Payments
+                $comms = Schema::hasTable('project_commissions') ? DB::table('project_commissions')->where('recipient_id', $selectedPartyId)->get() : collect();
+                foreach ($comms as $c) {
+                    $commPmts = DB::table('commission_payments')->where('commission_id', $c->id)->get();
+                    foreach ($commPmts as $cp) {
+                        $partyTimeline->push((object)[
+                            'date' => $cp->payment_date,
+                            'type' => 'Commission Payout',
+                            'reference' => $cp->reference_no ?? ('COMM-PAY-' . $cp->id),
+                            'debit' => $cp->amount,
+                            'credit' => 0,
+                            'description' => 'Commission Payment Payout',
+                        ]);
+                    }
+                }
+
+                $partyTimeline = $partyTimeline->sortByDesc('date')->values();
+            }
+        }
+
+        return view('reports.party_ledger', compact('from', 'to', 'partySummaries', 'partyDetail', 'partyTimeline', 'selectedPartyId', 'roleFilter'));
+    }
 }
+
