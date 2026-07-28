@@ -29,9 +29,10 @@
     "env": {
         "DB_CONNECTION": "pgsql",
         "DB_HOST": "db.ztqbhrrzpxnndrrchfdt.supabase.co",
-        "DB_PORT": "5432",
+        "DB_PORT": "6543",
         "DB_DATABASE": "postgres",
         "DB_USERNAME": "postgres",
+        "SESSION_DRIVER": "cookie",
         "PHP_VERSION": "8.3",
         "LOG_CHANNEL": "stderr",
         "APP_ENV": "production",
