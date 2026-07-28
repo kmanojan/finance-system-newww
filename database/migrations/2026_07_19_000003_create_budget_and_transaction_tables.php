@@ -61,6 +61,7 @@ return new class extends Migration
                 $table->foreignId('project_id')->nullable()->constrained('projects')->nullOnDelete();
                 $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
                 $table->boolean('reconciled')->default(false);
+                $table->timestamp('reconciled_at')->nullable();
                 $table->timestamps();
             });
         }
