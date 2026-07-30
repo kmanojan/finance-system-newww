@@ -98,21 +98,35 @@ class TransactionController extends Controller
             }
         }
 
+        \App\Services\ActivityLogService::logCreate('Transaction', $transactionId, [
+            'type' => $data['type'] ?? null,
+            'amount' => $data['amount'] ?? null,
+            'description' => $data['description'] ?? null,
+        ]);
+
         return back()->with('success', 'Transaction created successfully!');
     }
     public function update(Request $request, $id)
     {
+        $oldTx = DB::table('transactions')->where('id', $id)->first();
         $data = $request->only(['amount', 'description', 'category_id', 'type', 'payment_method']);
         $data['updated_at'] = now();
         
         DB::table('transactions')->where('id', $id)->update($data);
+
+        \App\Services\ActivityLogService::logUpdate('Transaction', $id, $oldTx, $data);
         
         return back()->with('success', 'Transaction updated successfully!');
     }
 
     public function destroy($id)
     {
+        $oldTx = DB::table('transactions')->where('id', $id)->first();
         DB::table('transactions')->where('id', $id)->delete();
+
+        \App\Services\ActivityLogService::logDelete('Transaction', $id, $oldTx);
+
         return back()->with('success', 'Transaction deleted successfully!');
     }
 }
+

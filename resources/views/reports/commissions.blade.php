@@ -59,7 +59,8 @@
                             @foreach($p->items as $item)
                                 <tr>
                                     <td data-label="Project" style="font-weight: 500; color: var(--text-heading);">{{ $item->project_name }}</td>
-                                    <td data-label="Percentage"><span class="badge" style="background: rgba(99, 102, 241, 0.1); color: var(--primary);">{{ number_format($item->percentage, 2) }}%</span></td>
+                                    <td data-label="Percentage"><span class="badge" style="background: rgba(99, 102, 241, 0.1); color: var(--primary);">{{ is_numeric($item->percentage) ? number_format((float)$item->percentage, 2) . '%' : $item->percentage }}</span></td>
+
                                     <td data-label="Invoiced" style="text-align: right;">{{ number_format($item->invoiced_paid, 2) }}</td>
                                     <td data-label="Earned" style="text-align: right; font-weight: 600; color: var(--text-heading);">{{ number_format($item->commission_earned, 2) }}</td>
                                     <td data-label="Paid Out" style="text-align: right; color: var(--success);">{{ number_format($item->paid_amount, 2) }}</td>

@@ -92,11 +92,17 @@ class ProjectController extends Controller
             ]);
         }
 
+        \App\Services\ActivityLogService::logCreate('Project', $projectId, [
+            'name' => $projectData['name'] ?? null,
+            'budget_limit' => $projectData['budget_limit'] ?? null,
+        ]);
+
         return back()->with('success', 'Project created and linked successfully!');
     }
 
     public function update(Request $request, $id)
     {
+        $oldProject = DB::table('projects')->where('id', $id)->first();
         $clientId = $request->input('client_id');
         $partnerId = $request->input('partner_id');
         $partnerShare = $request->input('partner_share_percentage', 0);
@@ -127,8 +133,11 @@ class ProjectController extends Controller
             ]);
         }
 
+        \App\Services\ActivityLogService::logUpdate('Project', $id, $oldProject, $projectData);
+
         return back()->with('success', 'Project updated successfully!');
     }
+
 
     public function show($id)
     {
@@ -339,10 +348,16 @@ class ProjectController extends Controller
             'currency' => $project->currency ?? 'LKR',
             'amount' => $milestone->amount,
             'subtotal' => $milestone->amount,
+            'discount_type' => 'fixed',
+            'discount_value' => 0.00,
+            'discount_amount' => 0.00,
+            'tax_rate' => 0.00,
+            'tax_amount' => 0.00,
             'grand_total' => $milestone->amount,
             'created_at' => now(),
             'updated_at' => now()
         ]);
+
 
         DB::table('invoice_items')->insert([
             'invoice_id' => $invoiceId,

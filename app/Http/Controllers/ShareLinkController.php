@@ -191,12 +191,21 @@ class ShareLinkController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
+        $approvedCR = DB::table('change_requests')
+            ->where('project_id', $project->id)
+            ->whereIn('status', ['approved', 'invoiced'])
+            ->sum('amount');
+        $totalProjectBudget = (float)($project->budget_limit ?? 0);
+        $totalProjectValue = $totalProjectBudget + (float)$approvedCR;
+
         $totalInvoiced = $invoices->sum('amount');
         $totalCollected = $payments->sum('total_amount');
-        $outstandingBalance = $totalInvoiced - $totalCollected;
+        $outstandingBalance = max(0, $totalInvoiced - $totalCollected);
+        $unbilledBalance = max(0, $totalProjectValue - $totalInvoiced);
 
-        return view('share.client', compact('project', 'invoices', 'payments', 'change_requests', 'documents', 'totalInvoiced', 'totalCollected', 'outstandingBalance', 'link'));
+        return view('share.client', compact('project', 'invoices', 'payments', 'change_requests', 'documents', 'totalInvoiced', 'totalCollected', 'outstandingBalance', 'totalProjectBudget', 'totalProjectValue', 'unbilledBalance', 'link'));
     }
+
 
     private function renderClientDashboard($link)
     {

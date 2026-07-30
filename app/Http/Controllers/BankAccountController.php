@@ -35,12 +35,16 @@ class BankAccountController extends Controller
             $data['company_id'] = $company ? $company->id : 1;
         }
 
-        DB::table('bank_accounts')->insert($data);
+        $id = DB::table('bank_accounts')->insertGetId($data);
+
+        \App\Services\ActivityLogService::logCreate('BankAccount', $id, $data);
+
         return back()->with('success', 'Bank account created successfully!');
     }
 
     public function update(Request $request, $id)
     {
+        $oldData = DB::table('bank_accounts')->where('id', $id)->first();
         $data = $request->except(['_token', '_method']);
         $data['updated_at'] = now();
 
@@ -51,12 +55,20 @@ class BankAccountController extends Controller
         }
 
         DB::table('bank_accounts')->where('id', $id)->update($data);
+
+        \App\Services\ActivityLogService::logUpdate('BankAccount', $id, $oldData, $data);
+
         return back()->with('success', 'Bank account updated successfully!');
     }
 
     public function destroy($id)
     {
+        $oldData = DB::table('bank_accounts')->where('id', $id)->first();
         DB::table('bank_accounts')->where('id', $id)->delete();
+
+        \App\Services\ActivityLogService::logDelete('BankAccount', $id, $oldData);
+
         return back()->with('success', 'Bank account deleted successfully!');
     }
 }
+

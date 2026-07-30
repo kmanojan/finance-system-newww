@@ -24,22 +24,34 @@ class CategoryController extends Controller
             $data['company_id'] = $company ? $company->id : 1;
         }
 
-        DB::table('categories')->insert($data);
+        $id = DB::table('categories')->insertGetId($data);
+
+        \App\Services\ActivityLogService::logCreate('Category', $id, $data);
+
         return back()->with('success', 'Category created successfully!');
     }
 
     public function update(Request $request, $id)
     {
+        $oldData = DB::table('categories')->where('id', $id)->first();
         $data = $request->except(['_token', '_method']);
         $data['updated_at'] = now();
 
         DB::table('categories')->where('id', $id)->update($data);
+
+        \App\Services\ActivityLogService::logUpdate('Category', $id, $oldData, $data);
+
         return back()->with('success', 'Category updated successfully!');
     }
 
     public function destroy($id)
     {
+        $oldData = DB::table('categories')->where('id', $id)->first();
         DB::table('categories')->where('id', $id)->delete();
+
+        \App\Services\ActivityLogService::logDelete('Category', $id, $oldData);
+
         return back()->with('success', 'Category deleted successfully!');
     }
 }
+

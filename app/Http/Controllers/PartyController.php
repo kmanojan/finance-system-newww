@@ -31,12 +31,16 @@ class PartyController extends Controller
             $data['types'] = '';
         }
 
-        DB::table('parties')->insert($data);
+        $id = DB::table('parties')->insertGetId($data);
+
+        \App\Services\ActivityLogService::logCreate('Party', $id, $data);
+
         return back()->with('success', 'Party created successfully!');
     }
 
     public function update(Request $request, $id)
     {
+        $oldData = DB::table('parties')->where('id', $id)->first();
         $data = $request->except(['_token', '_method']);
         $data['updated_at'] = now();
 
@@ -47,6 +51,9 @@ class PartyController extends Controller
         }
 
         DB::table('parties')->where('id', $id)->update($data);
+
+        \App\Services\ActivityLogService::logUpdate('Party', $id, $oldData, $data);
+
         return back()->with('success', 'Party updated successfully!');
     }
 
@@ -60,7 +67,12 @@ class PartyController extends Controller
             return back()->with('error', 'Cannot delete this party. It is linked to projects, invoices, or commissions. Deactivate it instead.');
         }
 
+        $oldData = DB::table('parties')->where('id', $id)->first();
         DB::table('parties')->where('id', $id)->delete();
+
+        \App\Services\ActivityLogService::logDelete('Party', $id, $oldData);
+
         return back()->with('success', 'Party deleted successfully!');
     }
 }
+

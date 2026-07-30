@@ -32,6 +32,8 @@ class AccountController extends Controller
 
         $account = Account::create($validated);
 
+        \App\Services\ActivityLogService::logCreate('Account', $account->id, $account);
+
         return response()->json([
             'success' => true,
             'message' => 'Account created successfully.',
@@ -39,3 +41,4 @@ class AccountController extends Controller
         ], 201);
     }
 }
+

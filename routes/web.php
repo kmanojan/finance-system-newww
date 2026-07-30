@@ -271,7 +271,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/bank-reconciliation', [\App\Http\Controllers\ReportController::class, 'bankReconciliation'])->name('reports.bank_reconciliation');
         Route::get('/expense-trend', [\App\Http\Controllers\ReportController::class, 'expenseTrend'])->name('reports.expense_trend');
         Route::get('/party-ledger', [\App\Http\Controllers\ReportController::class, 'partyLedger'])->name('reports.party_ledger');
+        Route::post('/party-ledger/settlement', [\App\Http\Controllers\ReportController::class, 'recordPartySettlement'])->name('reports.party_settlement');
     });
+
 
     // Cost Allocations & Integrations
     Route::prefix('api')->group(function () {

@@ -261,6 +261,11 @@ class LoanController extends Controller
 
         $loanId = DB::table('loans')->insertGetId($data);
 
+        \App\Services\ActivityLogService::logCreate('Loan', $loanId, [
+            'lender_name' => $data['lender_name'] ?? null,
+            'principal_amount' => $data['principal_amount'] ?? null,
+            'purpose' => $data['purpose'] ?? null,
+        ]);
 
         if ($request->hasFile('attachments')) {
             foreach ($request->file('attachments') as $file) {
@@ -535,7 +540,14 @@ class LoanController extends Controller
         
         $this->recalculateReducingBalance($id);
 
+        \App\Services\ActivityLogService::logCreate('LoanRepayment', $id, [
+            'loan_id' => $id,
+            'amount' => $amount,
+            'record_date' => $recordDate,
+        ], 'Recorded Loan Repayment');
+
         // Auto-post Expense Transaction for Principal Repayment
+
         if ($amount > 0) {
             $catId = $this->getCategoryId('Loan Principal Repayment', 'expense');
             DB::table('transactions')->insert([
@@ -675,6 +687,7 @@ class LoanController extends Controller
 
     public function destroy($id)
     {
+        $oldLoan = DB::table('loans')->where('id', $id)->first();
         DB::transaction(function() use ($id) {
             // Delete associated interest schedule rows
             DB::table('loan_interest_schedule')->where('loan_id', $id)->delete();

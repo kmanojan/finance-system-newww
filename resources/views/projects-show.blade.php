@@ -198,132 +198,152 @@
         </div>
     </div>
 
-    <!-- 12-Tile Metric Grid -->
-    <div class="metric-grid" style="grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap:1.25rem;">
-        <!-- Tile 1: Project Budget -->
-        <div class="metric-card" style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h3>Project Budget</h3>
-                <ion-icon name="wallet-outline" style="font-size:1.3rem; opacity:0.8;"></ion-icon>
+    <!-- Categorized Metric Sections -->
+    <div style="display:flex; flex-direction:column; gap:1.25rem;">
+
+        <!-- Section 1: Contract & Scope (Revenue Base) -->
+        <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:1.2rem;">
+            <div style="font-weight:700; font-size:0.95rem; color:var(--text-heading); margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem;">
+                <ion-icon name="contract-outline" style="color:var(--primary); font-size:1.15rem;"></ion-icon>
+                <span>Contract & Scope (Revenue Base)</span>
             </div>
-            <div class="value" style="font-size:1.6rem; margin-top:0.3rem;">{{ $project->currency ?? ($company->base_currency ?? 'LKR') }} {{ number_format($project->budget_limit, 2) }}</div>
-            <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">Initial Base Budget</div>
+            <div class="metric-grid" style="grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap:1rem;">
+                <!-- Tile 1: Project Budget -->
+                <div class="metric-card" style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h3>Project Budget</h3>
+                        <ion-icon name="wallet-outline" style="font-size:1.3rem; opacity:0.8;"></ion-icon>
+                    </div>
+                    <div class="value" style="font-size:1.5rem; margin-top:0.3rem;">{{ $project->currency ?? ($company->base_currency ?? 'LKR') }} {{ number_format($project->budget_limit, 2) }}</div>
+                    <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">Initial Base Budget</div>
+                </div>
+
+                <!-- Tile 2: Approved Change Requests -->
+                <div class="metric-card" style="background: linear-gradient(135deg, #0891b2 0%, #06b6d4 100%);">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h3>Approved CRs</h3>
+                        <ion-icon name="document-text-outline" style="font-size:1.3rem; opacity:0.8;"></ion-icon>
+                    </div>
+                    <div class="value" style="font-size:1.5rem; margin-top:0.3rem;">+{{ $project->currency ?? ($company->base_currency ?? 'LKR') }} {{ number_format($totalApprovedCR, 2) }}</div>
+                    <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">Scope Adjustments</div>
+                </div>
+
+                <!-- Tile 3: Total Revenue Base -->
+                <div class="metric-card" style="background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h3>Total Project Value</h3>
+                        <ion-icon name="trending-up-outline" style="font-size:1.3rem; opacity:0.8;"></ion-icon>
+                    </div>
+                    <div class="value" style="font-size:1.5rem; margin-top:0.3rem;">{{ $project->currency ?? ($company->base_currency ?? 'LKR') }} {{ number_format($project->budget_limit + $totalApprovedCR, 2) }}</div>
+                    <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">Budget + Approved CR</div>
+                </div>
+            </div>
         </div>
 
-        <!-- Tile 2: Approved Change Requests -->
-        <div class="metric-card" style="background: linear-gradient(135deg, #0891b2 0%, #06b6d4 100%);">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h3>Approved CRs</h3>
-                <ion-icon name="document-text-outline" style="font-size:1.3rem; opacity:0.8;"></ion-icon>
+        <!-- Section 2: Billing & Cash Collections (Money Flow) -->
+        <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:1.2rem;">
+            <div style="font-weight:700; font-size:0.95rem; color:var(--text-heading); margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem;">
+                <ion-icon name="cash-outline" style="color:#16a34a; font-size:1.15rem;"></ion-icon>
+                <span>Billing & Cash Collections</span>
             </div>
-            <div class="value" style="font-size:1.6rem; margin-top:0.3rem;">+{{ $project->currency ?? ($company->base_currency ?? 'LKR') }} {{ number_format($totalApprovedCR, 2) }}</div>
-            <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">Scope Adjustments</div>
+            <div class="metric-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:1rem;">
+                <!-- Tile 1: Cash Collected -->
+                <div class="metric-card" style="background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h3>Cash Collected</h3>
+                        <ion-icon name="cash-outline" style="font-size:1.3rem; opacity:0.8;"></ion-icon>
+                    </div>
+                    <div class="value" style="font-size:1.5rem; margin-top:0.3rem;">{{ $project->currency ?? ($company->base_currency ?? 'LKR') }} {{ number_format($totalCollected, 2) }}</div>
+                    <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">Total Cash Received</div>
+                </div>
+
+                <!-- Tile 2: Invoices Issued -->
+                <div class="metric-card" style="background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h3>Invoices Issued</h3>
+                        <ion-icon name="paper-plane-outline" style="font-size:1.3rem; opacity:0.8;"></ion-icon>
+                    </div>
+                    <div class="value" style="font-size:1.5rem; margin-top:0.3rem;">{{ $project->currency ?? ($company->base_currency ?? 'LKR') }} {{ number_format($totalInvoiced, 2) }}</div>
+                    <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">Total Billed to Client</div>
+                </div>
+
+                <!-- Tile 3: Outstanding Balance -->
+                <div class="metric-card" style="background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h3>Outstanding Balance</h3>
+                        <ion-icon name="alert-circle-outline" style="font-size:1.3rem; opacity:0.8;"></ion-icon>
+                    </div>
+                    <div class="value" style="font-size:1.5rem; margin-top:0.3rem;">{{ $project->currency ?? ($company->base_currency ?? 'LKR') }} {{ number_format($outstandingBalance, 2) }}</div>
+                    <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">Pending Billed Collection</div>
+                </div>
+
+                <!-- Tile 4: Realization Rate -->
+                <div class="metric-card" style="background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%);">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h3>Collection Rate</h3>
+                        <ion-icon name="pie-chart-outline" style="font-size:1.3rem; opacity:0.8;"></ion-icon>
+                    </div>
+                    <div class="value" style="font-size:1.5rem; margin-top:0.3rem;">{{ $collectionRate }}%</div>
+                    <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">Settled / Billed Ratio</div>
+                </div>
+            </div>
         </div>
 
-        <!-- Tile 3: Total Revenue Base -->
-        <div class="metric-card" style="background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h3>Total Revenue Base</h3>
-                <ion-icon name="trending-up-outline" style="font-size:1.3rem; opacity:0.8;"></ion-icon>
+        <!-- Section 3: Expenses & Profitability (Bottom Line) -->
+        <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:1.2rem;">
+            <div style="font-weight:700; font-size:0.95rem; color:var(--text-heading); margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem;">
+                <ion-icon name="stats-chart-outline" style="color:#0284c7; font-size:1.15rem;"></ion-icon>
+                <span>Expenses & Profitability (Bottom Line)</span>
             </div>
-            <div class="value" style="font-size:1.6rem; margin-top:0.3rem;">{{ $project->currency ?? ($company->base_currency ?? 'LKR') }} {{ number_format($project->budget_limit + $totalApprovedCR, 2) }}</div>
-            <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">Budget + Approved CR</div>
+            <div class="metric-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:1rem;">
+                <!-- Tile 1: External Commissions -->
+                <div class="metric-card" style="background: linear-gradient(135deg, #db2777 0%, #ec4899 100%);">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h3>Commissions</h3>
+                        <ion-icon name="people-circle-outline" style="font-size:1.3rem; opacity:0.8;"></ion-icon>
+                    </div>
+                    <div class="value" style="font-size:1.5rem; margin-top:0.3rem;">-{{ $project->currency ?? ($company->base_currency ?? 'LKR') }} {{ number_format($totalCommission, 2) }}</div>
+                    <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">External Partner Payouts</div>
+                </div>
+
+                <!-- Tile 2: Internal Cost Allocations -->
+                <div class="metric-card" style="background: linear-gradient(135deg, #475569 0%, #64748b 100%);">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h3>Cost Allocations</h3>
+                        <ion-icon name="calculator-outline" style="font-size:1.3rem; opacity:0.8;"></ion-icon>
+                    </div>
+                    <div class="value" style="font-size:1.5rem; margin-top:0.3rem;">-{{ $project->currency ?? ($company->base_currency ?? 'LKR') }} {{ number_format($totalCostAllocation, 2) }}</div>
+                    <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">Employee + Server + Direct</div>
+                </div>
+
+                <!-- Tile 3: Project Profit 👁️ -->
+                <div class="metric-card" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; position:relative; z-index:10;">
+                        <h3 style="margin:0;">Project Profit</h3>
+                        <button type="button" onclick="openModal('projectProfitModal')" title="View Breakdown" style="position:relative; z-index:20; background:rgba(255,255,255,0.25); border:none; color:white; border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:1.2rem; transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.45)'" onmouseout="this.style.background='rgba(255,255,255,0.25)'">
+                            <ion-icon name="eye-outline" style="pointer-events:none;"></ion-icon>
+                        </button>
+                    </div>
+                    <div class="value" style="font-size:1.5rem; margin-top:0.3rem;">{{ $project->currency ?? ($company->base_currency ?? 'LKR') }} {{ number_format($projectProfit, 2) }}</div>
+                    <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">(Budget + CR) - Commission</div>
+                </div>
+
+                <!-- Tile 4: Company Net Profit 👁️ -->
+                <div class="metric-card" style="background: linear-gradient(135deg, #0284c7 0%, #06b6d4 100%);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; position:relative; z-index:10;">
+                        <h3 style="margin:0;">Company Net Profit</h3>
+                        <button type="button" onclick="openModal('companyProfitModal')" title="View Breakdown" style="position:relative; z-index:20; background:rgba(255,255,255,0.25); border:none; color:white; border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:1.2rem; transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.45)'" onmouseout="this.style.background='rgba(255,255,255,0.25)'">
+                            <ion-icon name="eye-outline" style="pointer-events:none;"></ion-icon>
+                        </button>
+                    </div>
+                    <div class="value" style="font-size:1.5rem; margin-top:0.3rem;">{{ $project->currency ?? ($company->base_currency ?? 'LKR') }} {{ number_format($companyProfit, 2) }}</div>
+                    <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">Net Bottom Line</div>
+                </div>
+            </div>
         </div>
 
-        <!-- Tile 4: Invoice Sent -->
-        <div class="metric-card" style="background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h3>Invoice Sent</h3>
-                <ion-icon name="paper-plane-outline" style="font-size:1.3rem; opacity:0.8;"></ion-icon>
-            </div>
-            <div class="value" style="font-size:1.6rem; margin-top:0.3rem;">{{ $project->currency ?? ($company->base_currency ?? 'LKR') }} {{ number_format($totalInvoiced, 2) }}</div>
-            <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">Billed to Client</div>
-        </div>
-
-        <!-- Tile 5: Invoice Collected -->
-        <div class="metric-card" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%);">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h3>Invoice Collected</h3>
-                <ion-icon name="checkmark-circle-outline" style="font-size:1.3rem; opacity:0.8;"></ion-icon>
-            </div>
-            <div class="value" style="font-size:1.6rem; margin-top:0.3rem;">{{ $project->currency ?? ($company->base_currency ?? 'LKR') }} {{ number_format($invoiceCollected, 2) }}</div>
-            <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">Settled Invoices</div>
-        </div>
-
-        <!-- Tile 6: Payment Collected -->
-        <div class="metric-card" style="background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h3>Payment Collected</h3>
-                <ion-icon name="cash-outline" style="font-size:1.3rem; opacity:0.8;"></ion-icon>
-            </div>
-            <div class="value" style="font-size:1.6rem; margin-top:0.3rem;">{{ $project->currency ?? ($company->base_currency ?? 'LKR') }} {{ number_format($totalCollected, 2) }}</div>
-            <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">Total Cash Received</div>
-        </div>
-
-        <!-- Tile 7: Outstanding Balance -->
-        <div class="metric-card" style="background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h3>Outstanding Balance</h3>
-                <ion-icon name="alert-circle-outline" style="font-size:1.3rem; opacity:0.8;"></ion-icon>
-            </div>
-            <div class="value" style="font-size:1.6rem; margin-top:0.3rem;">{{ $project->currency ?? ($company->base_currency ?? 'LKR') }} {{ number_format($outstandingBalance, 2) }}</div>
-            <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">Pending Billed Collection</div>
-        </div>
-
-        <!-- Tile 8: Realization Rate -->
-        <div class="metric-card" style="background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%);">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h3>Collection Realization</h3>
-                <ion-icon name="pie-chart-outline" style="font-size:1.3rem; opacity:0.8;"></ion-icon>
-            </div>
-            <div class="value" style="font-size:1.6rem; margin-top:0.3rem;">{{ $collectionRate }}%</div>
-            <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">Collected / Invoiced Ratio</div>
-        </div>
-
-        <!-- Tile 9: External Commissions -->
-        <div class="metric-card" style="background: linear-gradient(135deg, #db2777 0%, #ec4899 100%);">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h3>Partner Commissions</h3>
-                <ion-icon name="people-circle-outline" style="font-size:1.3rem; opacity:0.8;"></ion-icon>
-            </div>
-            <div class="value" style="font-size:1.6rem; margin-top:0.3rem;">-{{ $project->currency ?? ($company->base_currency ?? 'LKR') }} {{ number_format($totalCommission, 2) }}</div>
-            <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">External Payouts</div>
-        </div>
-
-        <!-- Tile 10: Internal Cost Allocations -->
-        <div class="metric-card" style="background: linear-gradient(135deg, #475569 0%, #64748b 100%);">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h3>Cost Allocations</h3>
-                <ion-icon name="calculator-outline" style="font-size:1.3rem; opacity:0.8;"></ion-icon>
-            </div>
-            <div class="value" style="font-size:1.6rem; margin-top:0.3rem;">-{{ $project->currency ?? ($company->base_currency ?? 'LKR') }} {{ number_format($totalCostAllocation, 2) }}</div>
-            <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">Employee + Server + Other</div>
-        </div>
-
-        <!-- Tile 11: Project Profit 👁️ -->
-        <div class="metric-card" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%);">
-            <div style="display:flex; justify-content:space-between; align-items:center; position:relative; z-index:10;">
-                <h3 style="margin:0;">Project Profit</h3>
-                <button type="button" onclick="openModal('projectProfitModal')" title="View Breakdown" style="position:relative; z-index:20; background:rgba(255,255,255,0.25); border:none; color:white; border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:1.2rem; transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.45)'" onmouseout="this.style.background='rgba(255,255,255,0.25)'">
-                    <ion-icon name="eye-outline" style="pointer-events:none;"></ion-icon>
-                </button>
-            </div>
-            <div class="value" style="font-size:1.6rem; margin-top:0.3rem;">{{ $project->currency ?? ($company->base_currency ?? 'LKR') }} {{ number_format($projectProfit, 2) }}</div>
-            <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">(Budget + CR) - Commission</div>
-        </div>
-
-        <!-- Tile 12: Company Profit 👁️ -->
-        <div class="metric-card" style="background: linear-gradient(135deg, #0284c7 0%, #06b6d4 100%);">
-            <div style="display:flex; justify-content:space-between; align-items:center; position:relative; z-index:10;">
-                <h3 style="margin:0;">Company Profit</h3>
-                <button type="button" onclick="openModal('companyProfitModal')" title="View Breakdown" style="position:relative; z-index:20; background:rgba(255,255,255,0.25); border:none; color:white; border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:1.2rem; transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.45)'" onmouseout="this.style.background='rgba(255,255,255,0.25)'">
-                    <ion-icon name="eye-outline" style="pointer-events:none;"></ion-icon>
-                </button>
-            </div>
-            <div class="value" style="font-size:1.6rem; margin-top:0.3rem;">{{ $project->currency ?? ($company->base_currency ?? 'LKR') }} {{ number_format($companyProfit, 2) }}</div>
-            <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">(Budget + CR) - (Comm + Cost Alloc)</div>
-        </div>
     </div>
+
 
     <!-- Charts & Health Breakdown Section -->
     <div style="display:grid; grid-template-columns: 2fr 1fr; gap:1.5rem; margin-top:1.5rem;">
@@ -1596,10 +1616,11 @@
 
                 <div class="form-row" style="margin-top:1rem;">
                     <div class="form-col">
-                        <label class="form-label" style="font-weight:700;">Applicable Invoice Tax Rate (VAT)</label>
-                        <x-tax-selector name="tax_type_id" id="invoice_overall_tax" category="vat" appliesTo="invoice_item" onchange="calculateInvoiceTotals" />
+                        <label class="form-label">Applicable Invoice Tax Rate (VAT)</label>
+                        <x-tax-selector name="tax_type_id" id="invoice_overall_tax" category="vat" appliesTo="invoice_item" selected="" onchange="calculateInvoiceTotals" />
                     </div>
                 </div>
+
                 
                 <h3 class="section-title" style="margin-top:2rem; font-size:1.1rem; border-bottom:1px solid var(--border); padding-bottom:0.5rem;">Line Items</h3>
                 <table class="mini-table" style="margin-bottom: 1rem;">
@@ -1638,7 +1659,7 @@
                 <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-top:1.5rem; background:var(--bg-alt); padding:1.2rem; border-radius:12px; border:1px solid var(--border);">
                     <button type="button" class="btn btn-secondary-gradient btn-pill" onclick="addInvoiceRow()"><ion-icon name="add-outline"></ion-icon> Add Line Item</button>
                     
-                    <div style="display:flex; flex-direction:column; gap:0.5rem; min-width:280px; text-align:right;">
+                    <div style="display:flex; flex-direction:column; gap:0.5rem; min-width:320px; text-align:right;">
                         <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.9rem; color:var(--text-muted);">
                             <span>Line Items Subtotal:</span>
                             <strong id="invoice-subtotal-display" style="color:var(--text-heading);">0.00</strong>
@@ -1647,6 +1668,19 @@
                             <span>VAT / Tax Amount:</span>
                             <strong id="invoice-tax-display" style="color:var(--primary);">0.00</strong>
                         </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.9rem; color:#dc2626;">
+                            <span>Discount (-):</span>
+                            <div style="display:flex; gap:0.35rem; align-items:center;">
+                                <select name="discount_type" id="invoice_discount_type" class="form-control" style="padding:0.25rem 0.4rem; font-size:0.8rem; width:75px;" onchange="calculateInvoiceTotals()">
+                                    <option value="fixed">Fixed</option>
+                                    <option value="percentage">%</option>
+                                </select>
+                                <div style="width: 110px;">
+                                    <x-amount-input name="discount_value" id="invoice_discount_value" class="form-control" style="padding:0.3rem 0.5rem; font-size:0.88rem; text-align:right; color:#dc2626;" placeholder="0.00" onkeyup="calculateInvoiceTotals()" onblur="calculateInvoiceTotals()" />
+                                </div>
+                            </div>
+                        </div>
+
                         <div style="display:flex; justify-content:space-between; align-items:center; font-size:1.15rem; font-weight:700; color:var(--text-heading); border-top:1px solid var(--border); padding-top:0.6rem; margin-top:0.2rem;">
                             <span>Grand Total:</span>
                             <div style="width: 160px;">
@@ -1655,6 +1689,7 @@
                         </div>
                     </div>
                 </div>
+
                 
             </div>
             <div class="modal-footer"><button type="submit" class="btn btn-primary-gradient">Save Invoice</button></div>
@@ -1690,7 +1725,7 @@
                             <div class="allocation-row" style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.75rem; padding-bottom: 0.75rem; border-bottom: 1px dashed var(--border);">
                                 <div style="flex: 2;">
                                     <div style="font-size: 0.95rem; font-weight: 500;">{{ $inv->invoice_no }} <span style="font-size:0.75rem; color:var(--text-muted); background:var(--bg-card); padding:0.1rem 0.4rem; border-radius:4px; margin-left:0.5rem;">{{ ucfirst($inv->status) }}</span></div>
-                                    <div style="font-size: 0.8rem; color: var(--text-muted);">Balance: {{ $baseCurrency ?? 'LKR' }} {{ number_format($invBalance, 2) }} <span style="margin: 0 0.25rem;">|</span> Total: {{ number_format($inv->amount, 2) }}</div>
+                                    <div style="font-size: 0.8rem; color: var(--text-muted);">Balance: {{ $inv->currency ?? ($project->currency ?? 'LKR') }} {{ number_format($invBalance, 2) }} <span style="margin: 0 0.25rem;">|</span> Total: {{ number_format($inv->amount, 2) }}</div>
                                 </div>
                                 <div style="flex: 1; min-width: 120px;">
                                     <input type="hidden" name="alloc_invoice_id[]" value="{{ $inv->id }}">
@@ -1703,7 +1738,7 @@
                 </div>
                 <div class="form-row">
                     <div class="form-col"><label class="form-label">Total Amount</label><x-amount-input name="total_amount" required="true" /></div>
-                    <div class="form-col"><label class="form-label">Currency</label><input type="text" name="currency" class="form-control" value="{{ $baseCurrency ?? 'LKR' }}" required></div>
+                    <div class="form-col"><label class="form-label">Currency</label><input type="text" name="currency" class="form-control" value="{{ $project->currency ?? ($baseCurrency ?? 'LKR') }}" required></div>
                 </div>
                 
                 <x-payment-modes />
@@ -1727,8 +1762,9 @@
                 <div class="form-group"><label class="form-label">Description</label><textarea name="description" class="form-control" required></textarea></div>
                 <div class="form-row">
                     <div class="form-col form-group"><label class="form-label">Amount</label><x-amount-input name="amount" required="true" /></div>
-                    <div class="form-col"><label class="form-label">Currency</label><input type="text" name="currency" class="form-control" value="{{ $baseCurrency ?? 'LKR' }}"></div>
+                    <div class="form-col"><label class="form-label">Currency</label><input type="text" name="currency" class="form-control" value="{{ $project->currency ?? ($baseCurrency ?? 'LKR') }}"></div>
                 </div>
+
                 <div class="form-group" style="margin-top:1rem;">
                     <label class="form-label">Status</label>
                     <select name="status" class="form-control"><option value="pending">Pending</option><option value="approved">Approved</option></select>
@@ -1783,38 +1819,71 @@
 <!-- View Invoice Modals -->
 @foreach($invoices as $inv)
 <div class="modal-backdrop" id="viewInvoiceModal_{{ $inv->id }}">
-    <div class="modal-card">
+    <div class="modal-card" style="max-width: 650px;">
         <div class="modal-header">
             <h2 class="modal-title">Invoice Details: {{ $inv->invoice_no }}</h2>
             <button type="button" class="btn-close" onclick="closeModal('viewInvoiceModal_{{ $inv->id }}')"><ion-icon name="close-outline"></ion-icon></button>
         </div>
         <div class="modal-body">
-            <div style="display:flex; justify-content:space-between; margin-bottom:1rem;">
-                <div><strong>Status:</strong> {{ ucfirst($inv->status) }}</div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:1rem; padding: 0.75rem 1rem; background: var(--bg-alt); border-radius: 8px; border: 1px solid var(--border);">
+                <div><strong>Status:</strong> <span class="badge badge-{{ $inv->status }}">{{ ucfirst($inv->status) }}</span></div>
                 <div><strong>Issue Date:</strong> {{ $inv->issue_date ?? 'N/A' }}</div>
                 <div><strong>Due Date:</strong> {{ $inv->due_date ?? 'N/A' }}</div>
             </div>
-            <h3 class="section-title" style="font-size:1rem; border-bottom:1px solid #e2e8f0; padding-bottom:0.5rem;">Line Items</h3>
+            <h3 class="section-title" style="font-size:1rem; border-bottom:1px solid #e2e8f0; padding-bottom:0.5rem; margin-top: 1rem;">Line Items</h3>
             <table class="data-table">
-                <thead><tr><th>Description</th><th>Qty</th><th>Price</th><th>Tax %</th><th style="text-align:right;">Total</th></tr></thead>
+                <thead><tr><th>Description</th><th>Qty</th><th style="text-align:right;">Unit Price</th><th style="text-align:right;">Total</th></tr></thead>
                 <tbody>
                     @foreach($invoiceItems->where('invoice_id', $inv->id) as $item)
                     <tr>
                         <td>{{ $item->description }}</td>
                         <td>{{ $item->qty }}</td>
-                        <td>${{ number_format($item->unit_price, 2) }}</td>
-                        <td>{{ $item->tax_percentage }}%</td>
-                        <td style="text-align:right; font-weight:500;">${{ number_format($item->total, 2) }}</td>
+                        <td style="text-align:right;">{{ $inv->currency ?? 'LKR' }} {{ number_format($item->unit_price, 2) }}</td>
+                        <td style="text-align:right; font-weight:500;">{{ $inv->currency ?? 'LKR' }} {{ number_format($item->total, 2) }}</td>
                     </tr>
                     @endforeach
                 </tbody>
             </table>
-            <div style="text-align:right; margin-top:1rem; font-size:1.2rem; font-weight:600;">
-                Grand Total: <span style="color:var(--primary);">${{ number_format($inv->amount, 2) }}</span>
+
+            <!-- Invoice Total Breakdown -->
+            @php
+                $invSubtotal = (float)str_replace(',', '', (string)($inv->subtotal > 0 ? $inv->subtotal : $invoiceItems->where('invoice_id', $inv->id)->sum('total')));
+                $invDiscountValue = (float)str_replace(',', '', (string)($inv->discount_value ?? 0));
+                $invDiscountAmount = (float)str_replace(',', '', (string)($inv->discount_amount ?? 0));
+                $invTaxRate = (float)str_replace(',', '', (string)($inv->tax_rate ?? 0));
+                $invTaxAmount = (float)str_replace(',', '', (string)($inv->tax_amount ?? 0));
+                $invGrandTotal = (float)str_replace(',', '', (string)($inv->grand_total > 0 ? $inv->grand_total : $inv->amount));
+            @endphp
+            <div style="display:flex; flex-direction:column; gap:0.4rem; width:320px; margin-left:auto; margin-top:1.5rem; background:var(--bg-card); padding:1rem; border-radius:10px; border:1px solid var(--border); text-align:right;">
+                <div style="display:flex; justify-content:space-between; font-size:0.9rem; color:var(--text-muted);">
+                    <span>Line Items Subtotal:</span>
+                    <strong style="color:var(--text-heading);">{{ $inv->currency ?? 'LKR' }} {{ number_format($invSubtotal, 2) }}</strong>
+                </div>
+
+                @if($invDiscountAmount > 0)
+                <div style="display:flex; justify-content:space-between; font-size:0.9rem; color:#dc2626;">
+                    <span>Discount @if(($inv->discount_type ?? 'fixed') === 'percentage') ({{ number_format($invDiscountValue, 2) }}%) @endif:</span>
+                    <strong>- {{ $inv->currency ?? 'LKR' }} {{ number_format($invDiscountAmount, 2) }}</strong>
+                </div>
+                @endif
+
+                @if($invTaxAmount > 0 || $invTaxRate > 0)
+                <div style="display:flex; justify-content:space-between; font-size:0.9rem; color:var(--text-muted);">
+                    <span>VAT / Tax ({{ number_format($invTaxRate, 2) }}%):</span>
+                    <strong style="color:var(--primary);">+ {{ $inv->currency ?? 'LKR' }} {{ number_format($invTaxAmount, 2) }}</strong>
+                </div>
+                @endif
+
+                <div style="display:flex; justify-content:space-between; font-size:1.15rem; font-weight:700; color:var(--text-heading); border-top:1px solid var(--border); padding-top:0.6rem; margin-top:0.3rem;">
+                    <span>Grand Total:</span>
+                    <span style="color:var(--primary);">{{ $inv->currency ?? 'LKR' }} {{ number_format($invGrandTotal, 2) }}</span>
+                </div>
             </div>
+
         </div>
     </div>
 </div>
+
 
 <!-- Change Status Modal -->
 <div class="modal-backdrop" id="changeStatusModal_{{ $inv->id }}">
@@ -2038,8 +2107,29 @@ function calculateInvoiceTotals() {
             taxRate = parseFloat(selectedTaxItem.getAttribute('data-rate')) || 0;
         }
 
-        let taxAmount = subtotal * (taxRate / 100);
-        let grandTotal = subtotal + taxAmount;
+        // Resolve discount amount & type
+        let discTypeSelect = document.getElementById('invoice_discount_type');
+        let discValueInput = document.getElementById('invoice_discount_value') || document.querySelector('input[name="discount_value"]') || document.querySelector('#invoice_discount_amount');
+
+        let discType = discTypeSelect ? discTypeSelect.value : 'fixed';
+        let discVal = 0;
+        if (discValueInput) {
+            let hiddenDisc = discValueInput.parentElement?.querySelector('.amount-hidden');
+            let rawStr = (hiddenDisc && hiddenDisc.value !== '' && hiddenDisc.value !== undefined) ? hiddenDisc.value : discValueInput.value;
+            discVal = parseFloat(String(rawStr || '0').replace(/,/g, '')) || 0;
+        }
+
+        let discountAmount = 0;
+        if (discType === 'percentage') {
+            discountAmount = subtotal * (discVal / 100);
+        } else {
+            discountAmount = discVal;
+        }
+
+        let netTaxableAmount = Math.max(0, subtotal - discountAmount);
+        let taxAmount = netTaxableAmount * (taxRate / 100);
+        let grandTotal = netTaxableAmount + taxAmount;
+
 
         const subtotalEl = document.getElementById('invoice-subtotal-display');
         if (subtotalEl) subtotalEl.innerText = subtotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -2057,6 +2147,19 @@ function calculateInvoiceTotals() {
         isCalculatingInvoiceTotals = false;
     }
 }
+
+// Global Event Delegation to recalculate totals on any modal input change
+document.addEventListener('input', function(e) {
+    if (e.target.closest('#createInvoiceModal')) {
+        calculateInvoiceTotals();
+    }
+});
+document.addEventListener('change', function(e) {
+    if (e.target.closest('#createInvoiceModal')) {
+        calculateInvoiceTotals();
+    }
+});
+
 
 
 function addInvoiceRow() {
@@ -2394,13 +2497,15 @@ document.addEventListener('DOMContentLoaded', function() {
             <div class="modal-body">
                 <div class="form-group">
                     <label class="form-label">Recipient Party *</label>
-                    <select name="party_id" class="form-control" required onchange="prefillPartyCommission(this, 'create')">
-                        <option value="">-- Select Partner / Vendor --</option>
-                        @foreach($allRecipients as $rec)
-                            <option value="{{ $rec->id }}" data-type="{{ $rec->default_commission_type }}" data-value="{{ $rec->default_commission_value }}">{{ $rec->name }} ({{ str_replace(',', ', ', $rec->types) }})</option>
-                        @endforeach
-                    </select>
+                    <x-party-selector 
+                        name="party_id" 
+                        id="create_commission_party_selector" 
+                        :parties="$allRecipients" 
+                        placeholder="Search & Select Partner / Vendor / Agent..." 
+                        onchange="onProjectCommissionPartyChange" 
+                    />
                 </div>
+
                 
                 <div class="form-group" style="margin-top:1.5rem;">
                     <label class="form-label">Commission Type *</label>
@@ -2797,6 +2902,32 @@ function prefillPartyCommission(select, prefix) {
         toggleProjectCommType(prefix);
     }
 }
+
+const recipientsData = @json($allRecipients ?? []);
+
+function onProjectCommissionPartyChange(partyId, partyName) {
+    if (!partyId) return;
+    const p = recipientsData.find(item => item.id == partyId);
+    if (!p) return;
+
+    const type = p.default_commission_type;
+    const value = p.default_commission_value;
+
+    if (type === 'percentage') {
+        const percRadio = document.getElementById('create_comm_type_percentage');
+        if (percRadio) percRadio.checked = true;
+        const valInput = document.getElementById('create_percentage_value');
+        if (valInput) valInput.value = value || '';
+        toggleProjectCommType('create');
+    } else if (type === 'fixed') {
+        const fixedRadio = document.getElementById('create_comm_type_fixed');
+        if (fixedRadio) fixedRadio.checked = true;
+        const fixedInput = document.getElementById('create_fixed_amount');
+        if (fixedInput) fixedInput.value = value || '';
+        toggleProjectCommType('create');
+    }
+}
+
 
 function openEditCommissionModal(comm) {
     document.getElementById('editCommissionForm').action = '/projects/{{ $project->id }}/commissions/' + comm.id;

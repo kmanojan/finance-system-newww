@@ -140,13 +140,21 @@
 </head>
 <body>
 
-    @if(!empty($snapshot) && !empty($snapshot['background_image_url']))
+    @if(!empty($template) && !empty($template->background_image_url))
+        <div style="position: fixed; top: 250px; left: 10%; width: 80%; opacity: 0.08; z-index: -1000; text-align: center;">
+            <img src="{{ public_path($template->background_image_url) }}" style="width: 100%; max-width: 100%; height: auto;">
+        </div>
+    @elseif(!empty($snapshot) && !empty($snapshot['background_image_url']))
         <div style="position: fixed; top: 250px; left: 10%; width: 80%; opacity: 0.08; z-index: -1000; text-align: center;">
             <img src="{{ public_path($snapshot['background_image_url']) }}" style="width: 100%; max-width: 100%; height: auto;">
         </div>
     @endif
 
-    @if(!empty($snapshot) && !empty($snapshot['header_image_url']))
+    @if(!empty($template) && !empty($template->header_image_url))
+        <div class="header-container">
+            <img src="{{ public_path($template->header_image_url) }}" class="header-banner" alt="Header">
+        </div>
+    @elseif(!empty($snapshot) && !empty($snapshot['header_image_url']))
         <div class="header-container">
             <img src="{{ public_path($snapshot['header_image_url']) }}" class="header-banner" alt="Header">
         </div>
@@ -214,6 +222,16 @@
                     <td style="text-align: right; font-weight: bold;">{{ number_format($invoice->tax_amount, 2) }}</td>
                 </tr>
                 @endif
+
+                @if(!empty($invoice->discount_amount) && $invoice->discount_amount > 0)
+                <tr>
+                    <td @if($hasQty) colspan="3" @endif style="font-weight: bold; color: #dc2626;">
+                        Discount @if(($invoice->discount_type ?? 'fixed') === 'percentage') ({{ number_format($invoice->discount_value ?? 0, 2) }}%) @endif
+                    </td>
+                    <td style="text-align: right; font-weight: bold; color: #dc2626;">- {{ number_format($invoice->discount_amount, 2) }}</td>
+                </tr>
+                @endif
+
                 
                 @if(!empty($invoice->advance_paid) && $invoice->advance_paid > 0)
                 <tr>
@@ -221,6 +239,7 @@
                     <td style="text-align: right; font-weight: bold;">({{ number_format($invoice->advance_paid, 2) }})</td>
                 </tr>
                 @endif
+
 
                 <tr>
                     <td @if($hasQty) colspan="3" @endif style="font-weight: bold; font-size: 14px; background-color: #f8fafc;">Grand Total</td>
@@ -230,7 +249,18 @@
         </table>
 
 
-        @if(!empty($snapshot))
+        @if(!empty($template))
+            @if(!empty($template->description) || !empty($template->bank_details))
+            <div class="bank-details">
+                @if(!empty($template->description))
+                    <div style="margin-bottom: 10px;">{!! $template->description !!}</div>
+                @endif
+                @if(!empty($template->bank_details))
+                    {!! nl2br(e($template->bank_details)) !!}
+                @endif
+            </div>
+            @endif
+        @elseif(!empty($snapshot))
             @if(!empty($snapshot['description']) || !empty($snapshot['bank_details']))
             <div class="bank-details">
                 @if(!empty($snapshot['description']))
@@ -253,11 +283,19 @@
         </div>
     </div>
 
-    @if(!empty($snapshot) && !empty($snapshot['footer_image_url']))
+    @if(!empty($template) && !empty($template->footer_image_url))
+        <div class="footer-container">
+            <img src="{{ public_path($template->footer_image_url) }}" class="footer-banner" alt="Footer">
+        </div>
+    @elseif(!empty($snapshot) && !empty($snapshot['footer_image_url']))
         <div class="footer-container">
             <img src="{{ public_path($snapshot['footer_image_url']) }}" class="footer-banner" alt="Footer">
         </div>
     @endif
+
+</body>
+</html>
+
 
 </body>
 </html>

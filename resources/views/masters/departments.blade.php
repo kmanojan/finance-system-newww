@@ -88,12 +88,15 @@
 <div class="data-table-container" id="view-tree" style="display:none; padding:1.5rem; background:var(--bg-card); border-radius:12px; border:1px solid var(--border);">
     <ul class="tree-list" style="list-style:none; padding-left:0; margin:0;">
         @php
-            $buildTree = function($departments, $parentId = null) use (&$buildTree) {
+            $renderedIds = [];
+            $buildTree = function($departments, $parentId = null) use (&$buildTree, &$renderedIds) {
                 $html = '';
                 foreach ($departments as $dept) {
-                    if ($dept->parent_id == $parentId) {
+                    $effectiveParent = ($dept->parent_id == $dept->id) ? null : $dept->parent_id;
+                    if ($effectiveParent == $parentId && !isset($renderedIds[$dept->id])) {
+                        $renderedIds[$dept->id] = true;
                         $html .= '<li style="margin: 0.5rem 0;">';
-                        $html .= '<div style="display:flex; align-items:center; justify-space-between; padding:0.75rem 1rem; background:var(--bg-sidebar-secondary); border:1px solid var(--border); border-radius:8px;">';
+                        $html .= '<div style="display:flex; align-items:center; justify-content:space-between; padding:0.75rem 1rem; background:var(--bg-sidebar-secondary); border:1px solid var(--border); border-radius:8px;">';
                         $html .= '<div><span class="font-medium">' . e($dept->name) . '</span> <span class="text-muted" style="font-size:0.8rem;">(' . e($dept->code ?? '-') . ')</span></div>';
                         $html .= '<div class="actions">
                             <button class="action-btn" title="Add Sub-department" onclick="openCreateModalWithParent(' . $dept->id . ')"><ion-icon name="add-outline"></ion-icon></button>
@@ -115,8 +118,32 @@
                 }
                 return $html;
             };
+
+            $treeHtml = $buildTree($data);
+
+            // Fallback for any orphaned departments not matched by hierarchy
+            foreach ($data as $dept) {
+                if (!isset($renderedIds[$dept->id])) {
+                    $renderedIds[$dept->id] = true;
+                    $treeHtml .= '<li style="margin: 0.5rem 0;">';
+                    $treeHtml .= '<div style="display:flex; align-items:center; justify-content:space-between; padding:0.75rem 1rem; background:var(--bg-sidebar-secondary); border:1px solid var(--border); border-radius:8px;">';
+                    $treeHtml .= '<div><span class="font-medium">' . e($dept->name) . '</span> <span class="text-muted" style="font-size:0.8rem;">(' . e($dept->code ?? '-') . ')</span></div>';
+                    $treeHtml .= '<div class="actions">
+                        <button class="action-btn" title="Add Sub-department" onclick="openCreateModalWithParent(' . $dept->id . ')"><ion-icon name="add-outline"></ion-icon></button>
+                        <button class="action-btn" title="Edit" onclick="openEditModal(' . htmlspecialchars(json_encode($dept)) . ')"><ion-icon name="create-outline"></ion-icon></button>
+                        <form action="/master/departments/' . $dept->id . '" method="POST" style="display:inline;" onsubmit="return confirm(\'Delete this record?\');">
+                            ' . csrf_field() . '
+                            ' . method_field("DELETE") . '
+                            <button type="submit" class="action-btn" title="Delete"><ion-icon name="trash-outline"></ion-icon></button>
+                        </form>
+                    </div>';
+                    $treeHtml .= '</div>';
+                    $treeHtml .= '</li>';
+                }
+            }
         @endphp
-        {!! $buildTree($data) !!}
+        {!! $treeHtml !!}
+
     </ul>
 </div>
 

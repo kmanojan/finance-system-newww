@@ -62,19 +62,26 @@ class InvoiceController extends Controller
         $invoiceData['created_at'] = now();
         $invoiceData['updated_at'] = now();
         
-        // Fetch missing fields from project
-        $project = DB::table('projects')->where('id', $invoiceData['project_id'])->first();
-        if ($project) {
-            $invoiceData['department_id'] = $project->department_id;
-            $invoiceData['currency'] = $project->currency ?? (DB::table('companies')->value('base_currency') ?? 'LKR');
+        // Fetch missing fields & currency from project
+        if (!empty($invoiceData['project_id'])) {
+            $project = DB::table('projects')->where('id', $invoiceData['project_id'])->first();
+            if ($project) {
+                $invoiceData['department_id'] = $project->department_id;
+                if (!empty($project->currency)) {
+                    $invoiceData['currency'] = $project->currency;
+                }
+            }
+        }
+
+        if (empty($invoiceData['currency'])) {
+            $invoiceData['currency'] = DB::table('companies')->value('base_currency') ?? 'LKR';
         }
         
-        // Default missing fields
-        if(empty($invoiceData['department_id'])) {
-            // Fallback to first available department
-            $firstDept = DB::table('departments')->first();
-            $invoiceData['department_id'] = $firstDept ? $firstDept->id : 1;
+        // Make department_id nullable
+        if (empty($invoiceData['department_id'])) {
+            $invoiceData['department_id'] = null;
         }
+
         if(empty($invoiceData['status'])) $invoiceData['status'] = 'draft';
         
         // Auto-generate invoice number if empty
@@ -83,10 +90,13 @@ class InvoiceController extends Controller
         }
 
         // Fetch template snapshot
-        $template = DB::table('document_templates')
-            ->where('department_id', $invoiceData['department_id'])
-            ->where('is_default', true)
-            ->first();
+        $template = null;
+        if (!empty($invoiceData['department_id'])) {
+            $template = DB::table('document_templates')
+                ->where('department_id', $invoiceData['department_id'])
+                ->where('is_default', true)
+                ->first();
+        }
 
         if (!$template) {
             $template = DB::table('document_templates')->where('is_default', true)->first();
@@ -109,6 +119,20 @@ class InvoiceController extends Controller
         $invoiceData['advance_paid'] = 0;
         $invoiceData['grand_total'] = 0;
 
+        // Sanitize numeric & optional fields to prevent NOT NULL constraint errors
+        $invoiceData['discount_type'] = !empty($invoiceData['discount_type']) ? $invoiceData['discount_type'] : 'fixed';
+        $invoiceData['discount_value'] = !empty($invoiceData['discount_value']) ? (float)str_replace(',', '', (string)$invoiceData['discount_value']) : 0.00;
+        $invoiceData['discount_amount'] = !empty($invoiceData['discount_amount']) ? (float)str_replace(',', '', (string)$invoiceData['discount_amount']) : 0.00;
+        $invoiceData['tax_rate'] = !empty($invoiceData['tax_rate']) ? (float)$invoiceData['tax_rate'] : 0.00;
+        $invoiceData['tax_amount'] = !empty($invoiceData['tax_amount']) ? (float)$invoiceData['tax_amount'] : 0.00;
+
+        if (empty($invoiceData['tax_type_id'])) {
+            $invoiceData['tax_type_id'] = null;
+        }
+        if (empty($invoiceData['due_date'])) {
+            $invoiceData['due_date'] = null;
+        }
+
         // Insert into invoices table and get ID
         $invoiceId = DB::table('invoices')->insertGetId($invoiceData);
 
@@ -129,7 +153,7 @@ class InvoiceController extends Controller
 
                 $itemsToInsert[] = [
                     'invoice_id' => $invoiceId,
-                    'invoice_type_id' => $typeIds[$i] ?? 1,
+                    'invoice_type_id' => !empty($typeIds[$i]) ? $typeIds[$i] : (DB::table('invoice_types')->value('id') ?? 1),
                     'description' => $descriptions[$i],
                     'qty' => $qty,
                     'unit_price' => $price,
@@ -138,6 +162,7 @@ class InvoiceController extends Controller
                     'total' => $lineTotal,
                     'created_at' => now(),
                 ];
+
             }
         }
 
@@ -145,7 +170,7 @@ class InvoiceController extends Controller
             DB::table('invoice_items')->insert($itemsToInsert);
         }
 
-        // Calculate overall invoice tax rate and tax amount
+        // Calculate overall invoice tax rate, discount, and grand total
         $taxTypeId = $request->input('tax_type_id');
         $taxRate = 0.0;
         if ($taxTypeId) {
@@ -153,17 +178,35 @@ class InvoiceController extends Controller
             $taxRate = $taxType ? (float)$taxType->rate : 0.0;
         }
 
-        $taxAmount = round($subtotal * ($taxRate / 100), 2);
-        $grandTotal = round($subtotal + $taxAmount, 2);
+        $discountType = $request->input('discount_type', 'fixed');
+        $rawDiscVal = $request->input('discount_value', $request->input('discount_amount', 0));
+        $discountValue = max(0, (float)str_replace(',', '', (string)$rawDiscVal));
+
+        $discountAmount = 0.0;
+        if ($discountType === 'percentage') {
+            $discountAmount = round($subtotal * ($discountValue / 100), 2);
+        } else {
+            $discountAmount = $discountValue;
+        }
+
+        $netTaxableAmount = max(0, $subtotal - $discountAmount);
+        $taxAmount = round($netTaxableAmount * ($taxRate / 100), 2);
+        $grandTotal = round($netTaxableAmount + $taxAmount, 2);
+
 
         DB::table('invoices')->where('id', $invoiceId)->update([
             'subtotal' => $subtotal,
             'tax_type_id' => $taxTypeId,
             'tax_rate' => $taxRate,
             'tax_amount' => $taxAmount,
+            'discount_type' => $discountType,
+            'discount_value' => $discountValue,
+            'discount_amount' => $discountAmount,
             'amount' => $grandTotal,
             'grand_total' => $grandTotal
         ]);
+
+
 
 
         if ($request->filled('payment_milestone_id')) {
@@ -172,20 +215,64 @@ class InvoiceController extends Controller
                 ->update(['status' => 'invoiced', 'updated_at' => now()]);
         }
 
-        return back()->with('success', 'Invoice and line items created successfully!');
+        \App\Services\ActivityLogService::logCreate('Invoice', $invoiceId, [
+            'invoice_no' => $invoiceData['invoice_no'],
+            'project_id' => $invoiceData['project_id'],
+            'grand_total' => $grandTotal,
+        ]);
+
+        return redirect()->back()->with('success', 'Invoice generated successfully!');
     }
 
     public function updateStatus(Request $request, $id)
     {
         $status = $request->input('status');
+        $oldInvoice = DB::table('invoices')->where('id', $id)->first();
         DB::table('invoices')->where('id', $id)->update(['status' => $status]);
-        return back()->with('success', 'Invoice status updated successfully!');
+
+        \App\Services\ActivityLogService::logUpdate('Invoice', $id, [
+            'status' => $oldInvoice->status ?? 'N/A'
+        ], [
+            'status' => $status
+        ]);
+
+        return redirect()->back()->with('success', 'Invoice status updated successfully!');
     }
 
     public function destroy($id)
     {
+        $oldInvoice = DB::table('invoices')->where('id', $id)->first();
         DB::table('invoices')->where('id', $id)->delete();
-        return back()->with('success', 'Invoice deleted successfully!');
+
+        \App\Services\ActivityLogService::logDelete('Invoice', $id, [
+            'invoice_no' => $oldInvoice->invoice_no ?? 'N/A'
+        ]);
+
+        return redirect()->back()->with('success', 'Invoice deleted successfully!');
+    }
+
+    private function resolveDepartmentTemplate($project, $invoice)
+    {
+        $departmentId = $project->department_id ?? ($invoice->department_id ?? null);
+        $template = null;
+        if ($departmentId) {
+            $template = DB::table('document_templates')
+                ->where('department_id', $departmentId)
+                ->where('is_default', true)
+                ->first();
+            if (!$template) {
+                $template = DB::table('document_templates')
+                    ->where('department_id', $departmentId)
+                    ->first();
+            }
+        }
+        if (!$template) {
+            $template = DB::table('document_templates')->where('is_default', true)->first();
+            if (!$template) {
+                $template = DB::table('document_templates')->first();
+            }
+        }
+        return $template;
     }
 
     public function downloadPdf($id)
@@ -200,10 +287,10 @@ class InvoiceController extends Controller
         $client = DB::table('parties')->where('id', $invoice->client_id)->first();
         $taxType = $invoice->tax_type_id ? DB::table('tax_types')->where('id', $invoice->tax_type_id)->first() : null;
 
-        // Pass snapshot
-        $snapshot = $invoice->template_snapshot ? json_decode($invoice->template_snapshot, true) : null;
+        // Dynamically resolve template from project department
+        $template = $this->resolveDepartmentTemplate($project, $invoice);
 
-        $pdf = Pdf::loadView('invoices.pdf', compact('invoice', 'items', 'project', 'client', 'snapshot', 'taxType'));
+        $pdf = Pdf::loadView('invoices.pdf', compact('invoice', 'items', 'project', 'client', 'template', 'taxType'));
         return $pdf->download("invoice-{$invoice->invoice_no}.pdf");
     }
 
@@ -218,9 +305,11 @@ class InvoiceController extends Controller
         $project = DB::table('projects')->where('id', $invoice->project_id)->first();
         $client = DB::table('parties')->where('id', $invoice->client_id)->first();
         $taxType = $invoice->tax_type_id ? DB::table('tax_types')->where('id', $invoice->tax_type_id)->first() : null;
-        $snapshot = $invoice->template_snapshot ? json_decode($invoice->template_snapshot, true) : null;
 
-        $pdf = Pdf::loadView('invoices.pdf', compact('invoice', 'items', 'project', 'client', 'snapshot', 'taxType'));
+        // Dynamically resolve template from project department
+        $template = $this->resolveDepartmentTemplate($project, $invoice);
+
+        $pdf = Pdf::loadView('invoices.pdf', compact('invoice', 'items', 'project', 'client', 'template', 'taxType'));
         return $pdf->stream("invoice-{$invoice->invoice_no}.pdf");
     }
 

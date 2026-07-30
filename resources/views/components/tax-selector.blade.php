@@ -24,18 +24,10 @@
 
     $modalId = 'taxSelectorModal_' . preg_replace('/[^a-zA-Z0-9]/', '', $name) . '_' . uniqid();
 
-    $selectedIds = is_array($selected) ? $selected : ($selected ? [$selected] : []);
-    
-    // Find default if nothing selected
-    if (empty($selectedIds) && !$multiple) {
-        $defaultTax = collect($taxTypesList)->firstWhere('is_default', 1);
-        if ($defaultTax) {
-            $selectedIds = [$defaultTax->id];
-        }
-    }
-
+    $selectedIds = is_array($selected) ? $selected : ($selected !== null && $selected !== '' ? [$selected] : []);
     $selectedTaxObjs = collect($taxTypesList)->whereIn('id', $selectedIds);
 @endphp
+
 
 <div class="tax-selector-component" id="{{ $id ?? 'component_' . $modalId }}" data-modal-id="{{ $modalId }}" data-multiple="{{ $multiple ? '1' : '0' }}" @if($onchange) data-onchange="{{ $onchange }}" @endif style="position: relative;">
     <!-- Hidden input(s) -->
@@ -100,7 +92,32 @@
 
             <!-- List -->
             <div class="modal-body" style="padding: 0.8rem; overflow-y: auto; flex-grow: 1; max-height: 400px;" id="list_{{ $modalId }}">
+                <!-- No Tax / Exempt Option -->
+                <div class="tax-item-row" data-id="" data-name="no tax exempt 0%" data-category="NONE" data-rate="0" style="display: flex; align-items: center; justify-space-between; padding: 0.75rem 1rem; border-radius: 12px; margin-bottom: 0.4rem; cursor: pointer; border: 1px solid {{ empty($selectedIds) ? 'var(--primary)' : 'transparent' }}; background: {{ empty($selectedIds) ? 'var(--primary-light)' : 'var(--bg-card)' }}; transition: all 0.15s ease;" onclick="toggleTaxSelection('{{ $modalId }}', '', 'No Tax (0% VAT)', 'NONE', 0, {{ $multiple ? 'true' : 'false' }})">
+                    <div style="display: flex; align-items: center; gap: 0.8rem;">
+                        <div style="width: 32px; height: 32px; border-radius: 8px; background: var(--bg-alt); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.75rem; color: var(--text-muted);">
+                            NONE
+                        </div>
+                        <div>
+                            <div style="font-weight: 600; font-size: 0.9rem; color: var(--text-heading);">
+                                No Tax (0% / Exempt)
+                            </div>
+                            <div style="font-size: 0.73rem; color: var(--text-muted);">
+                                No statutory tax applied to this invoice
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; align-items: center; gap: 0.6rem;">
+                        <span class="font-bold" style="color: var(--text-muted); font-size: 0.95rem;">0.00%</span>
+                        <div class="tax-check-icon" style="display: {{ empty($selectedIds) ? 'flex' : 'none' }}; width: 22px; height: 22px; border-radius: 50%; background: var(--primary); color: white; align-items: center; justify-content: center; font-size: 0.8rem;">
+                            <ion-icon name="checkmark-outline"></ion-icon>
+                        </div>
+                    </div>
+                </div>
+
                 @foreach($taxTypesList as $tax)
+
                     @php
                         $isSelected = in_array($tax->id, $selectedIds);
                     @endphp

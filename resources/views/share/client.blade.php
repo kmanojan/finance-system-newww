@@ -9,12 +9,15 @@
     $collectedPct = ($totalInvoiced > 0) ? min(100, round(($totalCollected / $totalInvoiced) * 100, 1)) : 100;
 @endphp
 
-<!-- Navigation Back Button -->
+@if(isset($link) && $link->shareable_type === 'party')
+<!-- Navigation Back Button (Shown when viewing a project from a Client Account Portfolio link) -->
 <div style="margin-bottom: 1.25rem;">
     <a href="/share/{{ $link->token }}" class="btn btn-outline" style="border-radius:8px; font-weight:600; font-size:0.85rem; text-decoration:none; padding:0.45rem 1rem; display:inline-flex; align-items:center; gap:0.4rem;">
         <ion-icon name="arrow-back-outline"></ion-icon> Back to Projects Portfolio
     </a>
 </div>
+@endif
+
 
 <!-- Glassmorphic Header Card -->
 <div class="glass-header" style="margin-bottom:1.5rem;">
@@ -67,14 +70,25 @@
 
 <!-- ==================== TAB 1: OVERVIEW ==================== -->
 <div id="content-overview" class="share-tab-content">
-    <!-- 3 KPI Metric Cards -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+    <!-- 4 KPI Metric Cards -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1.25rem; margin-bottom: 2rem;">
+        <div class="portal-card" style="margin:0; background: linear-gradient(135deg, #0284c7 0%, #06b6d4 100%); color: white;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size: 0.8rem; text-transform: uppercase; font-weight:700; opacity:0.9;">Project Budget</span>
+                <ion-icon name="wallet-outline" style="font-size:1.4rem; opacity:0.85;"></ion-icon>
+            </div>
+            <div style="font-size: 1.7rem; font-weight: 800; margin-top: 0.4rem;">
+                {{ $currency }} {{ number_format($totalProjectValue, 2) }}
+            </div>
+            <div style="font-size:0.75rem; opacity:0.85; margin-top:0.3rem;">Contract Budget + Approved CRs</div>
+        </div>
+
         <div class="portal-card" style="margin:0; background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <span style="font-size: 0.8rem; text-transform: uppercase; font-weight:700; opacity:0.9;">Total Invoiced</span>
                 <ion-icon name="document-text-outline" style="font-size:1.4rem; opacity:0.85;"></ion-icon>
             </div>
-            <div style="font-size: 1.8rem; font-weight: 800; margin-top: 0.4rem;">
+            <div style="font-size: 1.7rem; font-weight: 800; margin-top: 0.4rem;">
                 {{ $currency }} {{ number_format($totalInvoiced, 2) }}
             </div>
             <div style="font-size:0.75rem; opacity:0.85; margin-top:0.3rem;">Total billed to date</div>
@@ -85,7 +99,7 @@
                 <span style="font-size: 0.8rem; text-transform: uppercase; font-weight:700; opacity:0.9;">Payments Settled</span>
                 <ion-icon name="checkmark-done-circle-outline" style="font-size:1.4rem; opacity:0.85;"></ion-icon>
             </div>
-            <div style="font-size: 1.8rem; font-weight: 800; margin-top: 0.4rem;">
+            <div style="font-size: 1.7rem; font-weight: 800; margin-top: 0.4rem;">
                 {{ $currency }} {{ number_format($totalCollected, 2) }}
             </div>
             <div style="font-size:0.75rem; opacity:0.85; margin-top:0.3rem;">Total payments received</div>
@@ -96,12 +110,13 @@
                 <span style="font-size: 0.8rem; text-transform: uppercase; font-weight:700; opacity:0.9;">Outstanding Balance</span>
                 <ion-icon name="alert-circle-outline" style="font-size:1.4rem; opacity:0.85;"></ion-icon>
             </div>
-            <div style="font-size: 1.8rem; font-weight: 800; margin-top: 0.4rem;">
+            <div style="font-size: 1.7rem; font-weight: 800; margin-top: 0.4rem;">
                 {{ $currency }} {{ number_format($outstanding, 2) }}
             </div>
             <div style="font-size:0.75rem; opacity:0.85; margin-top:0.3rem;">Current balance due</div>
         </div>
     </div>
+
 
     <!-- Collection Progress Card -->
     <div class="portal-card">

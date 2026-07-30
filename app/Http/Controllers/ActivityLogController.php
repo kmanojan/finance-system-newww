@@ -45,19 +45,7 @@ class ActivityLogController extends Controller
 
     public static function log($action, $modelType = null, $modelId = null, $oldValue = null, $newValue = null)
     {
-        if (!Schema::hasTable('activity_logs')) {
-            return;
-        }
-
-        DB::table('activity_logs')->insert([
-            'action' => $action,
-            'model_type' => $modelType,
-            'model_id' => $modelId,
-            'old_value' => $oldValue ? json_encode($oldValue) : null,
-            'new_value' => $newValue ? json_encode($newValue) : null,
-            'user_id' => auth()->id() ?? 1,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        \App\Services\ActivityLogService::log($action, $modelType, $modelId, $oldValue, $newValue);
     }
 }
+
