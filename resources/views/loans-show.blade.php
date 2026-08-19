@@ -352,8 +352,8 @@
                                         <a href="javascript:void(0)" onclick="openSettleModal({{ $sched->id }}, {{ $remAmt }})" style="display:flex; align-items:center; gap:0.5rem; padding:0.55rem 0.85rem; color:var(--text-main); font-size:0.85rem; text-decoration:none;">
                                             <ion-icon name="cash-outline" style="color:var(--success); font-size:1rem;"></ion-icon> Settle Payment
                                         </a>
-                                        <a href="javascript:void(0)" onclick="openEditInterestModal({{ $sched->id }}, {{ $sched->interest_amount }})" style="display:flex; align-items:center; gap:0.5rem; padding:0.55rem 0.85rem; color:var(--text-main); font-size:0.85rem; text-decoration:none;">
-                                            <ion-icon name="create-outline" style="color:var(--primary); font-size:1rem;"></ion-icon> Edit Amount
+                                        <a href="javascript:void(0)" onclick="openEditInterestModal({{ $sched->id }}, {{ $sched->interest_amount }}, '{{ $sched->due_date }}')" style="display:flex; align-items:center; gap:0.5rem; padding:0.55rem 0.85rem; color:var(--text-main); font-size:0.85rem; text-decoration:none;">
+                                            <ion-icon name="create-outline" style="color:var(--primary); font-size:1rem;"></ion-icon> Edit Schedule (Date & Amount)
                                         </a>
                                         <form action="/loans/{{ $loan->id }}/schedule/{{ $sched->id }}/skip" method="POST" style="margin:0;">
                                             @csrf
@@ -529,7 +529,7 @@
                 <div class="form-row" style="margin-top:1.25rem;">
                     <div class="form-col">
                         <label class="form-label">Principal Amount *</label>
-                        <input type="number" step="0.01" name="principal_amount" id="edit_principal_amount" class="form-control" value="{{ $loan->principal_amount }}" required min="0">
+                        <x-amount-input name="principal_amount" id="show_edit_principal_amount" required="true" :value="$loan->principal_amount" />
                     </div>
                     <div class="form-col">
                         <label class="form-label">Currency</label>
@@ -576,7 +576,7 @@
                 <!-- Method Dynamic Fields -->
                 <div id="edit_field_fixed_amount" class="form-group" style="margin-top:1.25rem; {{ $loan->interest_method === 'fixed_amount' ? '' : 'display:none;' }}">
                     <label class="form-label">Fixed Interest Amount per Period</label>
-                    <input type="number" step="0.01" name="interest_amount" id="edit_interest_amount" class="form-control" value="{{ $loan->interest_amount }}" placeholder="E.g. 2500.00">
+                    <x-amount-input name="interest_amount" id="show_edit_interest_amount" :value="$loan->interest_amount" placeholder="E.g. 2500.00" />
                 </div>
 
                 <div id="edit_field_percentage_rate" class="form-row" style="margin-top:1.25rem; {{ $loan->interest_method === 'percentage_rate' ? '' : 'display:none;' }}">
@@ -595,7 +595,7 @@
 
                 <div id="edit_field_equal_installments" class="form-group" style="margin-top:1.25rem; {{ $loan->interest_method === 'equal_installments' ? '' : 'display:none;' }}">
                     <label class="form-label">Total Agreed Interest Amount</label>
-                    <input type="number" step="0.01" name="total_interest" id="edit_total_interest" class="form-control" value="{{ $loan->total_interest }}" placeholder="E.g. 50000.00">
+                    <x-amount-input name="total_interest" id="show_edit_total_interest" :value="$loan->total_interest" placeholder="E.g. 50000.00" />
                 </div>
 
                 <div class="form-row" style="margin-top:1.25rem;">
@@ -654,25 +654,29 @@
     </div>
 </div>
 
-<!-- Edit Amount Modal -->
-<div class="modal-backdrop" id="editAmountModal">
+<!-- Edit Interest Schedule Modal (Date & Amount) -->
+<div class="modal-backdrop" id="editScheduleModal">
     <div class="modal-card">
         <div class="modal-header">
-            <h3 class="modal-title">Override Interest Amount</h3>
-            <button type="button" class="btn-close" onclick="closeModal('editAmountModal')">&times;</button>
+            <h3 class="modal-title">Edit Interest Schedule</h3>
+            <button type="button" class="btn-close" onclick="closeModal('editScheduleModal')">&times;</button>
         </div>
-        <form id="editAmountForm" method="POST">
+        <form id="editScheduleForm" method="POST">
             @csrf
             <div class="modal-body">
-                <p class="text-muted" style="margin-top:0; font-size:0.85rem;">Change the calculated or fixed interest amount for this specific period only.</p>
+                <p class="text-muted" style="margin-top:0; font-size:0.85rem;">Modify the scheduled due date or expected interest amount for this installment.</p>
                 <div class="form-group">
-                    <label class="form-label">New Amount ({{ $loan->currency }})</label>
-                    <x-amount-input name="interest_amount" id="edit_interest_amount" required="true" />
+                    <label class="form-label">Due Date *</label>
+                    <input type="date" name="due_date" id="edit_sched_due_date" class="form-control" required>
+                </div>
+                <div class="form-group" style="margin-top:1.25rem;">
+                    <label class="form-label">Interest Amount Due ({{ $loan->currency }}) *</label>
+                    <x-amount-input name="interest_amount" id="edit_sched_interest_amount" required="true" />
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-outline" onclick="closeModal('editAmountModal')">Cancel</button>
-                <button type="submit" class="btn btn-primary-gradient">Update Amount</button>
+                <button type="button" class="btn btn-outline" onclick="closeModal('editScheduleModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary-gradient">Update Schedule</button>
             </div>
         </form>
     </div>
@@ -794,18 +798,31 @@ window.addEventListener('click', function(event) {
     }
 });
 
+function setAmountInputValue(id, val) {
+    const input = document.getElementById(id);
+    if (!input) return;
+    const hidden = input.parentElement ? input.parentElement.querySelector('.amount-hidden') : null;
+    if (val !== null && val !== undefined && val !== '' && !isNaN(val)) {
+        const num = parseFloat(val);
+        input.value = num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        if (hidden) hidden.value = num.toFixed(2);
+    } else {
+        input.value = '';
+        if (hidden) hidden.value = '';
+    }
+}
+
 function openSettleModal(id, suggestedAmount) {
     document.getElementById('settleForm').action = "/loans/{{ $loan->id }}/schedule/" + id + "/settle";
-    document.getElementById('settle_amount').nextElementSibling.value = suggestedAmount;
-    if (typeof formatAmountBlur === 'function') formatAmountBlur(document.getElementById('settle_amount'));
+    setAmountInputValue('settle_amount', suggestedAmount);
     openModal('settleModal');
 }
 
-function openEditInterestModal(id, currentAmount) {
-    document.getElementById('editAmountForm').action = "/loans/{{ $loan->id }}/schedule/" + id + "/edit";
-    document.getElementById('edit_interest_amount').nextElementSibling.value = currentAmount;
-    if (typeof formatAmountBlur === 'function') formatAmountBlur(document.getElementById('edit_interest_amount'));
-    openModal('editAmountModal');
+function openEditInterestModal(id, currentAmount, currentDate) {
+    document.getElementById('editScheduleForm').action = "/loans/{{ $loan->id }}/schedule/" + id + "/edit";
+    document.getElementById('edit_sched_due_date').value = currentDate || '';
+    setAmountInputValue('edit_sched_interest_amount', currentAmount);
+    openModal('editScheduleModal');
 }
 
 function toggleEditInterestFields(method) {

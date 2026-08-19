@@ -600,10 +600,20 @@ class LoanController extends Controller
 
     public function editInterestAmount(Request $request, $id, $scheduleId)
     {
-        DB::table('loan_interest_schedule')->where('id', $scheduleId)->update([
-            'interest_amount' => $request->input('interest_amount')
-        ]);
-        return back()->with('success', 'Interest amount updated.');
+        $updateData = [
+            'interest_amount' => $request->input('interest_amount'),
+            'updated_at' => now(),
+        ];
+        if ($request->filled('due_date')) {
+            $updateData['due_date'] = $request->input('due_date');
+        }
+
+        DB::table('loan_interest_schedule')
+            ->where('id', $scheduleId)
+            ->where('loan_id', $id)
+            ->update($updateData);
+
+        return back()->with('success', 'Interest schedule updated successfully.');
     }
 
     public function addInterestSchedule(Request $request, $id)

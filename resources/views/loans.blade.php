@@ -296,7 +296,7 @@
                 <div class="form-row" style="margin-top:1.25rem;">
                     <div class="form-col">
                         <label class="form-label">Principal Amount *</label>
-                        <input type="number" step="0.01" name="principal_amount" id="edit_principal_amount" class="form-control" required min="0">
+                        <x-amount-input name="principal_amount" id="edit_principal_amount" required="true" />
                     </div>
                     <div class="form-col">
                         <label class="form-label">Currency</label>
@@ -343,7 +343,7 @@
                 <!-- Method Dynamic Fields -->
                 <div id="edit_field_fixed_amount" class="form-group" style="margin-top:1.25rem;">
                     <label class="form-label">Fixed Interest Amount per Period</label>
-                    <input type="number" step="0.01" name="interest_amount" id="edit_interest_amount" class="form-control" placeholder="E.g. 2500.00">
+                    <x-amount-input name="interest_amount" id="edit_interest_amount" />
                 </div>
 
                 <div id="edit_field_percentage_rate" class="form-row" style="margin-top:1.25rem; display:none;">
@@ -362,7 +362,7 @@
 
                 <div id="edit_field_equal_installments" class="form-group" style="margin-top:1.25rem; display:none;">
                     <label class="form-label">Total Agreed Interest Amount</label>
-                    <input type="number" step="0.01" name="total_interest" id="edit_total_interest" class="form-control" placeholder="E.g. 50000.00">
+                    <x-amount-input name="total_interest" id="edit_total_interest" />
                 </div>
 
                 <div class="form-row" style="margin-top:1.25rem;">
@@ -532,6 +532,20 @@ function toggleEditInterestFields(method) {
     document.getElementById('edit_field_due_day').style.display = hasFrequency ? 'block' : 'none';
 }
 
+function setAmountInputValue(id, val) {
+    const input = document.getElementById(id);
+    if (!input) return;
+    const hidden = input.parentElement ? input.parentElement.querySelector('.amount-hidden') : null;
+    if (val !== null && val !== undefined && val !== '' && !isNaN(val)) {
+        const num = parseFloat(val);
+        input.value = num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        if (hidden) hidden.value = num.toFixed(2);
+    } else {
+        input.value = '';
+        if (hidden) hidden.value = '';
+    }
+}
+
 function openEditLoanModal(loan) {
     document.getElementById('editLoanForm').action = '/loans/' + loan.id;
     
@@ -539,7 +553,7 @@ function openEditLoanModal(loan) {
     if (partyEl) partyEl.value = loan.party_id || '';
     
     document.getElementById('edit_lender_name').value = loan.lender_name || '';
-    document.getElementById('edit_principal_amount').value = loan.principal_amount || '';
+    setAmountInputValue('edit_principal_amount', loan.principal_amount);
     
     const currEl = document.getElementById('edit_currency');
     if (currEl) currEl.value = loan.currency || 'LKR';
@@ -551,10 +565,10 @@ function openEditLoanModal(loan) {
     const method = loan.interest_method || 'fixed_amount';
     document.getElementById('edit_interest_method').value = method;
     
-    document.getElementById('edit_interest_amount').value = loan.interest_amount || '';
+    setAmountInputValue('edit_interest_amount', loan.interest_amount);
     document.getElementById('edit_interest_rate').value = loan.interest_rate || '';
     document.getElementById('edit_rate_basis').value = loan.rate_basis || 'flat';
-    document.getElementById('edit_total_interest').value = loan.total_interest || '';
+    setAmountInputValue('edit_total_interest', loan.total_interest);
     document.getElementById('edit_frequency').value = loan.frequency || 'monthly';
     document.getElementById('edit_due_day').value = loan.due_day || 5;
     document.getElementById('edit_guarantor').value = loan.guarantor || '';
