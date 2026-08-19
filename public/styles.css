@@ -751,7 +751,7 @@ ion-icon {
 }
 
 @media (max-width: 768px) {
-    /* Layout */
+    /* Layout with iOS Safe Area support */
     html, body {
         overflow-x: hidden;
         width: 100%;
@@ -764,19 +764,22 @@ ion-icon {
         overflow-x: hidden;
     }
 
-    /* Mobile Header */
+    /* Mobile Header with Notch / Dynamic Island Safe Area */
     .mobile-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 0.65rem 1rem;
+        padding-top: calc(0.65rem + env(safe-area-inset-top, 0px));
+        padding-bottom: 0.65rem;
+        padding-left: calc(1rem + env(safe-area-inset-left, 0px));
+        padding-right: calc(1rem + env(safe-area-inset-right, 0px));
         background-color: var(--bg-card);
         border-bottom: 1px solid var(--border-light);
         position: sticky;
         top: 0;
         z-index: 40;
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
     }
 
     .mobile-header-left, .mobile-header-right {
@@ -992,7 +995,10 @@ ion-icon {
     .main-content, .main-content.full-width {
         margin-left: 0 !important;
         width: 100% !important;
-        padding: 1rem 0.75rem !important;
+        padding-top: 1rem !important;
+        padding-bottom: calc(2rem + env(safe-area-inset-bottom, 0px)) !important;
+        padding-left: calc(0.75rem + env(safe-area-inset-left, 0px)) !important;
+        padding-right: calc(0.75rem + env(safe-area-inset-right, 0px)) !important;
         min-width: 0;
         box-sizing: border-box;
     }
