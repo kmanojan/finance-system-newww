@@ -332,14 +332,7 @@ class LoanController extends Controller
 
         DB::table('loans')->where('id', $id)->update($data);
 
-        \App\Services\ActivityLogService::logUpdate('Loan', $id, [
-            'lender_name' => $data['lender_name'] ?? $loan->lender_name,
-            'principal_amount' => $data['principal_amount'] ?? $loan->principal_amount,
-            'purpose' => $data['purpose'] ?? $loan->purpose,
-            'term_months' => $data['term_months'] ?? $loan->term_months,
-            'interest_amount' => $data['interest_amount'] ?? $loan->interest_amount,
-            'claimed_date' => $data['claimed_date'] ?? $loan->claimed_date,
-        ]);
+        \App\Services\ActivityLogService::logUpdate('Loan', $id, (array) $loan, $data);
 
         if ($request->hasFile('attachments')) {
             foreach ($request->file('attachments') as $file) {
