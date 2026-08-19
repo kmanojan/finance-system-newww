@@ -86,8 +86,11 @@
                 </button>
             </form>
         @endif
+        <button class="btn btn-primary-gradient btn-pill" onclick="openModal('editLoanModal')">
+            <ion-icon name="create-outline" style="vertical-align:middle;"></ion-icon> Edit Loan
+        </button>
         <button class="btn btn-outline btn-pill" onclick="openModal('changeStatusModal')">
-            <ion-icon name="create-outline" style="vertical-align:middle;"></ion-icon> Change Status
+            <ion-icon name="swap-horizontal-outline" style="vertical-align:middle;"></ion-icon> Change Status
         </button>
         <form action="/loans/{{ $loan->id }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this loan and all associated schedules and records? This action cannot be undone.');" style="margin: 0; display:inline;">
             @csrf
@@ -496,6 +499,134 @@
     </div>
 </div>
 
+<!-- Edit Loan Modal -->
+<div class="modal-backdrop" id="editLoanModal">
+    <div class="modal-card" style="max-width:720px;">
+        <div class="modal-header">
+            <h3 class="modal-title">Edit Loan Details</h3>
+            <button type="button" class="btn-close" onclick="closeModal('editLoanModal')">&times;</button>
+        </div>
+        <form action="/loans/{{ $loan->id }}" method="POST" enctype="multipart/form-data">
+            @csrf
+            @method('PUT')
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-col">
+                        <label class="form-label" style="font-weight:700;">Select Party / Lender</label>
+                        <select name="party_id" id="edit_party_id" class="form-control">
+                            <option value="">-- None / Custom Lender --</option>
+                            @foreach($parties as $p)
+                                <option value="{{ $p->id }}" {{ $loan->party_id == $p->id ? 'selected' : '' }}>{{ $p->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="form-col">
+                        <label class="form-label" style="font-weight:700;">Lender Name / Entity *</label>
+                        <input type="text" name="lender_name" id="edit_lender_name" class="form-control" value="{{ $loan->lender_name }}" required>
+                    </div>
+                </div>
+
+                <div class="form-row" style="margin-top:1.25rem;">
+                    <div class="form-col">
+                        <label class="form-label">Principal Amount *</label>
+                        <input type="number" step="0.01" name="principal_amount" id="edit_principal_amount" class="form-control" value="{{ $loan->principal_amount }}" required min="0">
+                    </div>
+                    <div class="form-col">
+                        <label class="form-label">Currency</label>
+                        <x-currency-selector name="currency" id="edit_currency" :selected="$loan->currency" required />
+                    </div>
+                </div>
+
+                <div class="form-row" style="margin-top:1.25rem;">
+                    <div class="form-col">
+                        <label class="form-label">Claimed / Start Date *</label>
+                        <input type="date" name="claimed_date" id="edit_claimed_date" class="form-control" value="{{ $loan->claimed_date ?: $loan->start_date }}" required>
+                    </div>
+                    <div class="form-col">
+                        <label class="form-label">Term (Months) *</label>
+                        <input type="number" name="term_months" id="edit_term_months" class="form-control" value="{{ $loan->term_months ?: 12 }}" min="1" required>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-top:1.25rem;">
+                    <label class="form-label">Purpose / Description</label>
+                    <input type="text" name="purpose" id="edit_purpose" class="form-control" value="{{ $loan->purpose }}" placeholder="E.g. Capital investment / Equipment purchase">
+                </div>
+
+                <div class="form-row" style="margin-top:1.25rem;">
+                    <div class="form-col">
+                        <label class="form-label">Interest Calculation Method</label>
+                        <select name="interest_method" id="edit_interest_method" class="form-control" onchange="toggleEditInterestFields(this.value)" required>
+                            <option value="fixed_amount" {{ $loan->interest_method === 'fixed_amount' ? 'selected' : '' }}>Fixed Amount per Period</option>
+                            <option value="percentage_rate" {{ $loan->interest_method === 'percentage_rate' ? 'selected' : '' }}>Percentage Rate (%)</option>
+                            <option value="equal_installments" {{ $loan->interest_method === 'equal_installments' ? 'selected' : '' }}>Equal Installments</option>
+                            <option value="custom_schedule" {{ $loan->interest_method === 'custom_schedule' ? 'selected' : '' }}>Custom Schedule</option>
+                            <option value="no_interest" {{ $loan->interest_method === 'no_interest' ? 'selected' : '' }}>No Interest</option>
+                        </select>
+                    </div>
+                    <div class="form-col" id="edit_field_frequency">
+                        <label class="form-label">Payment Frequency</label>
+                        <select name="frequency" id="edit_frequency" class="form-control">
+                            <option value="monthly" {{ $loan->frequency === 'monthly' ? 'selected' : '' }}>Monthly</option>
+                            <option value="quarterly" {{ $loan->frequency === 'quarterly' ? 'selected' : '' }}>Quarterly</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Method Dynamic Fields -->
+                <div id="edit_field_fixed_amount" class="form-group" style="margin-top:1.25rem; {{ $loan->interest_method === 'fixed_amount' ? '' : 'display:none;' }}">
+                    <label class="form-label">Fixed Interest Amount per Period</label>
+                    <input type="number" step="0.01" name="interest_amount" id="edit_interest_amount" class="form-control" value="{{ $loan->interest_amount }}" placeholder="E.g. 2500.00">
+                </div>
+
+                <div id="edit_field_percentage_rate" class="form-row" style="margin-top:1.25rem; {{ $loan->interest_method === 'percentage_rate' ? '' : 'display:none;' }}">
+                    <div class="form-col">
+                        <label class="form-label">Interest Rate (%)</label>
+                        <input type="number" step="0.01" name="interest_rate" id="edit_interest_rate" class="form-control" value="{{ $loan->interest_rate }}" placeholder="E.g. 10.5">
+                    </div>
+                    <div class="form-col">
+                        <label class="form-label">Rate Basis</label>
+                        <select name="rate_basis" id="edit_rate_basis" class="form-control">
+                            <option value="flat" {{ $loan->rate_basis === 'flat' ? 'selected' : '' }}>Flat Interest Rate</option>
+                            <option value="reducing" {{ $loan->rate_basis === 'reducing' ? 'selected' : '' }}>Reducing Balance</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="edit_field_equal_installments" class="form-group" style="margin-top:1.25rem; {{ $loan->interest_method === 'equal_installments' ? '' : 'display:none;' }}">
+                    <label class="form-label">Total Agreed Interest Amount</label>
+                    <input type="number" step="0.01" name="total_interest" id="edit_total_interest" class="form-control" value="{{ $loan->total_interest }}" placeholder="E.g. 50000.00">
+                </div>
+
+                <div class="form-row" style="margin-top:1.25rem;">
+                    <div class="form-col" id="edit_field_due_day">
+                        <label class="form-label">Due Day of Month</label>
+                        <input type="number" name="due_day" id="edit_due_day" class="form-control" value="{{ $loan->due_day ?: 5 }}" min="1" max="31">
+                    </div>
+                    <div class="form-col">
+                        <label class="form-label">Guarantor (Optional)</label>
+                        <input type="text" name="guarantor" id="edit_guarantor" class="form-control" value="{{ $loan->guarantor }}" placeholder="Guarantor name / contact">
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-top:1.25rem;">
+                    <label class="form-label">Collateral / Security (Optional)</label>
+                    <textarea name="collateral" id="edit_collateral" class="form-control" rows="2" placeholder="Pledged assets or guarantees">{{ $loan->collateral }}</textarea>
+                </div>
+
+                <div class="form-group" style="margin-top:1.25rem;">
+                    <label class="form-label">Add More Attachments</label>
+                    <input type="file" name="attachments[]" class="form-control" multiple>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="closeModal('editLoanModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary-gradient">Update Loan Details</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- Settle Interest Modal -->
 <div class="modal-backdrop" id="settleModal">
     <div class="modal-card">
@@ -675,6 +806,15 @@ function openEditInterestModal(id, currentAmount) {
     document.getElementById('edit_interest_amount').nextElementSibling.value = currentAmount;
     if (typeof formatAmountBlur === 'function') formatAmountBlur(document.getElementById('edit_interest_amount'));
     openModal('editAmountModal');
+}
+
+function toggleEditInterestFields(method) {
+    document.getElementById('edit_field_fixed_amount').style.display = method === 'fixed_amount' ? 'block' : 'none';
+    document.getElementById('edit_field_percentage_rate').style.display = method === 'percentage_rate' ? 'flex' : 'none';
+    document.getElementById('edit_field_equal_installments').style.display = method === 'equal_installments' ? 'block' : 'none';
+    const hasFrequency = (method !== 'no_interest' && method !== 'custom_schedule');
+    document.getElementById('edit_field_frequency').style.display = hasFrequency ? 'block' : 'none';
+    document.getElementById('edit_field_due_day').style.display = hasFrequency ? 'block' : 'none';
 }
 </script>
 @endsection

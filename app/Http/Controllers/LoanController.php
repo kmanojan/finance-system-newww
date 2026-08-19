@@ -309,6 +309,117 @@ class LoanController extends Controller
         return back()->with('success', 'Loan created successfully! Please activate it to generate the schedule.');
     }
 
+    public function update(Request $request, $id)
+    {
+        $loan = DB::table('loans')->where('id', $id)->first();
+        if (!$loan) abort(404);
+
+        $data = $request->except(['_token', '_method', 'attachments', 'custom_dates', 'custom_amounts']);
+        $data['updated_at'] = now();
+
+        if ($request->filled('party_id')) {
+            $party = DB::table('parties')->where('id', $request->input('party_id'))->first();
+            if ($party) {
+                $data['party_id'] = $party->id;
+                if (empty($data['lender_name'])) {
+                    $data['lender_name'] = $party->name;
+                }
+            }
+        }
+
+        $oldPrincipal = $loan->principal_amount;
+        $oldClaimedDate = $loan->claimed_date;
+
+        DB::table('loans')->where('id', $id)->update($data);
+
+        \App\Services\ActivityLogService::logUpdate('Loan', $id, [
+            'lender_name' => $data['lender_name'] ?? $loan->lender_name,
+            'principal_amount' => $data['principal_amount'] ?? $loan->principal_amount,
+            'purpose' => $data['purpose'] ?? $loan->purpose,
+            'term_months' => $data['term_months'] ?? $loan->term_months,
+            'interest_amount' => $data['interest_amount'] ?? $loan->interest_amount,
+            'claimed_date' => $data['claimed_date'] ?? $loan->claimed_date,
+        ]);
+
+        if ($request->hasFile('attachments')) {
+            foreach ($request->file('attachments') as $file) {
+                $path = $file->store('attachments/loans', 'public');
+                DB::table('attachments')->insert([
+                    'model_id' => $id,
+                    'model_type' => 'Loan',
+                    'file_name' => $file->getClientOriginalName(),
+                    'file_path' => $path,
+                    'created_at' => now()
+                ]);
+            }
+        }
+
+        $updatedLoan = (array) DB::table('loans')->where('id', $id)->first();
+
+        // Check if any schedule has payments
+        $hasPaidSchedules = DB::table('loan_interest_schedule')
+            ->where('loan_id', $id)
+            ->where(function($q) {
+                $q->where('paid_amount', '>', 0)
+                  ->orWhere('status', 'paid')
+                  ->orWhere('status', 'partially_paid');
+            })
+            ->exists();
+
+        if (!$hasPaidSchedules) {
+            // Safe to regenerate entire schedule if no payments recorded yet
+            DB::table('loan_interest_schedule')->where('loan_id', $id)->delete();
+
+            if ($updatedLoan['interest_method'] === 'custom_schedule') {
+                $customDates = $request->input('custom_dates', []);
+                $customAmounts = $request->input('custom_amounts', []);
+                $inserts = [];
+                for($i = 0; $i < count($customDates); $i++) {
+                    if(!empty($customDates[$i]) && !empty($customAmounts[$i])) {
+                        $inserts[] = [
+                            'loan_id' => $id,
+                            'due_date' => $customDates[$i],
+                            'interest_amount' => $customAmounts[$i],
+                            'status' => 'pending',
+                            'created_at' => now(),
+                        ];
+                    }
+                }
+                if (!empty($inserts)) {
+                    DB::table('loan_interest_schedule')->insert($inserts);
+                }
+            } elseif ($updatedLoan['status'] === 'active' && $updatedLoan['interest_method'] !== 'no_interest') {
+                $this->generateInterestSchedule($id, $updatedLoan['claimed_date'] ?: now()->format('Y-m-d'), $updatedLoan);
+            }
+        } else {
+            // For fixed amount or percentage rate, update future pending schedules
+            if ($updatedLoan['interest_method'] === 'fixed_amount' && !empty($updatedLoan['interest_amount'])) {
+                DB::table('loan_interest_schedule')
+                    ->where('loan_id', $id)
+                    ->where('status', 'pending')
+                    ->where('paid_amount', '<=', 0)
+                    ->update(['interest_amount' => $updatedLoan['interest_amount']]);
+            } elseif ($updatedLoan['interest_method'] === 'percentage_rate') {
+                $this->recalculateReducingBalance($id);
+            }
+        }
+
+        // Sync initial disbursement transaction if active and amounts changed
+        if ($loan->status === 'active' && ($oldPrincipal != $updatedLoan['principal_amount'] || $oldClaimedDate != $updatedLoan['claimed_date'])) {
+            DB::table('transactions')
+                ->where('reference_no', "LOAN-ACT-{$id}")
+                ->update([
+                    'amount' => $updatedLoan['principal_amount'],
+                    'currency' => $updatedLoan['currency'],
+                    'transaction_date' => $updatedLoan['claimed_date'] ?: now()->format('Y-m-d'),
+                    'description' => "Loan Disbursement from {$updatedLoan['lender_name']}" . ($updatedLoan['purpose'] ? " ({$updatedLoan['purpose']})" : ""),
+                    'updated_at' => now()
+                ]);
+        }
+
+        return back()->with('success', 'Loan updated successfully!');
+    }
+
     private function generateInterestSchedule($loanId, $startDate, $loanData, $startFromDate = null)
     {
         if ($loanData['interest_method'] === 'no_interest') return;
@@ -390,7 +501,9 @@ class LoanController extends Controller
                         ->where('model_id', $id)
                         ->get();
                         
-        return view('loans-show', compact('loan', 'schedules', 'principalRecords', 'attachments'));
+        $parties = DB::table('parties')->orderBy('name')->get();
+                        
+        return view('loans-show', compact('loan', 'schedules', 'principalRecords', 'attachments', 'parties'));
     }
 
     public function activate($id)

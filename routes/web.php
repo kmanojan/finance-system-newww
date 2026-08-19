@@ -222,6 +222,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/loans', [LoanController::class, 'store']);
 
     Route::get('/loans/{id}', [LoanController::class, 'show']);
+    Route::put('/loans/{id}', [LoanController::class, 'update']);
     Route::post('/loans/{id}/activate', [LoanController::class, 'activate']);
     Route::post('/loans/{id}/status', [LoanController::class, 'updateStatus']);
     Route::post('/loans/{id}/schedule', [LoanController::class, 'addInterestSchedule']);

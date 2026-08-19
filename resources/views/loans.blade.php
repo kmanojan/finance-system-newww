@@ -206,8 +206,11 @@
                         <a href="/loans/{{ $loan->id }}" class="btn btn-outline" style="padding:0.25rem 0.65rem; font-size:0.8rem; text-decoration:none; border-radius:6px;">
                             View
                         </a>
-                        <button type="button" class="action-btn" title="Change Status" onclick="openChangeStatusModal({{ $loan->id }}, '{{ $loan->status }}')" style="background:var(--bg-page); border:1px solid var(--border); border-radius:6px; padding:0.25rem 0.5rem; cursor:pointer; color:var(--text-heading);">
+                        <button type="button" class="action-btn" title="Edit Loan" onclick='openEditLoanModal(@json($loan))' style="background:var(--bg-page); border:1px solid var(--border); border-radius:6px; padding:0.25rem 0.5rem; cursor:pointer; color:var(--primary);">
                             <ion-icon name="create-outline" style="font-size:0.95rem;"></ion-icon>
+                        </button>
+                        <button type="button" class="action-btn" title="Change Status" onclick="openChangeStatusModal({{ $loan->id }}, '{{ $loan->status }}')" style="background:var(--bg-page); border:1px solid var(--border); border-radius:6px; padding:0.25rem 0.5rem; cursor:pointer; color:var(--text-heading);">
+                            <ion-icon name="swap-horizontal-outline" style="font-size:0.95rem;"></ion-icon>
                         </button>
                         <form action="/loans/{{ $loan->id }}" method="POST" style="display:inline; margin:0;" onsubmit="return confirm('Delete this loan and all associated schedule/repayment records?');">
                             @csrf
@@ -258,6 +261,134 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline" onclick="closeModal('changeStatusModal')">Cancel</button>
                 <button type="submit" class="btn btn-primary-gradient">Save Status</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Loan Modal -->
+<div class="modal-backdrop" id="editLoanModal">
+    <div class="modal-card" style="max-width:720px;">
+        <div class="modal-header">
+            <h3 class="modal-title">Edit Loan Details</h3>
+            <button type="button" class="btn-close" onclick="closeModal('editLoanModal')">&times;</button>
+        </div>
+        <form id="editLoanForm" method="POST" enctype="multipart/form-data">
+            @csrf
+            @method('PUT')
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-col">
+                        <label class="form-label" style="font-weight:700;">Select Party / Lender</label>
+                        <select name="party_id" id="edit_party_id" class="form-control">
+                            <option value="">-- None / Custom Lender --</option>
+                            @foreach($parties as $p)
+                                <option value="{{ $p->id }}">{{ $p->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="form-col">
+                        <label class="form-label" style="font-weight:700;">Lender Name / Entity *</label>
+                        <input type="text" name="lender_name" id="edit_lender_name" class="form-control" required>
+                    </div>
+                </div>
+
+                <div class="form-row" style="margin-top:1.25rem;">
+                    <div class="form-col">
+                        <label class="form-label">Principal Amount *</label>
+                        <input type="number" step="0.01" name="principal_amount" id="edit_principal_amount" class="form-control" required min="0">
+                    </div>
+                    <div class="form-col">
+                        <label class="form-label">Currency</label>
+                        <x-currency-selector name="currency" id="edit_currency" selected="LKR" required />
+                    </div>
+                </div>
+
+                <div class="form-row" style="margin-top:1.25rem;">
+                    <div class="form-col">
+                        <label class="form-label">Claimed / Start Date *</label>
+                        <input type="date" name="claimed_date" id="edit_claimed_date" class="form-control" required>
+                    </div>
+                    <div class="form-col">
+                        <label class="form-label">Term (Months) *</label>
+                        <input type="number" name="term_months" id="edit_term_months" class="form-control" min="1" required>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-top:1.25rem;">
+                    <label class="form-label">Purpose / Description</label>
+                    <input type="text" name="purpose" id="edit_purpose" class="form-control" placeholder="E.g. Capital investment / Equipment purchase">
+                </div>
+
+                <div class="form-row" style="margin-top:1.25rem;">
+                    <div class="form-col">
+                        <label class="form-label">Interest Calculation Method</label>
+                        <select name="interest_method" id="edit_interest_method" class="form-control" onchange="toggleEditInterestFields(this.value)" required>
+                            <option value="fixed_amount">Fixed Amount per Period</option>
+                            <option value="percentage_rate">Percentage Rate (%)</option>
+                            <option value="equal_installments">Equal Installments</option>
+                            <option value="custom_schedule">Custom Schedule</option>
+                            <option value="no_interest">No Interest</option>
+                        </select>
+                    </div>
+                    <div class="form-col" id="edit_field_frequency">
+                        <label class="form-label">Payment Frequency</label>
+                        <select name="frequency" id="edit_frequency" class="form-control">
+                            <option value="monthly">Monthly</option>
+                            <option value="quarterly">Quarterly</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Method Dynamic Fields -->
+                <div id="edit_field_fixed_amount" class="form-group" style="margin-top:1.25rem;">
+                    <label class="form-label">Fixed Interest Amount per Period</label>
+                    <input type="number" step="0.01" name="interest_amount" id="edit_interest_amount" class="form-control" placeholder="E.g. 2500.00">
+                </div>
+
+                <div id="edit_field_percentage_rate" class="form-row" style="margin-top:1.25rem; display:none;">
+                    <div class="form-col">
+                        <label class="form-label">Interest Rate (%)</label>
+                        <input type="number" step="0.01" name="interest_rate" id="edit_interest_rate" class="form-control" placeholder="E.g. 10.5">
+                    </div>
+                    <div class="form-col">
+                        <label class="form-label">Rate Basis</label>
+                        <select name="rate_basis" id="edit_rate_basis" class="form-control">
+                            <option value="flat">Flat Interest Rate</option>
+                            <option value="reducing">Reducing Balance</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="edit_field_equal_installments" class="form-group" style="margin-top:1.25rem; display:none;">
+                    <label class="form-label">Total Agreed Interest Amount</label>
+                    <input type="number" step="0.01" name="total_interest" id="edit_total_interest" class="form-control" placeholder="E.g. 50000.00">
+                </div>
+
+                <div class="form-row" style="margin-top:1.25rem;">
+                    <div class="form-col" id="edit_field_due_day">
+                        <label class="form-label">Due Day of Month</label>
+                        <input type="number" name="due_day" id="edit_due_day" class="form-control" min="1" max="31">
+                    </div>
+                    <div class="form-col">
+                        <label class="form-label">Guarantor (Optional)</label>
+                        <input type="text" name="guarantor" id="edit_guarantor" class="form-control" placeholder="Guarantor name / contact">
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-top:1.25rem;">
+                    <label class="form-label">Collateral / Security (Optional)</label>
+                    <textarea name="collateral" id="edit_collateral" class="form-control" rows="2" placeholder="Pledged assets or guarantees"></textarea>
+                </div>
+
+                <div class="form-group" style="margin-top:1.25rem;">
+                    <label class="form-label">Add More Attachments</label>
+                    <input type="file" name="attachments[]" class="form-control" multiple>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="closeModal('editLoanModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary-gradient">Update Loan Details</button>
             </div>
         </form>
     </div>
@@ -390,6 +521,47 @@ function toggleInterestFields(method) {
     document.getElementById('field_percentage_rate').style.display = method === 'percentage_rate' ? 'flex' : 'none';
     document.getElementById('field_equal_installments').style.display = method === 'equal_installments' ? 'block' : 'none';
     document.getElementById('field_frequency').style.display = (method === 'no_interest' || method === 'custom_schedule') ? 'none' : 'flex';
+}
+
+function toggleEditInterestFields(method) {
+    document.getElementById('edit_field_fixed_amount').style.display = method === 'fixed_amount' ? 'block' : 'none';
+    document.getElementById('edit_field_percentage_rate').style.display = method === 'percentage_rate' ? 'flex' : 'none';
+    document.getElementById('edit_field_equal_installments').style.display = method === 'equal_installments' ? 'block' : 'none';
+    const hasFrequency = (method !== 'no_interest' && method !== 'custom_schedule');
+    document.getElementById('edit_field_frequency').style.display = hasFrequency ? 'block' : 'none';
+    document.getElementById('edit_field_due_day').style.display = hasFrequency ? 'block' : 'none';
+}
+
+function openEditLoanModal(loan) {
+    document.getElementById('editLoanForm').action = '/loans/' + loan.id;
+    
+    const partyEl = document.getElementById('edit_party_id');
+    if (partyEl) partyEl.value = loan.party_id || '';
+    
+    document.getElementById('edit_lender_name').value = loan.lender_name || '';
+    document.getElementById('edit_principal_amount').value = loan.principal_amount || '';
+    
+    const currEl = document.getElementById('edit_currency');
+    if (currEl) currEl.value = loan.currency || 'LKR';
+    
+    document.getElementById('edit_claimed_date').value = loan.claimed_date || loan.start_date || '';
+    document.getElementById('edit_term_months').value = loan.term_months || 12;
+    document.getElementById('edit_purpose').value = loan.purpose || '';
+    
+    const method = loan.interest_method || 'fixed_amount';
+    document.getElementById('edit_interest_method').value = method;
+    
+    document.getElementById('edit_interest_amount').value = loan.interest_amount || '';
+    document.getElementById('edit_interest_rate').value = loan.interest_rate || '';
+    document.getElementById('edit_rate_basis').value = loan.rate_basis || 'flat';
+    document.getElementById('edit_total_interest').value = loan.total_interest || '';
+    document.getElementById('edit_frequency').value = loan.frequency || 'monthly';
+    document.getElementById('edit_due_day').value = loan.due_day || 5;
+    document.getElementById('edit_guarantor').value = loan.guarantor || '';
+    document.getElementById('edit_collateral').value = loan.collateral || '';
+
+    toggleEditInterestFields(method);
+    openModal('editLoanModal');
 }
 </script>
 @endsection
