@@ -82,5 +82,12 @@
                 }
             ]
         }
+    ],
+    "id": "/",
+    "scope": "/",
+    "display_override": [
+        "standalone",
+        "fullscreen",
+        "minimal-ui"
     ]
 }
