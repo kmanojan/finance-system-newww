@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Carbon\Carbon;
 
 class LoanController extends Controller
@@ -92,6 +93,10 @@ class LoanController extends Controller
             $loan->total_outstanding = $outstandingPrincipal + $loanPendingInterest;
             $loan->total_paid = $loan->principal_repaid + $loan->interest_paid;
 
+            $loan->net_disbursed = !empty($loan->is_upfront_interest) 
+                ? max(0, $loan->principal_amount - ($loan->upfront_interest_amount ?: $loan->interest_amount))
+                : $loan->principal_amount;
+
             if ($loan->status === 'active' || $loan->status === 'pending') {
                 $totalOutstandingPrincipal += $outstandingPrincipal;
                 $totalOutstandingInterest += $loanPendingInterest;
@@ -103,7 +108,7 @@ class LoanController extends Controller
                     ->orderBy('due_date', 'asc')
                     ->first();
                     
-                $loan->next_due_date = $nextDue ? $nextDue->due_date : 'N/A';
+                $loan->next_due_date = $nextDue ? $nextDue->due_date : ($loan->maturity_date ?: 'N/A');
             } else {
                 $loan->next_due_date = 'N/A';
             }
@@ -257,6 +262,24 @@ class LoanController extends Controller
             }
         }
         
+        $data['is_upfront_interest'] = $request->has('is_upfront_interest') ? 1 : 0;
+        if ($data['is_upfront_interest']) {
+            if (empty($data['upfront_interest_amount'])) {
+                $data['upfront_interest_amount'] = $data['interest_amount'] ?? 0;
+            }
+        } else {
+            $data['upfront_interest_amount'] = null;
+        }
+
+        if (empty($data['maturity_date']) && !empty($data['claimed_date'])) {
+            $term = !empty($data['term_months']) ? (int)$data['term_months'] : 1;
+            $data['maturity_date'] = Carbon::parse($data['claimed_date'])->addMonths($term)->format('Y-m-d');
+        }
+
+        if (empty($data['reminder_days'])) {
+            $data['reminder_days'] = 3;
+        }
+
         if(empty($data['status'])) $data['status'] = 'pending';
 
         $loanId = DB::table('loans')->insertGetId($data);
@@ -302,8 +325,11 @@ class LoanController extends Controller
         }
 
         // Schedule is generated later when loan is activated (for non-custom)
-        if ($data['status'] === 'active' && $data['interest_method'] !== 'custom_schedule') {
-            $this->generateInterestSchedule($loanId, $data['claimed_date'], $data);
+        if ($data['status'] === 'active') {
+            if ($data['interest_method'] !== 'custom_schedule') {
+                $this->generateInterestSchedule($loanId, $data['claimed_date'], $data);
+            }
+            $this->syncLoanMaturityReminder($loanId);
         }
 
         return back()->with('success', 'Loan created successfully! Please activate it to generate the schedule.');
@@ -325,6 +351,24 @@ class LoanController extends Controller
                     $data['lender_name'] = $party->name;
                 }
             }
+        }
+
+        $data['is_upfront_interest'] = $request->has('is_upfront_interest') ? 1 : 0;
+        if ($data['is_upfront_interest']) {
+            if (empty($data['upfront_interest_amount'])) {
+                $data['upfront_interest_amount'] = $data['interest_amount'] ?? 0;
+            }
+        } else {
+            $data['upfront_interest_amount'] = null;
+        }
+
+        if (empty($data['maturity_date']) && !empty($data['claimed_date'])) {
+            $term = !empty($data['term_months']) ? (int)$data['term_months'] : 1;
+            $data['maturity_date'] = Carbon::parse($data['claimed_date'])->addMonths($term)->format('Y-m-d');
+        }
+
+        if (empty($data['reminder_days'])) {
+            $data['reminder_days'] = 3;
         }
 
         $oldPrincipal = $loan->principal_amount;
@@ -359,8 +403,13 @@ class LoanController extends Controller
             })
             ->exists();
 
-        if (!$hasPaidSchedules) {
-            // Safe to regenerate entire schedule if no payments recorded yet
+        $paidCount = DB::table('loan_interest_schedule')
+            ->where('loan_id', $id)
+            ->where('paid_amount', '>', 0)
+            ->count();
+
+        // If no payments recorded yet, or only upfront row was paid, safe to regenerate schedule
+        if (!$hasPaidSchedules || ($paidCount === 1 && !empty($loan->is_upfront_interest))) {
             DB::table('loan_interest_schedule')->where('loan_id', $id)->delete();
 
             if ($updatedLoan['interest_method'] === 'custom_schedule') {
@@ -410,6 +459,8 @@ class LoanController extends Controller
                 ]);
         }
 
+        $this->syncLoanMaturityReminder($id);
+
         return back()->with('success', 'Loan updated successfully!');
     }
 
@@ -417,51 +468,93 @@ class LoanController extends Controller
     {
         if ($loanData['interest_method'] === 'no_interest') return;
 
-        $termMonths = !empty($loanData['term_months']) ? $loanData['term_months'] : 12; // Default to 12 if open-ended
-        
+        $termMonths = !empty($loanData['term_months']) ? (int)$loanData['term_months'] : 1;
         $dueDay = $loanData['due_day'] ?? Carbon::parse($startDate)->day;
-        
+        $isUpfront = !empty($loanData['is_upfront_interest']);
+        $upfrontAmount = !empty($loanData['upfront_interest_amount']) ? (float)$loanData['upfront_interest_amount'] : null;
+
         $inserts = [];
         $currentDate = Carbon::parse($startDate);
-        
-        $outstanding = $loanData['principal_amount'];
-        
-        for ($i = 1; $i <= $termMonths; $i++) {
-            if (isset($loanData['frequency']) && $loanData['frequency'] === 'quarterly') {
-                $currentDate->addMonths(3);
-            } else {
-                $currentDate->addMonth(); // Monthly
-            }
-            
-            // Adjust day
-            $dueDate = $currentDate->copy()->setDay(min($dueDay, $currentDate->daysInMonth));
-            
-            // Skip dates before startFromDate if regenerating
-            if ($startFromDate && $dueDate->lt(Carbon::parse($startFromDate))) {
-                continue;
-            }
-            
-            $interestAmount = 0;
+        $outstanding = (float)($loanData['principal_amount'] ?? 0);
+
+        $computePeriodicInterest = function() use ($loanData, $outstanding, $termMonths) {
             if ($loanData['interest_method'] === 'fixed_amount') {
-                $interestAmount = $loanData['interest_amount'] ?? 0;
+                return (float)($loanData['interest_amount'] ?? 0);
             } elseif ($loanData['interest_method'] === 'percentage_rate') {
                 if (isset($loanData['rate_basis']) && $loanData['rate_basis'] === 'reducing') {
-                    $interestAmount = $outstanding * (($loanData['interest_rate'] ?? 0) / 100);
+                    return $outstanding * (($loanData['interest_rate'] ?? 0) / 100);
                 } else {
-                    $interestAmount = $loanData['principal_amount'] * (($loanData['interest_rate'] ?? 0) / 100);
+                    return $outstanding * (($loanData['interest_rate'] ?? 0) / 100);
                 }
             } elseif ($loanData['interest_method'] === 'equal_installments') {
-                $totalToPay = $loanData['principal_amount'] + ($loanData['total_interest'] ?? 0);
-                $interestAmount = $totalToPay / $termMonths;
+                $totalToPay = $outstanding + ($loanData['total_interest'] ?? 0);
+                return $totalToPay / max(1, $termMonths);
             }
+            return 0;
+        };
 
+        if ($isUpfront) {
+            $firstAmount = ($upfrontAmount !== null && $upfrontAmount > 0) ? $upfrontAmount : $computePeriodicInterest();
+            
+            // Period 1: Upfront interest paid on Claimed Date
             $inserts[] = [
                 'loan_id' => $loanId,
-                'due_date' => $dueDate->format('Y-m-d'),
-                'interest_amount' => $interestAmount,
-                'status' => 'pending',
+                'due_date' => Carbon::parse($startDate)->format('Y-m-d'),
+                'interest_amount' => $firstAmount,
+                'paid_amount' => $firstAmount,
+                'paid_date' => Carbon::parse($startDate)->format('Y-m-d'),
+                'status' => 'paid',
                 'created_at' => now(),
             ];
+
+            // For subsequent periods (if term > 1)
+            for ($i = 2; $i <= $termMonths; $i++) {
+                if (isset($loanData['frequency']) && $loanData['frequency'] === 'quarterly') {
+                    $currentDate->addMonths(3);
+                } else {
+                    $currentDate->addMonth();
+                }
+
+                $dueDate = $currentDate->copy()->setDay(min($dueDay, $currentDate->daysInMonth));
+
+                if ($startFromDate && $dueDate->lt(Carbon::parse($startFromDate))) {
+                    continue;
+                }
+
+                $inserts[] = [
+                    'loan_id' => $loanId,
+                    'due_date' => $dueDate->format('Y-m-d'),
+                    'interest_amount' => $computePeriodicInterest(),
+                    'paid_amount' => 0.00,
+                    'paid_date' => null,
+                    'status' => 'pending',
+                    'created_at' => now(),
+                ];
+            }
+        } else {
+            for ($i = 1; $i <= $termMonths; $i++) {
+                if (isset($loanData['frequency']) && $loanData['frequency'] === 'quarterly') {
+                    $currentDate->addMonths(3);
+                } else {
+                    $currentDate->addMonth();
+                }
+
+                $dueDate = $currentDate->copy()->setDay(min($dueDay, $currentDate->daysInMonth));
+
+                if ($startFromDate && $dueDate->lt(Carbon::parse($startFromDate))) {
+                    continue;
+                }
+
+                $inserts[] = [
+                    'loan_id' => $loanId,
+                    'due_date' => $dueDate->format('Y-m-d'),
+                    'interest_amount' => $computePeriodicInterest(),
+                    'paid_amount' => 0.00,
+                    'paid_date' => null,
+                    'status' => 'pending',
+                    'created_at' => now(),
+                ];
+            }
         }
 
         if (!empty($inserts)) {
@@ -489,6 +582,10 @@ class LoanController extends Controller
         $outstanding = $loan->principal_amount + $draws - $repayments;
         $loan->outstanding_principal = $outstanding;
 
+        $loan->net_disbursed = !empty($loan->is_upfront_interest) 
+            ? max(0, $loan->principal_amount - ($loan->upfront_interest_amount ?: $loan->interest_amount))
+            : $loan->principal_amount;
+
         $attachments = DB::table('attachments')
                         ->where('model_type', 'Loan')
                         ->where('model_id', $id)
@@ -508,7 +605,7 @@ class LoanController extends Controller
             // convert to array for generateInterestSchedule
             $loanData = (array) $loan;
             if ($loanData['interest_method'] !== 'custom_schedule') {
-                $this->generateInterestSchedule($id, $loan->claimed_date, $loanData);
+                $this->generateInterestSchedule($id, $loan->claimed_date ?: now()->format('Y-m-d'), $loanData);
             }
             
             // Auto-post Income Transaction for Loan Disbursement
@@ -527,9 +624,71 @@ class LoanController extends Controller
                 'updated_at' => now()
             ]);
 
+            // If upfront interest was deducted, record upfront interest expense transaction
+            if (!empty($loan->is_upfront_interest)) {
+                $upfrontAmt = $loan->upfront_interest_amount ?: $loan->interest_amount;
+                if ($upfrontAmt > 0) {
+                    $intCatId = $this->getCategoryId('Interest Expense', 'expense');
+                    DB::table('transactions')->insert([
+                        'type' => 'expense',
+                        'category_id' => $intCatId,
+                        'department_id' => $this->getDepartmentId(),
+                        'amount' => $upfrontAmt,
+                        'currency' => $loan->currency,
+                        'transaction_date' => $loan->claimed_date ?: now()->format('Y-m-d'),
+                        'description' => "Upfront Interest Deduction at Disbursement for Loan from {$loan->lender_name}",
+                        'reference_no' => "LOAN-INT-{$loan->id}-UPFRONT",
+                        'payment_method' => 'Normal',
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ]);
+                }
+            }
+
+            $this->syncLoanMaturityReminder($id);
+
             return back()->with('success', 'Loan activated, interest schedule generated, and disbursement posted to ledger!');
         }
         return back()->with('error', 'Loan cannot be activated.');
+    }
+
+    public function syncLoanMaturityReminder($loanId)
+    {
+        $loan = DB::table('loans')->where('id', $loanId)->first();
+        if (!$loan || empty($loan->maturity_date)) return;
+        if (!Schema::hasTable('reminders')) return;
+
+        $remTitle = "Loan Principal Repayment Due: {$loan->lender_name} ({$loan->currency} " . number_format($loan->principal_amount, 2) . ")";
+        $existing = DB::table('reminders')
+            ->where('type', 'loan')
+            ->where('reference_id', $loanId)
+            ->first();
+
+        $status = in_array($loan->status, ['settled', 'closed']) ? 'completed' : 'pending';
+
+        if ($existing) {
+            DB::table('reminders')->where('id', $existing->id)->update([
+                'title' => $remTitle,
+                'due_date' => $loan->maturity_date,
+                'notify_before_days' => $loan->reminder_days ?? 3,
+                'status' => $status,
+                'notes' => "Full principal repayment of {$loan->currency} " . number_format($loan->principal_amount, 2) . " due for {$loan->lender_name}",
+                'updated_at' => now(),
+            ]);
+        } else {
+            DB::table('reminders')->insert([
+                'title' => $remTitle,
+                'type' => 'loan',
+                'reference_id' => $loanId,
+                'reference_type' => 'Loan',
+                'due_date' => $loan->maturity_date,
+                'notify_before_days' => $loan->reminder_days ?? 3,
+                'status' => $status,
+                'notes' => "Full principal repayment of {$loan->currency} " . number_format($loan->principal_amount, 2) . " due for {$loan->lender_name}",
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
     }
 
     public function updateStatus(Request $request, $id)

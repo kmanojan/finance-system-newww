@@ -152,7 +152,12 @@
                     @endif
                 </td>
                 <td style="padding:0.85rem 1rem; text-align:right; font-weight:600; color:var(--text-heading); font-size:0.85rem;">
-                    {{ $loan->currency }} {{ number_format($loan->principal_amount, 2) }}
+                    <div>{{ $loan->currency }} {{ number_format($loan->principal_amount, 2) }}</div>
+                    @if(!empty($loan->is_upfront_interest))
+                        <div style="font-size:0.74rem; color:var(--primary); font-weight:700;" title="Disbursed after upfront interest deduction">
+                            Net Recv: {{ number_format($loan->net_disbursed, 2) }}
+                        </div>
+                    @endif
                 </td>
                 <td style="padding:0.85rem 1rem; text-align:right;">
                     <span style="color:var(--success); font-weight:800; font-size:0.9rem;">
@@ -184,9 +189,17 @@
                     @endif
                 </td>
                 <td style="padding:0.85rem 1rem; text-align:left;">
-                    <span class="font-medium {{ $loan->next_due_date !== 'N/A' && \Carbon\Carbon::parse($loan->next_due_date)->isPast() ? 'text-danger' : '' }}" style="font-size:0.85rem;">
+                    <div class="font-medium {{ $loan->next_due_date !== 'N/A' && \Carbon\Carbon::parse($loan->next_due_date)->isPast() ? 'text-danger' : '' }}" style="font-size:0.85rem;">
                         {{ $loan->next_due_date }}
-                    </span>
+                    </div>
+                    @if(!empty($loan->is_upfront_interest))
+                        <span class="badge" style="background:#fef3c7; color:#b45309; font-size:0.68rem; margin-top:0.2rem; display:inline-block;">Upfront Int. Paid</span>
+                    @endif
+                    @if($loan->maturity_date && $loan->maturity_date !== $loan->next_due_date)
+                        <div style="font-size:0.72rem; color:var(--text-muted); margin-top:0.15rem;">
+                            Maturity: {{ $loan->maturity_date }}
+                        </div>
+                    @endif
                 </td>
                 <td style="padding:0.85rem 1rem; text-align:center;">
                     @if($loan->status === 'pending')
@@ -365,6 +378,51 @@
                     <x-amount-input name="total_interest" id="edit_total_interest" />
                 </div>
 
+                <!-- Upfront Interest Deduction Feature -->
+                <div class="glass-card" style="margin-top:1.25rem; padding:1rem; border-radius:10px; background:var(--bg-page); border:1px solid var(--border-light);">
+                    <label style="display:flex; align-items:center; gap:0.6rem; cursor:pointer; font-weight:600; color:var(--text-heading); font-size:0.9rem; margin-bottom:0.35rem;">
+                        <input type="checkbox" name="is_upfront_interest" id="edit_is_upfront_interest" value="1" onchange="toggleUpfrontInterest('edit')" style="width:1.15rem; height:1.15rem; accent-color:var(--primary);">
+                        <span>Deduct Interest Upfront (Paid on Claimed Date)</span>
+                    </label>
+                    <p class="text-muted" style="margin:0 0 0.5rem 1.75rem; font-size:0.8rem;">
+                        Check if interest is paid immediately when loan is taken (e.g. Receive 42,500 for a 45,000 loan with 2,500 interest paid upfront on Day 1).
+                    </p>
+                    <div id="edit_upfront_interest_container" style="display:none; margin-left:1.75rem; margin-top:0.5rem;">
+                        <div class="form-group" style="margin-bottom:0.5rem;">
+                            <label class="form-label" style="font-size:0.85rem;">Upfront Interest Amount (Leave empty to use 1st period interest)</label>
+                            <x-amount-input name="upfront_interest_amount" id="edit_upfront_interest_amount" placeholder="Auto-calculated from period interest" />
+                        </div>
+                        <div id="edit_upfront_summary" style="font-size:0.82rem; color:var(--primary); font-weight:600; background:var(--primary-light); padding:0.4rem 0.75rem; border-radius:6px; display:inline-block;">
+                            💡 Net Cash Received: <span id="edit_net_disbursed_label">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Loan Maturity / Full Principal Due Date & Reminders -->
+                <div class="form-row" style="margin-top:1.25rem;">
+                    <div class="form-col">
+                        <label class="form-label" style="font-weight:600;">Loan Full Principal Due Date *</label>
+                        <input type="date" name="maturity_date" id="edit_maturity_date" class="form-control" required>
+                        <div style="display:flex; gap:0.3rem; margin-top:0.35rem; flex-wrap:wrap;">
+                            <button type="button" class="btn btn-outline" style="font-size:0.72rem; padding:0.15rem 0.45rem;" onclick="setMaturityMonths('edit', 1)">+1 Mo</button>
+                            <button type="button" class="btn btn-outline" style="font-size:0.72rem; padding:0.15rem 0.45rem;" onclick="setMaturityMonths('edit', 2)">+2 Mo</button>
+                            <button type="button" class="btn btn-outline" style="font-size:0.72rem; padding:0.15rem 0.45rem;" onclick="setMaturityMonths('edit', 3)">+3 Mo</button>
+                            <button type="button" class="btn btn-outline" style="font-size:0.72rem; padding:0.15rem 0.45rem;" onclick="setMaturityMonths('edit', 6)">+6 Mo</button>
+                            <button type="button" class="btn btn-outline" style="font-size:0.72rem; padding:0.15rem 0.45rem;" onclick="setMaturityMonths('edit', 12)">+1 Yr</button>
+                        </div>
+                    </div>
+                    <div class="form-col">
+                        <label class="form-label" style="font-weight:600;">Reminder Lead Time</label>
+                        <select name="reminder_days" id="edit_reminder_days" class="form-control">
+                            <option value="1">1 day before due date</option>
+                            <option value="2">2 days before due date</option>
+                            <option value="3" selected>3 days before due date</option>
+                            <option value="5">5 days before due date</option>
+                            <option value="7">1 week before due date</option>
+                        </select>
+                    </div>
+                </div>
+
                 <div class="form-row" style="margin-top:1.25rem;">
                     <div class="form-col" id="edit_field_due_day">
                         <label class="form-label">Due Day of Month</label>
@@ -415,23 +473,25 @@
                     </div>
                 </div>
 
-
                 <div class="form-row" style="margin-top:1.25rem;">
                     <div class="form-col">
                         <label class="form-label">Principal Amount *</label>
-                        <x-amount-input name="principal_amount" required="true" />
+                        <x-amount-input name="principal_amount" id="create_principal_amount" required="true" />
+                    </div>
+                    <div class="form-col">
+                        <label class="form-label">Currency</label>
+                        <x-currency-selector name="currency" id="create_currency" selected="LKR" required />
                     </div>
                 </div>
 
-
                 <div class="form-row" style="margin-top:1.25rem;">
                     <div class="form-col">
-                        <label class="form-label">Currency</label>
-                        <x-currency-selector name="currency" selected="LKR" required />
+                        <label class="form-label">Claimed / Start Date *</label>
+                        <input type="date" name="claimed_date" id="create_claimed_date" class="form-control" value="{{ date('Y-m-d') }}" onchange="autoSetMaturity('create')" required>
                     </div>
                     <div class="form-col">
-                        <label class="form-label">Claimed / Start Date</label>
-                        <input type="date" name="claimed_date" class="form-control" value="{{ date('Y-m-d') }}" required>
+                        <label class="form-label">Term (Months) *</label>
+                        <input type="number" name="term_months" id="create_term_months" class="form-control" value="1" min="1" onchange="autoSetMaturity('create')" required>
                     </div>
                 </div>
 
@@ -443,7 +503,7 @@
                 <div class="form-row" style="margin-top:1.25rem;">
                     <div class="form-col">
                         <label class="form-label">Interest Calculation Method</label>
-                        <select name="interest_method" id="create_interest_method" class="form-control" onchange="toggleInterestFields(this.value)" required>
+                        <select name="interest_method" id="create_interest_method" class="form-control" onchange="toggleInterestFields(this.value); calculateNetDisbursed('create');" required>
                             <option value="fixed_amount">Fixed Amount per Period</option>
                             <option value="percentage_rate">Percentage Rate (%)</option>
                             <option value="equal_installments">Equal Installments</option>
@@ -451,26 +511,29 @@
                             <option value="no_interest">No Interest</option>
                         </select>
                     </div>
-                    <div class="form-col">
-                        <label class="form-label">Term (Months)</label>
-                        <input type="number" name="term_months" class="form-control" value="12" min="1" required>
+                    <div class="form-col" id="field_frequency_col">
+                        <label class="form-label">Payment Frequency</label>
+                        <select name="frequency" id="create_frequency" class="form-control">
+                            <option value="monthly">Monthly</option>
+                            <option value="quarterly">Quarterly</option>
+                        </select>
                     </div>
                 </div>
 
                 <!-- Method Dynamic Fields -->
                 <div id="field_fixed_amount" class="form-group" style="margin-top:1.25rem;">
                     <label class="form-label">Fixed Interest Amount per Period</label>
-                    <x-amount-input name="interest_amount" />
+                    <x-amount-input name="interest_amount" id="create_interest_amount" />
                 </div>
 
                 <div id="field_percentage_rate" class="form-row" style="margin-top:1.25rem; display:none;">
                     <div class="form-col">
                         <label class="form-label">Interest Rate (%)</label>
-                        <input type="number" step="0.01" name="interest_rate" class="form-control" placeholder="E.g. 10.5">
+                        <input type="number" step="0.01" name="interest_rate" id="create_interest_rate" class="form-control" placeholder="E.g. 10.5" oninput="calculateNetDisbursed('create')">
                     </div>
                     <div class="form-col">
                         <label class="form-label">Rate Basis</label>
-                        <select name="rate_basis" class="form-control">
+                        <select name="rate_basis" id="create_rate_basis" class="form-control">
                             <option value="flat">Flat Interest Rate</option>
                             <option value="reducing">Reducing Balance</option>
                         </select>
@@ -479,21 +542,68 @@
 
                 <div id="field_equal_installments" class="form-group" style="margin-top:1.25rem; display:none;">
                     <label class="form-label">Total Agreed Interest Amount</label>
-                    <x-amount-input name="total_interest" />
+                    <x-amount-input name="total_interest" id="create_total_interest" />
                 </div>
 
-                <div id="field_frequency" class="form-row" style="margin-top:1.25rem;">
+                <!-- Upfront Interest Deduction Feature -->
+                <div class="glass-card" style="margin-top:1.25rem; padding:1rem; border-radius:10px; background:var(--bg-page); border:1px solid var(--border-light);">
+                    <label style="display:flex; align-items:center; gap:0.6rem; cursor:pointer; font-weight:600; color:var(--text-heading); font-size:0.9rem; margin-bottom:0.35rem;">
+                        <input type="checkbox" name="is_upfront_interest" id="create_is_upfront_interest" value="1" onchange="toggleUpfrontInterest('create')" style="width:1.15rem; height:1.15rem; accent-color:var(--primary);">
+                        <span>Deduct Interest Upfront (Paid on Claimed Date)</span>
+                    </label>
+                    <p class="text-muted" style="margin:0 0 0.5rem 1.75rem; font-size:0.8rem;">
+                        Check if interest is paid immediately when loan is taken (e.g. Receive 42,500 for a 45,000 loan with 2,500 interest paid upfront on Day 1).
+                    </p>
+                    <div id="create_upfront_interest_container" style="display:none; margin-left:1.75rem; margin-top:0.5rem;">
+                        <div class="form-group" style="margin-bottom:0.5rem;">
+                            <label class="form-label" style="font-size:0.85rem;">Upfront Interest Amount (Leave empty to use 1st period interest)</label>
+                            <x-amount-input name="upfront_interest_amount" id="create_upfront_interest_amount" placeholder="Auto-calculated from period interest" />
+                        </div>
+                        <div id="create_upfront_summary" style="font-size:0.82rem; color:var(--primary); font-weight:600; background:var(--primary-light); padding:0.4rem 0.75rem; border-radius:6px; display:inline-block;">
+                            💡 Net Cash Received: <span id="create_net_disbursed_label">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Loan Maturity / Full Principal Due Date & Reminders -->
+                <div class="form-row" style="margin-top:1.25rem;">
                     <div class="form-col">
-                        <label class="form-label">Interest Payment Frequency</label>
-                        <select name="frequency" class="form-control">
-                            <option value="monthly">Monthly</option>
-                            <option value="quarterly">Quarterly</option>
-                        </select>
+                        <label class="form-label" style="font-weight:600;">Loan Full Principal Due Date *</label>
+                        <input type="date" name="maturity_date" id="create_maturity_date" class="form-control" required>
+                        <div style="display:flex; gap:0.3rem; margin-top:0.35rem; flex-wrap:wrap;">
+                            <button type="button" class="btn btn-outline" style="font-size:0.72rem; padding:0.15rem 0.45rem;" onclick="setMaturityMonths('create', 1)">+1 Mo</button>
+                            <button type="button" class="btn btn-outline" style="font-size:0.72rem; padding:0.15rem 0.45rem;" onclick="setMaturityMonths('create', 2)">+2 Mo</button>
+                            <button type="button" class="btn btn-outline" style="font-size:0.72rem; padding:0.15rem 0.45rem;" onclick="setMaturityMonths('create', 3)">+3 Mo</button>
+                            <button type="button" class="btn btn-outline" style="font-size:0.72rem; padding:0.15rem 0.45rem;" onclick="setMaturityMonths('create', 6)">+6 Mo</button>
+                            <button type="button" class="btn btn-outline" style="font-size:0.72rem; padding:0.15rem 0.45rem;" onclick="setMaturityMonths('create', 12)">+1 Yr</button>
+                        </div>
                     </div>
                     <div class="form-col">
+                        <label class="form-label" style="font-weight:600;">Reminder Lead Time</label>
+                        <select name="reminder_days" id="create_reminder_days" class="form-control">
+                            <option value="1">1 day before due date</option>
+                            <option value="2">2 days before due date</option>
+                            <option value="3" selected>3 days before due date</option>
+                            <option value="5">5 days before due date</option>
+                            <option value="7">1 week before due date</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row" style="margin-top:1.25rem;">
+                    <div class="form-col" id="field_due_day">
                         <label class="form-label">Due Day of Month</label>
                         <input type="number" name="due_day" class="form-control" value="5" min="1" max="31">
                     </div>
+                    <div class="form-col">
+                        <label class="form-label">Guarantor (Optional)</label>
+                        <input type="text" name="guarantor" class="form-control" placeholder="Guarantor name / contact">
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-top:1.25rem;">
+                    <label class="form-label">Collateral / Security (Optional)</label>
+                    <textarea name="collateral" class="form-control" rows="2" placeholder="Pledged assets or guarantees"></textarea>
                 </div>
 
                 <div class="form-group" style="margin-top:1.25rem;">
@@ -532,19 +642,91 @@ function toggleEditInterestFields(method) {
     document.getElementById('edit_field_due_day').style.display = hasFrequency ? 'block' : 'none';
 }
 
-function setAmountInputValue(id, val) {
-    const input = document.getElementById(id);
-    if (!input) return;
-    const hidden = input.parentElement ? input.parentElement.querySelector('.amount-hidden') : null;
-    if (val !== null && val !== undefined && val !== '' && !isNaN(val)) {
-        const num = parseFloat(val);
-        input.value = num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        if (hidden) hidden.value = num.toFixed(2);
-    } else {
-        input.value = '';
-        if (hidden) hidden.value = '';
+function toggleUpfrontInterest(prefix) {
+    const isChecked = document.getElementById(prefix + '_is_upfront_interest').checked;
+    const container = document.getElementById(prefix + '_upfront_interest_container');
+    if (container) container.style.display = isChecked ? 'block' : 'none';
+    calculateNetDisbursed(prefix);
+}
+
+function calculateNetDisbursed(prefix) {
+    const principalInput = document.getElementById(prefix + '_principal_amount');
+    const principalHidden = principalInput ? (principalInput.parentElement.querySelector('.amount-hidden') || principalInput) : null;
+    const principal = parseFloat(principalHidden ? principalHidden.value : 0) || 0;
+
+    const upfrontInput = document.getElementById(prefix + '_upfront_interest_amount');
+    const upfrontHidden = upfrontInput ? (upfrontInput.parentElement.querySelector('.amount-hidden') || upfrontInput) : null;
+    let upfront = parseFloat(upfrontHidden ? upfrontHidden.value : 0) || 0;
+
+    if (upfront === 0) {
+        const method = document.getElementById(prefix + '_interest_method').value;
+        if (method === 'fixed_amount') {
+            const intInput = document.getElementById(prefix + '_interest_amount');
+            const intHidden = intInput ? (intInput.parentElement.querySelector('.amount-hidden') || intInput) : null;
+            upfront = parseFloat(intHidden ? intHidden.value : 0) || 0;
+        } else if (method === 'percentage_rate') {
+            const rate = parseFloat(document.getElementById(prefix + '_interest_rate').value) || 0;
+            upfront = principal * (rate / 100);
+        } else if (method === 'equal_installments') {
+            const totInput = document.getElementById(prefix + '_total_interest');
+            const totHidden = totInput ? (totInput.parentElement.querySelector('.amount-hidden') || totInput) : null;
+            const term = parseInt(document.getElementById(prefix + '_term_months').value) || 1;
+            const tot = parseFloat(totHidden ? totHidden.value : 0) || 0;
+            upfront = tot / Math.max(1, term);
+        }
+    }
+
+    const net = Math.max(0, principal - upfront);
+    const label = document.getElementById(prefix + '_net_disbursed_label');
+    if (label) {
+        label.textContent = net.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 }
+
+function autoSetMaturity(prefix) {
+    const claimedDateInput = document.getElementById(prefix + '_claimed_date');
+    const termInput = document.getElementById(prefix + '_term_months');
+    const maturityInput = document.getElementById(prefix + '_maturity_date');
+    if (!claimedDateInput || !termInput || !maturityInput) return;
+
+    if (claimedDateInput.value) {
+        const d = new Date(claimedDateInput.value);
+        const months = parseInt(termInput.value) || 1;
+        d.setMonth(d.getMonth() + months);
+        maturityInput.value = d.toISOString().split('T')[0];
+    }
+}
+
+function setMaturityMonths(prefix, months) {
+    const claimedDateInput = document.getElementById(prefix + '_claimed_date');
+    const maturityInput = document.getElementById(prefix + '_maturity_date');
+    const termInput = document.getElementById(prefix + '_term_months');
+    
+    let baseDate = new Date();
+    if (claimedDateInput && claimedDateInput.value) {
+        baseDate = new Date(claimedDateInput.value);
+    }
+    baseDate.setMonth(baseDate.getMonth() + months);
+    if (maturityInput) {
+        maturityInput.value = baseDate.toISOString().split('T')[0];
+    }
+    if (termInput) {
+        termInput.value = months;
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    autoSetMaturity('create');
+    
+    // Live update Net Cash Received on create form changes
+    ['create_principal_amount', 'create_interest_amount', 'create_total_interest', 'create_upfront_interest_amount'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('input', () => calculateNetDisbursed('create'));
+            el.addEventListener('blur', () => calculateNetDisbursed('create'));
+        }
+    });
+});
 
 function openEditLoanModal(loan) {
     document.getElementById('editLoanForm').action = '/loans/' + loan.id;
@@ -559,7 +741,7 @@ function openEditLoanModal(loan) {
     if (currEl) currEl.value = loan.currency || 'LKR';
     
     document.getElementById('edit_claimed_date').value = loan.claimed_date || loan.start_date || '';
-    document.getElementById('edit_term_months').value = loan.term_months || 12;
+    document.getElementById('edit_term_months').value = loan.term_months || 1;
     document.getElementById('edit_purpose').value = loan.purpose || '';
     
     const method = loan.interest_method || 'fixed_amount';
@@ -574,7 +756,15 @@ function openEditLoanModal(loan) {
     document.getElementById('edit_guarantor').value = loan.guarantor || '';
     document.getElementById('edit_collateral').value = loan.collateral || '';
 
+    document.getElementById('edit_is_upfront_interest').checked = !!loan.is_upfront_interest;
+    toggleUpfrontInterest('edit');
+    setAmountInputValue('edit_upfront_interest_amount', loan.upfront_interest_amount || '');
+
+    document.getElementById('edit_maturity_date').value = loan.maturity_date || '';
+    document.getElementById('edit_reminder_days').value = loan.reminder_days || 3;
+
     toggleEditInterestFields(method);
+    calculateNetDisbursed('edit');
     openModal('editLoanModal');
 }
 </script>

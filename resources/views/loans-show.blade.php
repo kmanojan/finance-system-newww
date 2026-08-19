@@ -218,6 +218,17 @@
                     </div>
                 @endif
 
+                @if(!empty($loan->is_upfront_interest))
+                    <div style="display:flex; justify-content:space-between; border-bottom:1px dashed var(--border); padding-bottom:0.5rem; background:#fef3c7; color:#92400e; padding:0.5rem; border-radius:6px;">
+                        <span style="font-weight:600;">Net Cash In-Hand:</span>
+                        <strong style="font-size:0.95rem;">{{ $loan->currency }} {{ number_format($loan->net_disbursed, 2) }}</strong>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; border-bottom:1px dashed var(--border); padding-bottom:0.5rem;">
+                        <span class="text-muted">Upfront Interest Paid:</span>
+                        <strong style="color:var(--success);">{{ $loan->currency }} {{ number_format($loan->upfront_interest_amount ?: $loan->interest_amount, 2) }}</strong>
+                    </div>
+                @endif
+
                 @if(!in_array($loan->interest_method, ['no_interest', 'custom_schedule']))
                     <div style="display:flex; justify-content:space-between; border-bottom:1px dashed var(--border); padding-bottom:0.5rem;">
                         <span class="text-muted">Frequency:</span>
@@ -228,6 +239,18 @@
                 <div style="display:flex; justify-content:space-between; border-bottom:1px dashed var(--border); padding-bottom:0.5rem;">
                     <span class="text-muted">Claimed / Start Date:</span>
                     <strong style="color:var(--text-heading);">{{ $loan->claimed_date ?? 'N/A' }}</strong>
+                </div>
+
+                <div style="display:flex; justify-content:space-between; border-bottom:1px dashed var(--border); padding-bottom:0.5rem;">
+                    <span class="text-muted">Full Principal Due Date:</span>
+                    <strong style="color:var(--text-heading);">
+                        {{ $loan->maturity_date ?? 'N/A' }}
+                        @if($loan->maturity_date)
+                            <span class="badge" style="background:var(--primary-light); color:var(--primary); font-size:0.7rem; margin-left:0.25rem;">
+                                Reminder: {{ $loan->reminder_days ?? 3 }}d
+                            </span>
+                        @endif
+                    </strong>
                 </div>
 
                 <div style="display:flex; justify-content:space-between; border-bottom:1px dashed var(--border); padding-bottom:0.5rem;">
@@ -598,6 +621,51 @@
                     <x-amount-input name="total_interest" id="show_edit_total_interest" :value="$loan->total_interest" placeholder="E.g. 50000.00" />
                 </div>
 
+                <!-- Upfront Interest Deduction Feature -->
+                <div class="glass-card" style="margin-top:1.25rem; padding:1rem; border-radius:10px; background:var(--bg-page); border:1px solid var(--border-light);">
+                    <label style="display:flex; align-items:center; gap:0.6rem; cursor:pointer; font-weight:600; color:var(--text-heading); font-size:0.9rem; margin-bottom:0.35rem;">
+                        <input type="checkbox" name="is_upfront_interest" id="edit_is_upfront_interest" value="1" {{ !empty($loan->is_upfront_interest) ? 'checked' : '' }} onchange="toggleUpfrontInterest('edit')" style="width:1.15rem; height:1.15rem; accent-color:var(--primary);">
+                        <span>Deduct Interest Upfront (Paid on Claimed Date)</span>
+                    </label>
+                    <p class="text-muted" style="margin:0 0 0.5rem 1.75rem; font-size:0.8rem;">
+                        Check if interest is paid immediately when loan is taken (e.g. Receive 42,500 for a 45,000 loan with 2,500 interest paid upfront on Day 1).
+                    </p>
+                    <div id="edit_upfront_interest_container" style="{{ !empty($loan->is_upfront_interest) ? '' : 'display:none;' }}; margin-left:1.75rem; margin-top:0.5rem;">
+                        <div class="form-group" style="margin-bottom:0.5rem;">
+                            <label class="form-label" style="font-size:0.85rem;">Upfront Interest Amount (Leave empty to use 1st period interest)</label>
+                            <x-amount-input name="upfront_interest_amount" id="edit_upfront_interest_amount" :value="$loan->upfront_interest_amount" placeholder="Auto-calculated from period interest" />
+                        </div>
+                        <div id="edit_upfront_summary" style="font-size:0.82rem; color:var(--primary); font-weight:600; background:var(--primary-light); padding:0.4rem 0.75rem; border-radius:6px; display:inline-block;">
+                            💡 Net Cash Received: <span id="edit_net_disbursed_label">{{ number_format($loan->net_disbursed, 2) }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Loan Maturity / Full Principal Due Date & Reminders -->
+                <div class="form-row" style="margin-top:1.25rem;">
+                    <div class="form-col">
+                        <label class="form-label" style="font-weight:600;">Loan Full Principal Due Date *</label>
+                        <input type="date" name="maturity_date" id="edit_maturity_date" class="form-control" value="{{ $loan->maturity_date ?: date('Y-m-d', strtotime('+'.($loan->term_months ?: 1).' months', strtotime($loan->claimed_date ?: date('Y-m-d')))) }}" required>
+                        <div style="display:flex; gap:0.3rem; margin-top:0.35rem; flex-wrap:wrap;">
+                            <button type="button" class="btn btn-outline" style="font-size:0.72rem; padding:0.15rem 0.45rem;" onclick="setMaturityMonths('edit', 1)">+1 Mo</button>
+                            <button type="button" class="btn btn-outline" style="font-size:0.72rem; padding:0.15rem 0.45rem;" onclick="setMaturityMonths('edit', 2)">+2 Mo</button>
+                            <button type="button" class="btn btn-outline" style="font-size:0.72rem; padding:0.15rem 0.45rem;" onclick="setMaturityMonths('edit', 3)">+3 Mo</button>
+                            <button type="button" class="btn btn-outline" style="font-size:0.72rem; padding:0.15rem 0.45rem;" onclick="setMaturityMonths('edit', 6)">+6 Mo</button>
+                            <button type="button" class="btn btn-outline" style="font-size:0.72rem; padding:0.15rem 0.45rem;" onclick="setMaturityMonths('edit', 12)">+1 Yr</button>
+                        </div>
+                    </div>
+                    <div class="form-col">
+                        <label class="form-label" style="font-weight:600;">Reminder Lead Time</label>
+                        <select name="reminder_days" id="edit_reminder_days" class="form-control">
+                            <option value="1" {{ ($loan->reminder_days ?? 3) == 1 ? 'selected' : '' }}>1 day before due date</option>
+                            <option value="2" {{ ($loan->reminder_days ?? 3) == 2 ? 'selected' : '' }}>2 days before due date</option>
+                            <option value="3" {{ ($loan->reminder_days ?? 3) == 3 ? 'selected' : '' }}>3 days before due date</option>
+                            <option value="5" {{ ($loan->reminder_days ?? 3) == 5 ? 'selected' : '' }}>5 days before due date</option>
+                            <option value="7" {{ ($loan->reminder_days ?? 3) == 7 ? 'selected' : '' }}>1 week before due date</option>
+                        </select>
+                    </div>
+                </div>
+
                 <div class="form-row" style="margin-top:1.25rem;">
                     <div class="form-col" id="edit_field_due_day">
                         <label class="form-label">Due Day of Month</label>
@@ -825,6 +893,65 @@ function openEditInterestModal(id, currentAmount, currentDate) {
     openModal('editScheduleModal');
 }
 
+function toggleUpfrontInterest(prefix) {
+    const isChecked = document.getElementById(prefix + '_is_upfront_interest').checked;
+    const container = document.getElementById(prefix + '_upfront_interest_container');
+    if (container) container.style.display = isChecked ? 'block' : 'none';
+    calculateNetDisbursed(prefix);
+}
+
+function calculateNetDisbursed(prefix) {
+    const principalInput = document.getElementById('show_edit_principal_amount');
+    const principalHidden = principalInput ? (principalInput.parentElement.querySelector('.amount-hidden') || principalInput) : null;
+    const principal = parseFloat(principalHidden ? principalHidden.value : 0) || 0;
+
+    const upfrontInput = document.getElementById('edit_upfront_interest_amount');
+    const upfrontHidden = upfrontInput ? (upfrontInput.parentElement.querySelector('.amount-hidden') || upfrontInput) : null;
+    let upfront = parseFloat(upfrontHidden ? upfrontHidden.value : 0) || 0;
+
+    if (upfront === 0) {
+        const method = document.getElementById('edit_interest_method').value;
+        if (method === 'fixed_amount') {
+            const intInput = document.getElementById('show_edit_interest_amount');
+            const intHidden = intInput ? (intInput.parentElement.querySelector('.amount-hidden') || intInput) : null;
+            upfront = parseFloat(intHidden ? intHidden.value : 0) || 0;
+        } else if (method === 'percentage_rate') {
+            const rate = parseFloat(document.getElementById('edit_interest_rate').value) || 0;
+            upfront = principal * (rate / 100);
+        } else if (method === 'equal_installments') {
+            const totInput = document.getElementById('show_edit_total_interest');
+            const totHidden = totInput ? (totInput.parentElement.querySelector('.amount-hidden') || totInput) : null;
+            const term = parseInt(document.getElementById('edit_term_months').value) || 1;
+            const tot = parseFloat(totHidden ? totHidden.value : 0) || 0;
+            upfront = tot / Math.max(1, term);
+        }
+    }
+
+    const net = Math.max(0, principal - upfront);
+    const label = document.getElementById('edit_net_disbursed_label');
+    if (label) {
+        label.textContent = net.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+}
+
+function setMaturityMonths(prefix, months) {
+    const claimedDateInput = document.getElementById('edit_claimed_date');
+    const maturityInput = document.getElementById('edit_maturity_date');
+    const termInput = document.getElementById('edit_term_months');
+    
+    let baseDate = new Date();
+    if (claimedDateInput && claimedDateInput.value) {
+        baseDate = new Date(claimedDateInput.value);
+    }
+    baseDate.setMonth(baseDate.getMonth() + months);
+    if (maturityInput) {
+        maturityInput.value = baseDate.toISOString().split('T')[0];
+    }
+    if (termInput) {
+        termInput.value = months;
+    }
+}
+
 function toggleEditInterestFields(method) {
     document.getElementById('edit_field_fixed_amount').style.display = method === 'fixed_amount' ? 'block' : 'none';
     document.getElementById('edit_field_percentage_rate').style.display = method === 'percentage_rate' ? 'flex' : 'none';
@@ -832,6 +959,7 @@ function toggleEditInterestFields(method) {
     const hasFrequency = (method !== 'no_interest' && method !== 'custom_schedule');
     document.getElementById('edit_field_frequency').style.display = hasFrequency ? 'block' : 'none';
     document.getElementById('edit_field_due_day').style.display = hasFrequency ? 'block' : 'none';
+    calculateNetDisbursed('edit');
 }
 </script>
 @endsection

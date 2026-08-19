@@ -134,6 +134,42 @@ class ReminderController extends Controller
                     'link' => "/loans/{$s->loan_id}",
                 ]);
             }
+
+            // Also check active loans for Principal Maturity Due Date if not already covered by pending schedules
+            if (Schema::hasTable('loans')) {
+                $activeLoans = DB::table('loans')->where('status', 'active')->whereNotNull('maturity_date')->get();
+                foreach ($activeLoans as $al) {
+                    $hasPendingSched = DB::table('loan_interest_schedule')
+                        ->where('loan_id', $al->id)
+                        ->whereIn('status', ['pending', 'partially_paid', 'overdue'])
+                        ->exists();
+
+                    if (!$hasPendingSched) {
+                        $repayments = DB::table('loan_principal_records')
+                            ->where('loan_id', $al->id)
+                            ->where('record_type', 'repayment')
+                            ->sum('amount');
+                        $draws = DB::table('loan_principal_records')
+                            ->where('loan_id', $al->id)
+                            ->where('record_type', 'draw')
+                            ->sum('amount');
+                        $outstandingPrincipal = max(0, $al->principal_amount + $draws - $repayments);
+
+                        if ($outstandingPrincipal > 0) {
+                            $allReminders->push((object)[
+                                'id' => 'loan_mat_' . $al->id,
+                                'title' => "Loan Principal Repayment: {$al->lender_name}",
+                                'type' => 'loan',
+                                'due_date' => date('Y-m-d', strtotime($al->maturity_date)),
+                                'amount_formatted' => $al->currency . ' ' . number_format($outstandingPrincipal, 2),
+                                'status' => 'pending',
+                                'is_system' => true,
+                                'link' => "/loans/{$al->id}",
+                            ]);
+                        }
+                    }
+                }
+            }
         }
 
         // 3. Cheque Deposit / Clearance Dates
