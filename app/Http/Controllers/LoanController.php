@@ -610,40 +610,34 @@ class LoanController extends Controller
             
             // Auto-post Income Transaction for Loan Disbursement
             $catId = $this->getCategoryId('Loan Disbursement', 'income');
+            
+            $isUpfront = !empty($loan->is_upfront_interest);
+            $upfrontAmt = $isUpfront ? ($loan->upfront_interest_amount ?: $loan->interest_amount) : 0;
+            $disbursedAmount = ($isUpfront && $upfrontAmt > 0) ? max(0, $loan->principal_amount - $upfrontAmt) : $loan->principal_amount;
+
+            $desc = "Loan Disbursement from {$loan->lender_name}";
+            if ($isUpfront && $upfrontAmt > 0) {
+                $desc .= " (Net received: " . number_format($disbursedAmount, 2) . ", deducted " . number_format($upfrontAmt, 2) . " for upfront interest on " . number_format($loan->principal_amount, 2) . " principal)";
+                if ($loan->purpose) {
+                    $desc .= " - {$loan->purpose}";
+                }
+            } elseif ($loan->purpose) {
+                $desc .= " ({$loan->purpose})";
+            }
+
             DB::table('transactions')->insert([
                 'type' => 'income',
                 'category_id' => $catId,
                 'department_id' => $this->getDepartmentId(),
-                'amount' => $loan->principal_amount,
+                'amount' => $disbursedAmount,
                 'currency' => $loan->currency,
                 'transaction_date' => $loan->claimed_date ?: now()->format('Y-m-d'),
-                'description' => "Loan Disbursement from {$loan->lender_name}" . ($loan->purpose ? " ({$loan->purpose})" : ""),
+                'description' => $desc,
                 'reference_no' => "LOAN-ACT-{$loan->id}",
                 'payment_method' => 'Normal',
                 'created_at' => now(),
                 'updated_at' => now()
             ]);
-
-            // If upfront interest was deducted, record upfront interest expense transaction
-            if (!empty($loan->is_upfront_interest)) {
-                $upfrontAmt = $loan->upfront_interest_amount ?: $loan->interest_amount;
-                if ($upfrontAmt > 0) {
-                    $intCatId = $this->getCategoryId('Interest Expense', 'expense');
-                    DB::table('transactions')->insert([
-                        'type' => 'expense',
-                        'category_id' => $intCatId,
-                        'department_id' => $this->getDepartmentId(),
-                        'amount' => $upfrontAmt,
-                        'currency' => $loan->currency,
-                        'transaction_date' => $loan->claimed_date ?: now()->format('Y-m-d'),
-                        'description' => "Upfront Interest Deduction at Disbursement for Loan from {$loan->lender_name}",
-                        'reference_no' => "LOAN-INT-{$loan->id}-UPFRONT",
-                        'payment_method' => 'Normal',
-                        'created_at' => now(),
-                        'updated_at' => now()
-                    ]);
-                }
-            }
 
             $this->syncLoanMaturityReminder($id);
 
@@ -706,6 +700,8 @@ class LoanController extends Controller
                 $this->generateInterestSchedule($id, $loan->claimed_date ?: now()->format('Y-m-d'), (array)$loan);
             }
         }
+
+        $this->syncLoanMaturityReminder($id);
 
         return back()->with('success', 'Loan status updated successfully.');
     }
