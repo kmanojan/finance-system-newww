@@ -42,14 +42,21 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Close on Escape key
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            closePrimarySidebar();
-            // Close any open modals as well
-            document.querySelectorAll('.modal-backdrop.active').forEach(modal => {
-                modal.classList.remove('active');
-            });
-        }
-    });
+    // Keep iOS PWA links in standalone mode
+    if (window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches) {
+        document.addEventListener('click', (e) => {
+            const target = e.target.closest('a');
+            if (
+                target &&
+                target.href &&
+                target.href.startsWith(window.location.origin) &&
+                !target.getAttribute('target') &&
+                !target.hasAttribute('download') &&
+                !target.href.includes('#')
+            ) {
+                e.preventDefault();
+                window.location.href = target.href;
+            }
+        });
+    }
 });

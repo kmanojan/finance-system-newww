@@ -105,6 +105,13 @@ button {
     font-family: inherit;
 }
 
+ion-icon {
+    display: inline-block;
+    vertical-align: middle;
+    line-height: 1;
+    font-size: 1.25rem;
+}
+
 /* Utilities */
 .font-medium {
     font-weight: 500;
