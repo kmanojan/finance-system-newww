@@ -153,9 +153,9 @@
                 </td>
                 <td style="padding:0.85rem 1rem; text-align:right; font-weight:600; color:var(--text-heading); font-size:0.85rem;">
                     <div>{{ $loan->currency }} {{ number_format($loan->principal_amount, 2) }}</div>
-                    @if(!empty($loan->is_upfront_interest))
+                    @if(!empty($loan->is_upfront_interest ?? null))
                         <div style="font-size:0.74rem; color:var(--primary); font-weight:700;" title="Disbursed after upfront interest deduction">
-                            Net Recv: {{ number_format($loan->net_disbursed, 2) }}
+                            Net Recv: {{ number_format($loan->net_disbursed ?? $loan->principal_amount, 2) }}
                         </div>
                     @endif
                 </td>
@@ -192,10 +192,10 @@
                     <div class="font-medium {{ $loan->next_due_date !== 'N/A' && \Carbon\Carbon::parse($loan->next_due_date)->isPast() ? 'text-danger' : '' }}" style="font-size:0.85rem;">
                         {{ $loan->next_due_date }}
                     </div>
-                    @if(!empty($loan->is_upfront_interest))
+                    @if(!empty($loan->is_upfront_interest ?? null))
                         <span class="badge" style="background:#fef3c7; color:#b45309; font-size:0.68rem; margin-top:0.2rem; display:inline-block;">Upfront Int. Paid</span>
                     @endif
-                    @if($loan->maturity_date && $loan->maturity_date !== $loan->next_due_date)
+                    @if(!empty($loan->maturity_date ?? null) && ($loan->maturity_date ?? null) !== $loan->next_due_date)
                         <div style="font-size:0.72rem; color:var(--text-muted); margin-top:0.15rem;">
                             Maturity: {{ $loan->maturity_date }}
                         </div>

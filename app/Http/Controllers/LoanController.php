@@ -93,9 +93,9 @@ class LoanController extends Controller
             $loan->total_outstanding = $outstandingPrincipal + $loanPendingInterest;
             $loan->total_paid = $loan->principal_repaid + $loan->interest_paid;
 
-            $loan->net_disbursed = !empty($loan->is_upfront_interest) 
-                ? max(0, $loan->principal_amount - ($loan->upfront_interest_amount ?: $loan->interest_amount))
-                : $loan->principal_amount;
+            $loan->net_disbursed = !empty($loan->is_upfront_interest ?? null) 
+                ? max(0, ($loan->principal_amount ?? 0) - (($loan->upfront_interest_amount ?? null) ?: ($loan->interest_amount ?? 0)))
+                : ($loan->principal_amount ?? 0);
 
             if ($loan->status === 'active' || $loan->status === 'pending') {
                 $totalOutstandingPrincipal += $outstandingPrincipal;
@@ -108,7 +108,7 @@ class LoanController extends Controller
                     ->orderBy('due_date', 'asc')
                     ->first();
                     
-                $loan->next_due_date = $nextDue ? $nextDue->due_date : ($loan->maturity_date ?: 'N/A');
+                $loan->next_due_date = $nextDue ? $nextDue->due_date : (($loan->maturity_date ?? null) ?: 'N/A');
             } else {
                 $loan->next_due_date = 'N/A';
             }
@@ -582,9 +582,9 @@ class LoanController extends Controller
         $outstanding = $loan->principal_amount + $draws - $repayments;
         $loan->outstanding_principal = $outstanding;
 
-        $loan->net_disbursed = !empty($loan->is_upfront_interest) 
-            ? max(0, $loan->principal_amount - ($loan->upfront_interest_amount ?: $loan->interest_amount))
-            : $loan->principal_amount;
+        $loan->net_disbursed = !empty($loan->is_upfront_interest ?? null) 
+            ? max(0, ($loan->principal_amount ?? 0) - (($loan->upfront_interest_amount ?? null) ?: ($loan->interest_amount ?? 0)))
+            : ($loan->principal_amount ?? 0);
 
         $attachments = DB::table('attachments')
                         ->where('model_type', 'Loan')

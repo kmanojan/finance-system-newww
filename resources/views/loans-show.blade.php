@@ -218,14 +218,14 @@
                     </div>
                 @endif
 
-                @if(!empty($loan->is_upfront_interest))
+                @if(!empty($loan->is_upfront_interest ?? null))
                     <div style="display:flex; justify-content:space-between; border-bottom:1px dashed var(--border); padding-bottom:0.5rem; background:#fef3c7; color:#92400e; padding:0.5rem; border-radius:6px;">
                         <span style="font-weight:600;">Net Cash In-Hand:</span>
-                        <strong style="font-size:0.95rem;">{{ $loan->currency }} {{ number_format($loan->net_disbursed, 2) }}</strong>
+                        <strong style="font-size:0.95rem;">{{ $loan->currency }} {{ number_format($loan->net_disbursed ?? $loan->principal_amount, 2) }}</strong>
                     </div>
                     <div style="display:flex; justify-content:space-between; border-bottom:1px dashed var(--border); padding-bottom:0.5rem;">
                         <span class="text-muted">Upfront Interest Paid:</span>
-                        <strong style="color:var(--success);">{{ $loan->currency }} {{ number_format($loan->upfront_interest_amount ?: $loan->interest_amount, 2) }}</strong>
+                        <strong style="color:var(--success);">{{ $loan->currency }} {{ number_format(($loan->upfront_interest_amount ?? null) ?: $loan->interest_amount, 2) }}</strong>
                     </div>
                 @endif
 
@@ -245,7 +245,7 @@
                     <span class="text-muted">Full Principal Due Date:</span>
                     <strong style="color:var(--text-heading);">
                         {{ $loan->maturity_date ?? 'N/A' }}
-                        @if($loan->maturity_date)
+                        @if(!empty($loan->maturity_date ?? null))
                             <span class="badge" style="background:var(--primary-light); color:var(--primary); font-size:0.7rem; margin-left:0.25rem;">
                                 Reminder: {{ $loan->reminder_days ?? 3 }}d
                             </span>
@@ -624,19 +624,19 @@
                 <!-- Upfront Interest Deduction Feature -->
                 <div class="glass-card" style="margin-top:1.25rem; padding:1rem; border-radius:10px; background:var(--bg-page); border:1px solid var(--border-light);">
                     <label style="display:flex; align-items:center; gap:0.6rem; cursor:pointer; font-weight:600; color:var(--text-heading); font-size:0.9rem; margin-bottom:0.35rem;">
-                        <input type="checkbox" name="is_upfront_interest" id="edit_is_upfront_interest" value="1" {{ !empty($loan->is_upfront_interest) ? 'checked' : '' }} onchange="toggleUpfrontInterest('edit')" style="width:1.15rem; height:1.15rem; accent-color:var(--primary);">
+                        <input type="checkbox" name="is_upfront_interest" id="edit_is_upfront_interest" value="1" {{ !empty($loan->is_upfront_interest ?? null) ? 'checked' : '' }} onchange="toggleUpfrontInterest('edit')" style="width:1.15rem; height:1.15rem; accent-color:var(--primary);">
                         <span>Deduct Interest Upfront (Paid on Claimed Date)</span>
                     </label>
                     <p class="text-muted" style="margin:0 0 0.5rem 1.75rem; font-size:0.8rem;">
                         Check if interest is paid immediately when loan is taken (e.g. Receive 42,500 for a 45,000 loan with 2,500 interest paid upfront on Day 1).
                     </p>
-                    <div id="edit_upfront_interest_container" style="{{ !empty($loan->is_upfront_interest) ? '' : 'display:none;' }}; margin-left:1.75rem; margin-top:0.5rem;">
+                    <div id="edit_upfront_interest_container" style="{{ !empty($loan->is_upfront_interest ?? null) ? '' : 'display:none;' }}; margin-left:1.75rem; margin-top:0.5rem;">
                         <div class="form-group" style="margin-bottom:0.5rem;">
                             <label class="form-label" style="font-size:0.85rem;">Upfront Interest Amount (Leave empty to use 1st period interest)</label>
-                            <x-amount-input name="upfront_interest_amount" id="edit_upfront_interest_amount" :value="$loan->upfront_interest_amount" placeholder="Auto-calculated from period interest" />
+                            <x-amount-input name="upfront_interest_amount" id="edit_upfront_interest_amount" :value="$loan->upfront_interest_amount ?? ''" placeholder="Auto-calculated from period interest" />
                         </div>
                         <div id="edit_upfront_summary" style="font-size:0.82rem; color:var(--primary); font-weight:600; background:var(--primary-light); padding:0.4rem 0.75rem; border-radius:6px; display:inline-block;">
-                            💡 Net Cash Received: <span id="edit_net_disbursed_label">{{ number_format($loan->net_disbursed, 2) }}</span>
+                            💡 Net Cash Received: <span id="edit_net_disbursed_label">{{ number_format($loan->net_disbursed ?? $loan->principal_amount, 2) }}</span>
                         </div>
                     </div>
                 </div>
@@ -645,7 +645,7 @@
                 <div class="form-row" style="margin-top:1.25rem;">
                     <div class="form-col">
                         <label class="form-label" style="font-weight:600;">Loan Full Principal Due Date *</label>
-                        <input type="date" name="maturity_date" id="edit_maturity_date" class="form-control" value="{{ $loan->maturity_date ?: date('Y-m-d', strtotime('+'.($loan->term_months ?: 1).' months', strtotime($loan->claimed_date ?: date('Y-m-d')))) }}" required>
+                        <input type="date" name="maturity_date" id="edit_maturity_date" class="form-control" value="{{ ($loan->maturity_date ?? null) ?: date('Y-m-d', strtotime('+'.($loan->term_months ?: 1).' months', strtotime($loan->claimed_date ?: date('Y-m-d')))) }}" required>
                         <div style="display:flex; gap:0.3rem; margin-top:0.35rem; flex-wrap:wrap;">
                             <button type="button" class="btn btn-outline" style="font-size:0.72rem; padding:0.15rem 0.45rem;" onclick="setMaturityMonths('edit', 1)">+1 Mo</button>
                             <button type="button" class="btn btn-outline" style="font-size:0.72rem; padding:0.15rem 0.45rem;" onclick="setMaturityMonths('edit', 2)">+2 Mo</button>

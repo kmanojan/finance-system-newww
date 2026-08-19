@@ -27,7 +27,12 @@ class AppServiceProvider extends ServiceProvider
                 $baseCurrency = DB::table('companies')->value('base_currency') ?? 'LKR';
                 View::share('baseCurrency', $baseCurrency);
             }
-        } catch (\Exception $e) {
+
+            // Auto-run pending migrations in production / serverless environment if new columns are missing
+            if (Schema::hasTable('loans') && !Schema::hasColumn('loans', 'maturity_date')) {
+                \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+            }
+        } catch (\Throwable $e) {
             // Ignore during migrations or when DB is not available
         }
     }

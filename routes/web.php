@@ -287,4 +287,21 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/api-integrations', [\App\Http\Controllers\ApiIntegrationController::class, 'store']);
         Route::post('/api-integrations/{apiIntegration}/sync', [\App\Http\Controllers\ApiIntegrationController::class, 'sync']);
     });
+
+    // Run Migrations Route (Production Utility)
+    Route::get('/run-migrations', function () {
+        \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+        return response()->json([
+            'status' => 'success',
+            'output' => \Illuminate\Support\Facades\Artisan::output()
+        ]);
+    });
+});
+
+Route::get('/migrate', function () {
+    \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+    return response()->json([
+        'status' => 'success',
+        'output' => \Illuminate\Support\Facades\Artisan::output()
+    ]);
 });
