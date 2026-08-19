@@ -11,7 +11,7 @@
         <h1>Parties</h1>
         <p class="subtitle">Manage clients, vendors, and partner organizations.</p>
     </div>
-    <button class="btn btn-primary btn-pill mobile-hide" onclick="openCreateModal()">
+    <button class="btn btn-primary btn-pill" onclick="openCreateModal()">
         <ion-icon name="add-outline"></ion-icon> Add New Party
     </button>
 </header>

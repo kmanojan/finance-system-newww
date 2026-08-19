@@ -16,19 +16,19 @@
         </div>
     </header>
 
-    <div class="filter-bar" style="background:var(--bg-card); padding:1rem; border-radius:12px; border:1px solid var(--border); margin-bottom:1.5rem; display:flex; gap:1rem;">
-        <form action="" method="GET" style="display:flex; gap:1rem; width:100%;">
-            <input type="text" name="search" value="{{ request('search') }}" class="form-control" placeholder="Search by name or code..." style="flex:1; padding:0.6rem;">
-            <select name="status" class="form-control" style="width:200px; padding:0.6rem;">
+    <div class="filter-bar" style="background:var(--bg-card); padding:1rem; border-radius:12px; border:1px solid var(--border); margin-bottom:1.5rem;">
+        <form action="" method="GET" style="display:flex; flex-wrap:wrap; gap:0.75rem; width:100%;">
+            <input type="text" name="search" value="{{ request('search') }}" class="form-control" placeholder="Search by name or code..." style="flex:1; min-width:200px; padding:0.6rem;">
+            <select name="status" class="form-control" style="width:160px; min-width:140px; padding:0.6rem;">
                 <option value="">All Statuses</option>
                 <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Active</option>
                 <option value="inactive" {{ request('status') === 'inactive' ? 'selected' : '' }}>Inactive</option>
             </select>
-            <button type="submit" class="btn btn-outline" style="padding:0.6rem 1rem;">Filter</button>
+            <button type="submit" class="btn btn-outline" style="padding:0.6rem 1.25rem;">Filter</button>
         </form>
     </div>
 
-    <div class="table-container" style="background:var(--bg-card); border-radius:12px; border:1px solid var(--border); overflow:hidden;">
+    <div class="data-table-container" style="background:var(--bg-card); border-radius:12px; border:1px solid var(--border);">
         <table class="data-table" style="width:100%; border-collapse:collapse;">
             <thead style="background:var(--bg-page); border-bottom:1px solid var(--border);">
                 <tr>
@@ -74,12 +74,12 @@
         </table>
         
         @if($employees->total() > 0)
-        <div style="display:flex; justify-content:space-between; align-items:center; padding:1rem; border-top:1px solid var(--border); font-size:0.85rem; color:var(--text-muted);">
+        <div style="display:flex; flex-wrap:wrap; gap:0.75rem; justify-content:space-between; align-items:center; padding:1rem; border-top:1px solid var(--border); font-size:0.85rem; color:var(--text-muted);">
             <div>
                 Showing <strong>{{ $employees->firstItem() ?? 0 }}</strong> to <strong>{{ $employees->lastItem() ?? 0 }}</strong> of <strong>{{ $employees->total() }}</strong> employees
             </div>
             @if($employees->hasPages())
-            <div style="display:flex; gap:0.5rem; align-items:center;">
+            <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
                 {{-- Previous Page Link --}}
                 @if ($employees->onFirstPage())
                     <span class="btn btn-outline" style="opacity:0.5; cursor:not-allowed; padding:0.35rem 0.75rem; font-size:0.85rem;">Previous</span>

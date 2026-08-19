@@ -1,0 +1,1344 @@
+{
+  "communities": {
+    "0": [
+      "app_http_controllers_approvalcontroller",
+      "app_http_controllers_approvalcontroller_approvalcontroller",
+      "app_http_controllers_approvalcontroller_approvalcontroller_approve",
+      "app_http_controllers_approvalcontroller_approvalcontroller_index",
+      "app_http_controllers_approvalcontroller_approvalcontroller_reject",
+      "app_http_controllers_projectcontroller",
+      "app_http_controllers_projectcontroller_projectcontroller",
+      "app_http_controllers_projectcontroller_projectcontroller_adjustforweekends",
+      "app_http_controllers_projectcontroller_projectcontroller_approvechangerequest",
+      "app_http_controllers_projectcontroller_projectcontroller_approvedraftinvoice",
+      "app_http_controllers_projectcontroller_projectcontroller_calculatecommissiondetails",
+      "app_http_controllers_projectcontroller_projectcontroller_calculatenextdate",
+      "app_http_controllers_projectcontroller_projectcontroller_checkactiveschedules",
+      "app_http_controllers_projectcontroller_projectcontroller_destroy",
+      "app_http_controllers_projectcontroller_projectcontroller_destroycommission",
+      "app_http_controllers_projectcontroller_projectcontroller_destroyschedule",
+      "app_http_controllers_projectcontroller_projectcontroller_generateinvoicefromschedule",
+      "app_http_controllers_projectcontroller_projectcontroller_index",
+      "app_http_controllers_projectcontroller_projectcontroller_invoicemilestone",
+      "app_http_controllers_projectcontroller_projectcontroller_pauseschedule",
+      "app_http_controllers_projectcontroller_projectcontroller_rejectdraftinvoice",
+      "app_http_controllers_projectcontroller_projectcontroller_resumeschedule",
+      "app_http_controllers_projectcontroller_projectcontroller_runscheduleimmediately",
+      "app_http_controllers_projectcontroller_projectcontroller_show",
+      "app_http_controllers_projectcontroller_projectcontroller_skipmilestone",
+      "app_http_controllers_projectcontroller_projectcontroller_skipoccurrence",
+      "app_http_controllers_projectcontroller_projectcontroller_store",
+      "app_http_controllers_projectcontroller_projectcontroller_storechangerequest",
+      "app_http_controllers_projectcontroller_projectcontroller_storecommission",
+      "app_http_controllers_projectcontroller_projectcontroller_storecommissionpayment",
+      "app_http_controllers_projectcontroller_projectcontroller_storeinteraction",
+      "app_http_controllers_projectcontroller_projectcontroller_storemilestone",
+      "app_http_controllers_projectcontroller_projectcontroller_storenote",
+      "app_http_controllers_projectcontroller_projectcontroller_storepayment",
+      "app_http_controllers_projectcontroller_projectcontroller_storeschedule",
+      "app_http_controllers_projectcontroller_projectcontroller_storetimesheet",
+      "app_http_controllers_projectcontroller_projectcontroller_update",
+      "app_http_controllers_projectcontroller_projectcontroller_updatechangerequest",
+      "app_http_controllers_projectcontroller_projectcontroller_updatecommission",
+      "app_http_controllers_projectcontroller_projectcontroller_updateschedule",
+      "app_http_controllers_reportcontroller",
+      "app_http_controllers_reportcontroller_reportcontroller",
+      "app_http_controllers_reportcontroller_reportcontroller_araging",
+      "app_http_controllers_reportcontroller_reportcontroller_balancesheet",
+      "app_http_controllers_reportcontroller_reportcontroller_bankreconciliation",
+      "app_http_controllers_reportcontroller_reportcontroller_cashflow",
+      "app_http_controllers_reportcontroller_reportcontroller_clienthealth",
+      "app_http_controllers_reportcontroller_reportcontroller_clientstatement",
+      "app_http_controllers_reportcontroller_reportcontroller_commissions",
+      "app_http_controllers_reportcontroller_reportcontroller_converttolkr",
+      "app_http_controllers_reportcontroller_reportcontroller_costallocations",
+      "app_http_controllers_reportcontroller_reportcontroller_expenses",
+      "app_http_controllers_reportcontroller_reportcontroller_expensetrend",
+      "app_http_controllers_reportcontroller_reportcontroller_getcurrencysymbol",
+      "app_http_controllers_reportcontroller_reportcontroller_getdaterange",
+      "app_http_controllers_reportcontroller_reportcontroller_index",
+      "app_http_controllers_reportcontroller_reportcontroller_partyledger",
+      "app_http_controllers_reportcontroller_reportcontroller_pnl",
+      "app_http_controllers_reportcontroller_reportcontroller_projectprofitability",
+      "app_http_controllers_reportcontroller_reportcontroller_projectstatus",
+      "app_http_controllers_reportcontroller_reportcontroller_recordpartysettlement",
+      "app_http_controllers_reportcontroller_reportcontroller_unformatamount",
+      "illuminate_http_request"
+    ],
+    "1": [
+      "composer",
+      "composer_allow_plugins_pestphp_pest_plugin",
+      "composer_allow_plugins_php_http_discovery",
+      "composer_autoload",
+      "composer_autoload_dev",
+      "composer_autoload_dev_psr_4",
+      "composer_autoload_psr_4",
+      "composer_config",
+      "composer_config_allow_plugins",
+      "composer_config_optimize_autoloader",
+      "composer_config_platform",
+      "composer_config_preferred_install",
+      "composer_config_sort_packages",
+      "composer_description",
+      "composer_extra",
+      "composer_extra_laravel",
+      "composer_keywords",
+      "composer_laravel_dont_discover",
+      "composer_license",
+      "composer_minimum_stability",
+      "composer_name",
+      "composer_platform_php",
+      "composer_prefer_stable",
+      "composer_psr_4_app",
+      "composer_psr_4_database_factories",
+      "composer_psr_4_database_seeders",
+      "composer_psr_4_tests",
+      "composer_require",
+      "composer_require_barryvdh_laravel_dompdf",
+      "composer_require_dev",
+      "composer_require_dev_fakerphp_faker",
+      "composer_require_dev_laravel_pail",
+      "composer_require_dev_laravel_pao",
+      "composer_require_dev_laravel_pint",
+      "composer_require_dev_mockery_mockery",
+      "composer_require_dev_nunomaduro_collision",
+      "composer_require_dev_phpunit_phpunit",
+      "composer_require_laravel_framework",
+      "composer_require_laravel_tinker",
+      "composer_require_php",
+      "composer_schema",
+      "composer_type",
+      "ref_framework",
+      "ref_laravel"
+    ],
+    "2": [
+      "app_http_controllers_apiintegrationcontroller",
+      "app_http_controllers_apiintegrationcontroller_apiintegrationcontroller",
+      "app_http_controllers_apiintegrationcontroller_apiintegrationcontroller_store",
+      "app_http_controllers_apiintegrationcontroller_apiintegrationcontroller_sync",
+      "app_http_controllers_employeecontroller",
+      "app_http_controllers_employeecontroller_employeecontroller",
+      "app_http_controllers_employeecontroller_employeecontroller_index",
+      "app_http_controllers_employeecontroller_employeecontroller_webindex",
+      "app_jobs_syncemployeesjob",
+      "app_jobs_syncemployeesjob_syncemployeesjob",
+      "app_jobs_syncemployeesjob_syncemployeesjob_construct",
+      "app_jobs_syncemployeesjob_syncemployeesjob_handle",
+      "app_models_apiintegration",
+      "app_models_apiintegration_apiintegration",
+      "app_models_employee",
+      "app_models_employee_employee",
+      "app_models_employee_employee_costallocations",
+      "app_models_employee_employee_scopeactive",
+      "app_models_user",
+      "app_models_user_user",
+      "app_models_user_user_casts",
+      "database_factories_userfactory",
+      "database_factories_userfactory_userfactory",
+      "database_factories_userfactory_userfactory_definition",
+      "database_factories_userfactory_userfactory_unverified",
+      "illuminate_bus_queueable",
+      "illuminate_contracts_queue_shouldqueue",
+      "illuminate_database_eloquent_factories_factory",
+      "illuminate_database_eloquent_factories_hasfactory",
+      "illuminate_foundation_auth_user",
+      "illuminate_foundation_bus_dispatchable",
+      "illuminate_notifications_notifiable",
+      "illuminate_queue_interactswithqueue",
+      "illuminate_queue_serializesmodels",
+      "static"
+    ],
+    "3": [
+      "app_http_controllers_costallocationcontroller",
+      "app_http_controllers_costallocationcontroller_costallocationcontroller",
+      "app_http_controllers_costallocationcontroller_costallocationcontroller_destroy",
+      "app_http_controllers_costallocationcontroller_costallocationcontroller_index",
+      "app_http_controllers_costallocationcontroller_costallocationcontroller_store",
+      "app_http_controllers_taxtypecontroller",
+      "app_http_controllers_taxtypecontroller_taxtypecontroller",
+      "app_http_controllers_taxtypecontroller_taxtypecontroller_calculate",
+      "app_http_controllers_taxtypecontroller_taxtypecontroller_destroy",
+      "app_http_controllers_taxtypecontroller_taxtypecontroller_index",
+      "app_http_controllers_taxtypecontroller_taxtypecontroller_store",
+      "app_http_controllers_taxtypecontroller_taxtypecontroller_update",
+      "app_models_costallocation",
+      "app_models_costallocation_costallocation",
+      "app_models_costallocation_costallocation_employee",
+      "app_models_costallocation_costallocation_project",
+      "app_models_costallocation_costallocation_server",
+      "app_models_taxtype",
+      "app_models_taxtype_taxtype",
+      "app_models_taxtype_taxtype_scopeactive",
+      "app_models_taxtype_taxtype_scopeeffectiveon",
+      "app_services_taxcalculator",
+      "app_services_taxcalculator_taxcalculator",
+      "app_services_taxcalculator_taxcalculator_apit",
+      "app_services_taxcalculator_taxcalculator_vat",
+      "app_services_taxcalculator_taxcalculator_wht",
+      "illuminate_database_eloquent_softdeletes"
+    ],
+    "4": [
+      "composer_scripts",
+      "composer_scripts_dev",
+      "composer_scripts_post_autoload_dump",
+      "composer_scripts_post_create_project_cmd",
+      "composer_scripts_post_root_package_install",
+      "composer_scripts_post_update_cmd",
+      "composer_scripts_pre_package_uninstall",
+      "composer_scripts_setup",
+      "composer_scripts_test",
+      "ref_composer_config_disableprocesstimeout",
+      "ref_composer_install",
+      "ref_illuminate_foundation_composerscripts_postautoloaddump",
+      "ref_illuminate_foundation_composerscripts_prepackageuninstall",
+      "ref_npm_install_ignore_scripts",
+      "ref_npm_run_build",
+      "ref_npx_concurrently_c_93c5fd_c4b5fd_fb7185_fdba74_php_artisan_serve_php_artisan_queue_listen_tries_1_timeout_0_php_artisan_pail_timeout_0_npm_run_dev_names_server_queue_logs_vite_kill_others",
+      "ref_php_artisan_config_clear_ansi_no_additional_args",
+      "ref_php_artisan_key_generate",
+      "ref_php_artisan_key_generate_ansi",
+      "ref_php_artisan_migrate_force",
+      "ref_php_artisan_migrate_graceful_ansi",
+      "ref_php_artisan_package_discover_ansi",
+      "ref_php_artisan_test",
+      "ref_php_artisan_vendor_publish_tag_laravel_assets_ansi_force",
+      "ref_php_r_file_exists_database_database_sqlite_touch_database_database_sqlite",
+      "ref_php_r_file_exists_env_copy_env_example_env"
+    ],
+    "5": [
+      "ref_sin1",
+      "vercel",
+      "vercel_api_index_php_runtime",
+      "vercel_buildcommand",
+      "vercel_env",
+      "vercel_env_app_config_cache",
+      "vercel_env_app_debug",
+      "vercel_env_app_env",
+      "vercel_env_app_events_cache",
+      "vercel_env_app_key",
+      "vercel_env_app_packages_cache",
+      "vercel_env_app_routes_cache",
+      "vercel_env_app_services_cache",
+      "vercel_env_db_connection",
+      "vercel_env_log_channel",
+      "vercel_env_php_version",
+      "vercel_env_session_driver",
+      "vercel_env_view_compiled_path",
+      "vercel_framework",
+      "vercel_functions",
+      "vercel_functions_api_index_php",
+      "vercel_outputdirectory",
+      "vercel_regions",
+      "vercel_routes",
+      "vercel_version"
+    ],
+    "6": [
+      "app_http_controllers_loancontroller_loancontroller",
+      "app_http_controllers_loancontroller_loancontroller_activate",
+      "app_http_controllers_loancontroller_loancontroller_addinterestschedule",
+      "app_http_controllers_loancontroller_loancontroller_addprincipaldraw",
+      "app_http_controllers_loancontroller_loancontroller_destroy",
+      "app_http_controllers_loancontroller_loancontroller_editinterestamount",
+      "app_http_controllers_loancontroller_loancontroller_generateinterestschedule",
+      "app_http_controllers_loancontroller_loancontroller_getcategoryid",
+      "app_http_controllers_loancontroller_loancontroller_getdepartmentid",
+      "app_http_controllers_loancontroller_loancontroller_index",
+      "app_http_controllers_loancontroller_loancontroller_markinterestnotneeded",
+      "app_http_controllers_loancontroller_loancontroller_partyreport",
+      "app_http_controllers_loancontroller_loancontroller_recalculatereducingbalance",
+      "app_http_controllers_loancontroller_loancontroller_recordprincipalrepayment",
+      "app_http_controllers_loancontroller_loancontroller_schedules",
+      "app_http_controllers_loancontroller_loancontroller_settlefully",
+      "app_http_controllers_loancontroller_loancontroller_settleinterestperiod",
+      "app_http_controllers_loancontroller_loancontroller_settlements",
+      "app_http_controllers_loancontroller_loancontroller_show",
+      "app_http_controllers_loancontroller_loancontroller_store",
+      "app_http_controllers_loancontroller_loancontroller_updatestatus"
+    ],
+    "7": [
+      "app_http_controllers_bankreconciliationcontroller",
+      "app_http_controllers_bankreconciliationcontroller_bankreconciliationcontroller",
+      "app_http_controllers_bankreconciliationcontroller_bankreconciliationcontroller_automatch",
+      "app_http_controllers_bankreconciliationcontroller_bankreconciliationcontroller_index",
+      "app_http_controllers_transactioncontroller",
+      "app_http_controllers_transactioncontroller_transactioncontroller",
+      "app_http_controllers_transactioncontroller_transactioncontroller_destroy",
+      "app_http_controllers_transactioncontroller_transactioncontroller_index",
+      "app_http_controllers_transactioncontroller_transactioncontroller_store",
+      "app_http_controllers_transactioncontroller_transactioncontroller_update",
+      "app_models_bankstatementimport",
+      "app_models_bankstatementimport_bankstatementimport",
+      "app_models_bankstatementimport_bankstatementimport_bankaccount",
+      "app_models_bankstatementimport_bankstatementimport_matchedtransaction",
+      "app_models_transaction",
+      "app_models_transaction_transaction",
+      "app_services_bankreconciliationservice",
+      "app_services_bankreconciliationservice_bankreconciliationservice",
+      "app_services_bankreconciliationservice_bankreconciliationservice_automatch"
+    ],
+    "8": [
+      "concurrently",
+      "laravel_vite_plugin",
+      "package",
+      "package_devdependencies",
+      "package_devdependencies_concurrently",
+      "package_devdependencies_laravel_vite_plugin",
+      "package_devdependencies_tailwindcss",
+      "package_devdependencies_tailwindcss_vite",
+      "package_devdependencies_vite",
+      "package_private",
+      "package_schema",
+      "package_scripts",
+      "package_scripts_build",
+      "package_scripts_dev",
+      "package_type",
+      "tailwindcss",
+      "tailwindcss_vite",
+      "vite"
+    ],
+    "9": [
+      "app_models_company",
+      "app_models_company_company",
+      "database_seeders_accountseeder",
+      "database_seeders_accountseeder_accountseeder",
+      "database_seeders_accountseeder_accountseeder_run",
+      "database_seeders_databaseseeder",
+      "database_seeders_databaseseeder_databaseseeder",
+      "database_seeders_databaseseeder_databaseseeder_run",
+      "database_seeders_financialyearseeder",
+      "database_seeders_financialyearseeder_financialyearseeder",
+      "database_seeders_financialyearseeder_financialyearseeder_run",
+      "database_seeders_taxtypeseeder",
+      "database_seeders_taxtypeseeder_taxtypeseeder",
+      "database_seeders_taxtypeseeder_taxtypeseeder_run",
+      "illuminate_database_console_seeds_withoutmodelevents",
+      "illuminate_database_seeder"
+    ],
+    "10": [
+      "app_http_controllers_authcontroller",
+      "app_http_controllers_authcontroller_authcontroller",
+      "app_http_controllers_authcontroller_authcontroller_login",
+      "app_http_controllers_authcontroller_authcontroller_logout",
+      "app_http_controllers_authcontroller_authcontroller_showlogin",
+      "app_services_activitylogservice",
+      "app_services_activitylogservice_activitylogservice",
+      "app_services_activitylogservice_activitylogservice_ensuretableexists",
+      "app_services_activitylogservice_activitylogservice_log",
+      "app_services_activitylogservice_activitylogservice_logcreate",
+      "app_services_activitylogservice_activitylogservice_logdelete",
+      "app_services_activitylogservice_activitylogservice_logupdate",
+      "config_auth"
+    ],
+    "11": [
+      "app_http_controllers_purchaseordercontroller",
+      "app_http_controllers_purchaseordercontroller_purchaseordercontroller",
+      "app_http_controllers_purchaseordercontroller_purchaseordercontroller_index",
+      "app_http_controllers_purchaseordercontroller_purchaseordercontroller_store",
+      "app_models_purchaseorder",
+      "app_models_purchaseorder_purchaseorder",
+      "app_models_purchaseorder_purchaseorder_bills",
+      "app_models_purchaseorder_purchaseorder_department",
+      "app_models_purchaseorder_purchaseorder_vendor",
+      "app_services_periodlockservice",
+      "app_services_periodlockservice_periodlockservice",
+      "app_services_periodlockservice_periodlockservice_isdateeditable"
+    ],
+    "12": [
+      "app_http_controllers_currencycontroller",
+      "app_http_controllers_currencycontroller_currencycontroller",
+      "app_http_controllers_currencycontroller_currencycontroller_destroy",
+      "app_http_controllers_currencycontroller_currencycontroller_ensuretablesexist",
+      "app_http_controllers_currencycontroller_currencycontroller_history",
+      "app_http_controllers_currencycontroller_currencycontroller_index",
+      "app_http_controllers_currencycontroller_currencycontroller_store",
+      "app_http_controllers_currencycontroller_currencycontroller_syncrates",
+      "app_http_controllers_currencycontroller_currencycontroller_update",
+      "app_models_currency",
+      "app_models_currency_currency",
+      "app_models_currency_currency_seeddefaultcurrencies"
+    ],
+    "13": [
+      "app_http_controllers_financialyearcontroller",
+      "app_http_controllers_financialyearcontroller_financialyearcontroller",
+      "app_http_controllers_financialyearcontroller_financialyearcontroller_index",
+      "app_http_controllers_financialyearcontroller_financialyearcontroller_store",
+      "app_http_controllers_financialyearcontroller_financialyearcontroller_updateperiodstatus",
+      "app_models_financialyear",
+      "app_models_financialyear_financialyear",
+      "app_models_financialyear_financialyear_company",
+      "app_models_financialyear_financialyear_periods",
+      "app_models_fiscalperiod",
+      "app_models_fiscalperiod_fiscalperiod",
+      "app_models_fiscalperiod_fiscalperiod_financialyear",
+      "app_services_periodlockservice_periodlockservice_checklockeddate"
+    ],
+    "14": [
+      "app_http_controllers_sharelinkcontroller",
+      "app_http_controllers_sharelinkcontroller_sharelinkcontroller",
+      "app_http_controllers_sharelinkcontroller_sharelinkcontroller_index",
+      "app_http_controllers_sharelinkcontroller_sharelinkcontroller_regenerate",
+      "app_http_controllers_sharelinkcontroller_sharelinkcontroller_renderclientdashboard",
+      "app_http_controllers_sharelinkcontroller_sharelinkcontroller_renderclientscope",
+      "app_http_controllers_sharelinkcontroller_sharelinkcontroller_renderpartnerscope",
+      "app_http_controllers_sharelinkcontroller_sharelinkcontroller_revoke",
+      "app_http_controllers_sharelinkcontroller_sharelinkcontroller_showpublic",
+      "app_http_controllers_sharelinkcontroller_sharelinkcontroller_store",
+      "app_http_controllers_sharelinkcontroller_sharelinkcontroller_verifypassword"
+    ],
+    "15": [
+      "app_http_controllers_vendorbillcontroller",
+      "app_http_controllers_vendorbillcontroller_vendorbillcontroller",
+      "app_http_controllers_vendorbillcontroller_vendorbillcontroller_index",
+      "app_http_controllers_vendorbillcontroller_vendorbillcontroller_store",
+      "app_models_department",
+      "app_models_department_department",
+      "app_models_vendorbill",
+      "app_models_vendorbill_vendorbill",
+      "app_models_vendorbill_vendorbill_department",
+      "app_models_vendorbill_vendorbill_purchaseorder",
+      "app_models_vendorbill_vendorbill_vendor"
+    ],
+    "16": [
+      "app_http_controllers_fixedassetcontroller",
+      "app_http_controllers_fixedassetcontroller_fixedassetcontroller",
+      "app_http_controllers_fixedassetcontroller_fixedassetcontroller_index",
+      "app_http_controllers_fixedassetcontroller_fixedassetcontroller_rundepreciation",
+      "app_http_controllers_fixedassetcontroller_fixedassetcontroller_store",
+      "app_models_fixedasset",
+      "app_models_fixedasset_fixedasset",
+      "app_services_depreciationservice",
+      "app_services_depreciationservice_depreciationservice",
+      "app_services_depreciationservice_depreciationservice_processmonthlydepreciation"
+    ],
+    "17": [
+      "app_models_journalentry",
+      "app_models_journalentry_journalentry",
+      "app_models_journalentry_journalentry_lines",
+      "app_models_journalentryline",
+      "app_models_journalentryline_journalentryline",
+      "app_models_journalentryline_journalentryline_account",
+      "app_models_journalentryline_journalentryline_journalentry",
+      "app_services_ledgerpostingservice",
+      "app_services_ledgerpostingservice_ledgerpostingservice",
+      "app_services_ledgerpostingservice_ledgerpostingservice_postjournal"
+    ],
+    "18": [
+      "app_http_controllers_accountcontroller",
+      "app_http_controllers_accountcontroller_accountcontroller",
+      "app_http_controllers_accountcontroller_accountcontroller_index",
+      "app_http_controllers_accountcontroller_accountcontroller_store",
+      "app_models_account",
+      "app_models_account_account",
+      "app_models_account_account_children",
+      "app_models_account_account_company",
+      "app_models_account_account_parent"
+    ],
+    "19": [
+      "app_models_currencyexchangerate",
+      "app_models_currencyexchangerate_currencyexchangerate",
+      "app_models_project",
+      "app_models_project_project",
+      "app_models_projectdocument",
+      "app_models_projectdocument_projectdocument",
+      "app_models_server",
+      "app_models_server_server",
+      "illuminate_database_eloquent_model"
+    ],
+    "20": [
+      "app_models_invoice_invoice_items",
+      "app_models_loan",
+      "app_models_loan_loan",
+      "app_models_loan_loan_interestschedules",
+      "app_models_loan_loan_party",
+      "app_models_party",
+      "app_models_party_party",
+      "app_models_party_party_loans",
+      "illuminate_database_eloquent_relations_hasmany"
+    ],
+    "21": [
+      "app_http_controllers_invoicecontroller_invoicecontroller",
+      "app_http_controllers_invoicecontroller_invoicecontroller_destroy",
+      "app_http_controllers_invoicecontroller_invoicecontroller_downloadpdf",
+      "app_http_controllers_invoicecontroller_invoicecontroller_index",
+      "app_http_controllers_invoicecontroller_invoicecontroller_resolvedepartmenttemplate",
+      "app_http_controllers_invoicecontroller_invoicecontroller_store",
+      "app_http_controllers_invoicecontroller_invoicecontroller_updatestatus",
+      "app_http_controllers_invoicecontroller_invoicecontroller_viewpdf"
+    ],
+    "22": [
+      "app_http_controllers_budgetcontroller",
+      "app_http_controllers_budgetcontroller_budgetcontroller",
+      "app_http_controllers_budgetcontroller_budgetcontroller_destroy",
+      "app_http_controllers_budgetcontroller_budgetcontroller_getjson",
+      "app_http_controllers_budgetcontroller_budgetcontroller_index",
+      "app_http_controllers_budgetcontroller_budgetcontroller_show",
+      "app_http_controllers_budgetcontroller_budgetcontroller_store",
+      "app_http_controllers_budgetcontroller_budgetcontroller_storetransaction"
+    ],
+    "23": [
+      "app_http_controllers_chequecontroller",
+      "app_http_controllers_chequecontroller_chequecontroller",
+      "app_http_controllers_chequecontroller_chequecontroller_destroy",
+      "app_http_controllers_chequecontroller_chequecontroller_ensuretableexists",
+      "app_http_controllers_chequecontroller_chequecontroller_index",
+      "app_http_controllers_chequecontroller_chequecontroller_store",
+      "app_http_controllers_chequecontroller_chequecontroller_updatestatus"
+    ],
+    "24": [
+      "app_http_controllers_documenttemplatecontroller",
+      "app_http_controllers_documenttemplatecontroller_documenttemplatecontroller",
+      "app_http_controllers_documenttemplatecontroller_documenttemplatecontroller_destroy",
+      "app_http_controllers_documenttemplatecontroller_documenttemplatecontroller_getuploadpath",
+      "app_http_controllers_documenttemplatecontroller_documenttemplatecontroller_index",
+      "app_http_controllers_documenttemplatecontroller_documenttemplatecontroller_store",
+      "app_http_controllers_documenttemplatecontroller_documenttemplatecontroller_update"
+    ],
+    "25": [
+      "app_http_controllers_invoicecontroller",
+      "app_models_invoice",
+      "app_models_invoice_invoice",
+      "app_models_invoice_invoice_client",
+      "app_models_invoice_invoice_project",
+      "app_models_invoice_invoice_taxtype",
+      "illuminate_database_eloquent_relations_belongsto"
+    ],
+    "26": [
+      "app_http_controllers_remindercontroller",
+      "app_http_controllers_remindercontroller_remindercontroller",
+      "app_http_controllers_remindercontroller_remindercontroller_destroy",
+      "app_http_controllers_remindercontroller_remindercontroller_ensuretableexists",
+      "app_http_controllers_remindercontroller_remindercontroller_index",
+      "app_http_controllers_remindercontroller_remindercontroller_store",
+      "app_http_controllers_remindercontroller_remindercontroller_updatestatus"
+    ],
+    "27": [
+      "app_http_controllers_bankaccountcontroller",
+      "app_http_controllers_bankaccountcontroller_bankaccountcontroller",
+      "app_http_controllers_bankaccountcontroller_bankaccountcontroller_destroy",
+      "app_http_controllers_bankaccountcontroller_bankaccountcontroller_index",
+      "app_http_controllers_bankaccountcontroller_bankaccountcontroller_store",
+      "app_http_controllers_bankaccountcontroller_bankaccountcontroller_update"
+    ],
+    "28": [
+      "app_http_controllers_dashboardcontroller",
+      "app_http_controllers_dashboardcontroller_dashboardcontroller",
+      "app_http_controllers_dashboardcontroller_dashboardcontroller_index",
+      "app_http_controllers_journalentrycontroller",
+      "app_http_controllers_loancontroller",
+      "routes_web"
+    ],
+    "29": [
+      "app_http_controllers_categorycontroller",
+      "app_http_controllers_categorycontroller_categorycontroller",
+      "app_http_controllers_categorycontroller_categorycontroller_destroy",
+      "app_http_controllers_categorycontroller_categorycontroller_index",
+      "app_http_controllers_categorycontroller_categorycontroller_store",
+      "app_http_controllers_categorycontroller_categorycontroller_update"
+    ],
+    "30": [
+      "app_http_controllers_controller",
+      "app_http_controllers_controller_controller",
+      "app_http_controllers_profilecontroller",
+      "app_http_controllers_profilecontroller_profilecontroller",
+      "app_http_controllers_profilecontroller_profilecontroller_index",
+      "app_http_controllers_profilecontroller_profilecontroller_updateconfig"
+    ],
+    "31": [
+      "app_http_controllers_departmentcontroller",
+      "app_http_controllers_departmentcontroller_departmentcontroller",
+      "app_http_controllers_departmentcontroller_departmentcontroller_destroy",
+      "app_http_controllers_departmentcontroller_departmentcontroller_index",
+      "app_http_controllers_departmentcontroller_departmentcontroller_store",
+      "app_http_controllers_departmentcontroller_departmentcontroller_update"
+    ],
+    "32": [
+      "app_http_controllers_invoicetypecontroller",
+      "app_http_controllers_invoicetypecontroller_invoicetypecontroller",
+      "app_http_controllers_invoicetypecontroller_invoicetypecontroller_destroy",
+      "app_http_controllers_invoicetypecontroller_invoicetypecontroller_index",
+      "app_http_controllers_invoicetypecontroller_invoicetypecontroller_store",
+      "app_http_controllers_invoicetypecontroller_invoicetypecontroller_update"
+    ],
+    "33": [
+      "app_http_controllers_journalentrycontroller_journalentrycontroller",
+      "app_http_controllers_journalentrycontroller_journalentrycontroller_ensuretablesexist",
+      "app_http_controllers_journalentrycontroller_journalentrycontroller_index",
+      "app_http_controllers_journalentrycontroller_journalentrycontroller_postdoubleentry",
+      "app_http_controllers_journalentrycontroller_journalentrycontroller_store"
+    ],
+    "34": [
+      "app_http_controllers_partycontroller",
+      "app_http_controllers_partycontroller_partycontroller",
+      "app_http_controllers_partycontroller_partycontroller_destroy",
+      "app_http_controllers_partycontroller_partycontroller_index",
+      "app_http_controllers_partycontroller_partycontroller_store",
+      "app_http_controllers_partycontroller_partycontroller_update"
+    ],
+    "35": [
+      "app_http_controllers_projectdocumentcontroller",
+      "app_http_controllers_projectdocumentcontroller_projectdocumentcontroller",
+      "app_http_controllers_projectdocumentcontroller_projectdocumentcontroller_destroy",
+      "app_http_controllers_projectdocumentcontroller_projectdocumentcontroller_download",
+      "app_http_controllers_projectdocumentcontroller_projectdocumentcontroller_store",
+      "app_http_controllers_projectdocumentcontroller_projectdocumentcontroller_update"
+    ],
+    "36": [
+      "app_http_controllers_servercontroller",
+      "app_http_controllers_servercontroller_servercontroller",
+      "app_http_controllers_servercontroller_servercontroller_destroy",
+      "app_http_controllers_servercontroller_servercontroller_index",
+      "app_http_controllers_servercontroller_servercontroller_store",
+      "app_http_controllers_servercontroller_servercontroller_update"
+    ],
+    "37": [
+      "app_http_controllers_tagcontroller",
+      "app_http_controllers_tagcontroller_tagcontroller",
+      "app_http_controllers_tagcontroller_tagcontroller_destroy",
+      "app_http_controllers_tagcontroller_tagcontroller_index",
+      "app_http_controllers_tagcontroller_tagcontroller_store",
+      "app_http_controllers_tagcontroller_tagcontroller_update"
+    ],
+    "38": [
+      "app_providers_appserviceprovider",
+      "app_providers_appserviceprovider_appserviceprovider",
+      "app_providers_appserviceprovider_appserviceprovider_boot",
+      "app_providers_appserviceprovider_appserviceprovider_register",
+      "bootstrap_providers",
+      "illuminate_support_serviceprovider"
+    ],
+    "39": [
+      "illuminate_foundation_testing_testcase",
+      "tests_feature_exampletest",
+      "tests_feature_exampletest_exampletest",
+      "tests_feature_exampletest_exampletest_test_the_application_returns_a_successful_response",
+      "tests_testcase",
+      "tests_testcase_testcase"
+    ],
+    "40": [
+      "app_http_controllers_activitylogcontroller",
+      "app_http_controllers_activitylogcontroller_activitylogcontroller",
+      "app_http_controllers_activitylogcontroller_activitylogcontroller_ensuretableexists",
+      "app_http_controllers_activitylogcontroller_activitylogcontroller_index",
+      "app_http_controllers_activitylogcontroller_activitylogcontroller_log"
+    ],
+    "41": [
+      "phpunit_framework_testcase",
+      "tests_unit_exampletest",
+      "tests_unit_exampletest_exampletest",
+      "tests_unit_exampletest_exampletest_test_that_true_is_true"
+    ],
+    "42": [
+      "database_migrations_0001_01_01_000000_create_users_table",
+      "database_migrations_0001_01_01_000000_create_users_table_down",
+      "database_migrations_0001_01_01_000000_create_users_table_up"
+    ],
+    "43": [
+      "database_migrations_0001_01_01_000001_create_cache_table",
+      "database_migrations_0001_01_01_000001_create_cache_table_down",
+      "database_migrations_0001_01_01_000001_create_cache_table_up"
+    ],
+    "44": [
+      "database_migrations_0001_01_01_000002_create_jobs_table",
+      "database_migrations_0001_01_01_000002_create_jobs_table_down",
+      "database_migrations_0001_01_01_000002_create_jobs_table_up"
+    ],
+    "45": [
+      "database_migrations_2026_07_19_000001_create_master_tables",
+      "database_migrations_2026_07_19_000001_create_master_tables_down",
+      "database_migrations_2026_07_19_000001_create_master_tables_up"
+    ],
+    "46": [
+      "database_migrations_2026_07_19_000002_create_project_tables",
+      "database_migrations_2026_07_19_000002_create_project_tables_down",
+      "database_migrations_2026_07_19_000002_create_project_tables_up"
+    ],
+    "47": [
+      "database_migrations_2026_07_19_000003_create_budget_and_transaction_tables",
+      "database_migrations_2026_07_19_000003_create_budget_and_transaction_tables_down",
+      "database_migrations_2026_07_19_000003_create_budget_and_transaction_tables_up"
+    ],
+    "48": [
+      "database_migrations_2026_07_19_000004_create_invoice_and_payment_tables",
+      "database_migrations_2026_07_19_000004_create_invoice_and_payment_tables_down",
+      "database_migrations_2026_07_19_000004_create_invoice_and_payment_tables_up"
+    ],
+    "49": [
+      "database_migrations_2026_07_19_000005_create_loan_and_reminder_tables",
+      "database_migrations_2026_07_19_000005_create_loan_and_reminder_tables_down",
+      "database_migrations_2026_07_19_000005_create_loan_and_reminder_tables_up"
+    ],
+    "50": [
+      "database_migrations_2026_07_19_000006_create_share_and_ledger_tables",
+      "database_migrations_2026_07_19_000006_create_share_and_ledger_tables_down",
+      "database_migrations_2026_07_19_000006_create_share_and_ledger_tables_up"
+    ],
+    "51": [
+      "database_migrations_2026_07_20_115404_create_project_documents_table",
+      "database_migrations_2026_07_20_115404_create_project_documents_table_down",
+      "database_migrations_2026_07_20_115404_create_project_documents_table_up"
+    ],
+    "52": [
+      "database_migrations_2026_07_21_115330_create_api_integrations_table",
+      "database_migrations_2026_07_21_115330_create_api_integrations_table_down",
+      "database_migrations_2026_07_21_115330_create_api_integrations_table_up"
+    ],
+    "53": [
+      "database_migrations_2026_07_21_115330_create_employees_table",
+      "database_migrations_2026_07_21_115330_create_employees_table_down",
+      "database_migrations_2026_07_21_115330_create_employees_table_up"
+    ],
+    "54": [
+      "database_migrations_2026_07_21_115330_create_servers_table",
+      "database_migrations_2026_07_21_115330_create_servers_table_down",
+      "database_migrations_2026_07_21_115330_create_servers_table_up"
+    ],
+    "55": [
+      "database_migrations_2026_07_21_115331_create_cost_allocations_table",
+      "database_migrations_2026_07_21_115331_create_cost_allocations_table_down",
+      "database_migrations_2026_07_21_115331_create_cost_allocations_table_up"
+    ],
+    "56": [
+      "database_migrations_2026_07_28_130000_create_tax_types_table",
+      "database_migrations_2026_07_28_130000_create_tax_types_table_down",
+      "database_migrations_2026_07_28_130000_create_tax_types_table_up"
+    ],
+    "57": [
+      "database_migrations_2026_07_28_140000_create_financial_years_table",
+      "database_migrations_2026_07_28_140000_create_financial_years_table_down",
+      "database_migrations_2026_07_28_140000_create_financial_years_table_up"
+    ],
+    "58": [
+      "database_migrations_2026_07_28_140001_create_accounts_table",
+      "database_migrations_2026_07_28_140001_create_accounts_table_down",
+      "database_migrations_2026_07_28_140001_create_accounts_table_up"
+    ],
+    "59": [
+      "database_migrations_2026_07_28_140002_create_accounts_payable_tables",
+      "database_migrations_2026_07_28_140002_create_accounts_payable_tables_down",
+      "database_migrations_2026_07_28_140002_create_accounts_payable_tables_up"
+    ],
+    "60": [
+      "database_migrations_2026_07_28_140003_create_bank_statement_imports_table",
+      "database_migrations_2026_07_28_140003_create_bank_statement_imports_table_down",
+      "database_migrations_2026_07_28_140003_create_bank_statement_imports_table_up"
+    ],
+    "61": [
+      "database_migrations_2026_07_28_140004_create_fixed_assets_table",
+      "database_migrations_2026_07_28_140004_create_fixed_assets_table_down",
+      "database_migrations_2026_07_28_140004_create_fixed_assets_table_up"
+    ],
+    "62": [
+      "database_migrations_2026_07_28_150000_add_tax_type_id_to_invoices_table",
+      "database_migrations_2026_07_28_150000_add_tax_type_id_to_invoices_table_down",
+      "database_migrations_2026_07_28_150000_add_tax_type_id_to_invoices_table_up"
+    ],
+    "63": [
+      "database_migrations_2026_07_28_160000_add_party_id_to_loans_table",
+      "database_migrations_2026_07_28_160000_add_party_id_to_loans_table_down",
+      "database_migrations_2026_07_28_160000_add_party_id_to_loans_table_up"
+    ],
+    "64": [
+      "artisan",
+      "routes_console"
+    ],
+    "65": [
+      "resources_views_activity_logs_blade",
+      "resources_views_activity_logs_blade_php_operations_sidebar"
+    ],
+    "66": [
+      "resources_views_approvals_blade",
+      "resources_views_approvals_blade_php_operations_sidebar"
+    ],
+    "67": [
+      "resources_views_cheques_blade",
+      "resources_views_cheques_blade_php_operations_sidebar"
+    ],
+    "68": [
+      "resources_views_masters_bank_accounts_blade",
+      "resources_views_masters_bank_accounts_blade_php_masters_sidebar"
+    ],
+    "69": [
+      "resources_views_masters_categories_blade",
+      "resources_views_masters_categories_blade_php_masters_sidebar"
+    ],
+    "70": [
+      "resources_views_masters_currencies_blade",
+      "resources_views_masters_currencies_blade_php_masters_sidebar"
+    ],
+    "71": [
+      "resources_views_masters_departments_blade",
+      "resources_views_masters_departments_blade_php_masters_sidebar"
+    ],
+    "72": [
+      "resources_views_masters_document_templates_blade",
+      "resources_views_masters_document_templates_blade_php_masters_sidebar"
+    ],
+    "73": [
+      "resources_views_masters_invoice_types_blade",
+      "resources_views_masters_invoice_types_blade_php_masters_sidebar"
+    ],
+    "74": [
+      "resources_views_masters_parties_blade",
+      "resources_views_masters_parties_blade_php_masters_sidebar"
+    ],
+    "75": [
+      "resources_views_masters_servers_blade",
+      "resources_views_masters_servers_blade_php_masters_sidebar"
+    ],
+    "76": [
+      "resources_views_masters_tags_blade",
+      "resources_views_masters_tags_blade_php_masters_sidebar"
+    ],
+    "77": [
+      "resources_views_masters_tax_types_blade",
+      "resources_views_masters_tax_types_blade_php_masters_sidebar"
+    ],
+    "78": [
+      "resources_views_reminders_blade",
+      "resources_views_reminders_blade_php_operations_sidebar"
+    ],
+    "79": [
+      "api_index"
+    ],
+    "80": [
+      "bootstrap_app"
+    ],
+    "81": [
+      "config_app"
+    ],
+    "82": [
+      "config_cache"
+    ],
+    "83": [
+      "config_database"
+    ],
+    "84": [
+      "config_filesystems"
+    ],
+    "85": [
+      "config_logging"
+    ],
+    "86": [
+      "config_mail"
+    ],
+    "87": [
+      "config_queue"
+    ],
+    "88": [
+      "config_services"
+    ],
+    "89": [
+      "config_session"
+    ],
+    "90": [
+      "convert_schema"
+    ],
+    "91": [
+      "design_system_script"
+    ],
+    "92": [
+      "public_index"
+    ],
+    "93": [
+      "public_script"
+    ],
+    "94": [
+      "resources_js_app"
+    ],
+    "95": [
+      "resources_views_assets_fixed_assets_blade"
+    ],
+    "96": [
+      "resources_views_auth_login_blade"
+    ],
+    "97": [
+      "resources_views_budgets_blade"
+    ],
+    "98": [
+      "resources_views_budgets_show_blade"
+    ],
+    "99": [
+      "resources_views_components_amount_display_blade"
+    ],
+    "100": [
+      "resources_views_components_amount_input_blade"
+    ],
+    "101": [
+      "resources_views_components_budget_item_selector_blade"
+    ],
+    "102": [
+      "resources_views_components_client_selector_blade"
+    ],
+    "103": [
+      "resources_views_components_company_profit_modal_blade"
+    ],
+    "104": [
+      "resources_views_components_currency_selector_blade"
+    ],
+    "105": [
+      "resources_views_components_date_range_picker_blade"
+    ],
+    "106": [
+      "resources_views_components_department_selector_blade"
+    ],
+    "107": [
+      "resources_views_components_employee_selector_blade"
+    ],
+    "108": [
+      "resources_views_components_party_selector_blade"
+    ],
+    "109": [
+      "resources_views_components_payment_modes_blade"
+    ],
+    "110": [
+      "resources_views_components_server_selector_blade"
+    ],
+    "111": [
+      "resources_views_components_sidebar_quick_add_cost_blade"
+    ],
+    "112": [
+      "resources_views_components_tag_selector_blade"
+    ],
+    "113": [
+      "resources_views_components_tax_selector_blade"
+    ],
+    "114": [
+      "resources_views_dashboard_blade"
+    ],
+    "115": [
+      "resources_views_employees_index_blade"
+    ],
+    "116": [
+      "resources_views_invoices_blade"
+    ],
+    "117": [
+      "resources_views_invoices_pdf_blade"
+    ],
+    "118": [
+      "resources_views_journal_entries_blade"
+    ],
+    "119": [
+      "resources_views_layouts_app_blade"
+    ],
+    "120": [
+      "resources_views_layouts_share_blade"
+    ],
+    "121": [
+      "resources_views_loans_blade"
+    ],
+    "122": [
+      "resources_views_loans_party_report_blade"
+    ],
+    "123": [
+      "resources_views_loans_schedules_blade"
+    ],
+    "124": [
+      "resources_views_loans_settlements_blade"
+    ],
+    "125": [
+      "resources_views_loans_show_blade"
+    ],
+    "126": [
+      "resources_views_masters_sidebar_blade"
+    ],
+    "127": [
+      "resources_views_operations_sidebar_blade"
+    ],
+    "128": [
+      "resources_views_payables_index_blade"
+    ],
+    "129": [
+      "resources_views_profile_blade"
+    ],
+    "130": [
+      "resources_views_projects_blade"
+    ],
+    "131": [
+      "resources_views_projects_show_blade"
+    ],
+    "132": [
+      "resources_views_reports_ar_aging_blade"
+    ],
+    "133": [
+      "resources_views_reports_balance_sheet_blade"
+    ],
+    "134": [
+      "resources_views_reports_bank_reconciliation_blade"
+    ],
+    "135": [
+      "resources_views_reports_cash_flow_blade"
+    ],
+    "136": [
+      "resources_views_reports_client_health_blade"
+    ],
+    "137": [
+      "resources_views_reports_client_statement_blade"
+    ],
+    "138": [
+      "resources_views_reports_commissions_blade"
+    ],
+    "139": [
+      "resources_views_reports_cost_allocations_blade"
+    ],
+    "140": [
+      "resources_views_reports_expense_trend_blade"
+    ],
+    "141": [
+      "resources_views_reports_expenses_blade"
+    ],
+    "142": [
+      "resources_views_reports_layout_blade"
+    ],
+    "143": [
+      "resources_views_reports_missing_blade"
+    ],
+    "144": [
+      "resources_views_reports_party_ledger_blade"
+    ],
+    "145": [
+      "resources_views_reports_pnl_blade"
+    ],
+    "146": [
+      "resources_views_reports_project_profitability_blade"
+    ],
+    "147": [
+      "resources_views_reports_project_status_blade"
+    ],
+    "148": [
+      "resources_views_share_client_blade"
+    ],
+    "149": [
+      "resources_views_share_client_dashboard_blade"
+    ],
+    "150": [
+      "resources_views_share_invalid_blade"
+    ],
+    "151": [
+      "resources_views_share_links_blade"
+    ],
+    "152": [
+      "resources_views_share_partner_blade"
+    ],
+    "153": [
+      "resources_views_share_password_blade"
+    ],
+    "154": [
+      "resources_views_transactions_blade"
+    ],
+    "155": [
+      "resources_views_treasury_bank_reconciliation_blade"
+    ],
+    "156": [
+      "resources_views_welcome_blade"
+    ],
+    "157": [
+      "vite_config"
+    ]
+  },
+  "cohesion": {
+    "0": 0.07680491551459294,
+    "1": 0.045454545454545456,
+    "2": 0.09243697478991597,
+    "3": 0.11396011396011396,
+    "4": 0.08,
+    "5": 0.08,
+    "6": 0.16666666666666666,
+    "7": 0.13450292397660818,
+    "8": 0.1111111111111111,
+    "9": 0.19166666666666668,
+    "10": 0.15384615384615385,
+    "11": 0.21212121212121213,
+    "12": 0.2878787878787879,
+    "13": 0.20512820512820512,
+    "14": 0.23636363636363636,
+    "15": 0.23636363636363636,
+    "16": 0.3333333333333333,
+    "17": 0.24444444444444444,
+    "18": 0.2777777777777778,
+    "19": 0.3333333333333333,
+    "20": 0.2777777777777778,
+    "21": 0.32142857142857145,
+    "22": 0.25,
+    "23": 0.47619047619047616,
+    "24": 0.38095238095238093,
+    "25": 0.42857142857142855,
+    "26": 0.47619047619047616,
+    "27": 0.3333333333333333,
+    "28": 0.3333333333333333,
+    "29": 0.3333333333333333,
+    "30": 0.3333333333333333,
+    "31": 0.3333333333333333,
+    "32": 0.3333333333333333,
+    "33": 0.6,
+    "34": 0.3333333333333333,
+    "35": 0.4666666666666667,
+    "36": 0.3333333333333333,
+    "37": 0.3333333333333333,
+    "38": 0.4,
+    "39": 0.4,
+    "40": 0.5,
+    "41": 0.6666666666666666,
+    "42": 0.6666666666666666,
+    "43": 0.6666666666666666,
+    "44": 0.6666666666666666,
+    "45": 0.6666666666666666,
+    "46": 0.6666666666666666,
+    "47": 0.6666666666666666,
+    "48": 0.6666666666666666,
+    "49": 0.6666666666666666,
+    "50": 0.6666666666666666,
+    "51": 0.6666666666666666,
+    "52": 0.6666666666666666,
+    "53": 0.6666666666666666,
+    "54": 0.6666666666666666,
+    "55": 0.6666666666666666,
+    "56": 0.6666666666666666,
+    "57": 0.6666666666666666,
+    "58": 0.6666666666666666,
+    "59": 0.6666666666666666,
+    "60": 0.6666666666666666,
+    "61": 0.6666666666666666,
+    "62": 0.6666666666666666,
+    "63": 0.6666666666666666,
+    "64": 1.0,
+    "65": 1.0,
+    "66": 1.0,
+    "67": 1.0,
+    "68": 1.0,
+    "69": 1.0,
+    "70": 1.0,
+    "71": 1.0,
+    "72": 1.0,
+    "73": 1.0,
+    "74": 1.0,
+    "75": 1.0,
+    "76": 1.0,
+    "77": 1.0,
+    "78": 1.0,
+    "79": 1.0,
+    "80": 1.0,
+    "81": 1.0,
+    "82": 1.0,
+    "83": 1.0,
+    "84": 1.0,
+    "85": 1.0,
+    "86": 1.0,
+    "87": 1.0,
+    "88": 1.0,
+    "89": 1.0,
+    "90": 1.0,
+    "91": 1.0,
+    "92": 1.0,
+    "93": 1.0,
+    "94": 1.0,
+    "95": 1.0,
+    "96": 1.0,
+    "97": 1.0,
+    "98": 1.0,
+    "99": 1.0,
+    "100": 1.0,
+    "101": 1.0,
+    "102": 1.0,
+    "103": 1.0,
+    "104": 1.0,
+    "105": 1.0,
+    "106": 1.0,
+    "107": 1.0,
+    "108": 1.0,
+    "109": 1.0,
+    "110": 1.0,
+    "111": 1.0,
+    "112": 1.0,
+    "113": 1.0,
+    "114": 1.0,
+    "115": 1.0,
+    "116": 1.0,
+    "117": 1.0,
+    "118": 1.0,
+    "119": 1.0,
+    "120": 1.0,
+    "121": 1.0,
+    "122": 1.0,
+    "123": 1.0,
+    "124": 1.0,
+    "125": 1.0,
+    "126": 1.0,
+    "127": 1.0,
+    "128": 1.0,
+    "129": 1.0,
+    "130": 1.0,
+    "131": 1.0,
+    "132": 1.0,
+    "133": 1.0,
+    "134": 1.0,
+    "135": 1.0,
+    "136": 1.0,
+    "137": 1.0,
+    "138": 1.0,
+    "139": 1.0,
+    "140": 1.0,
+    "141": 1.0,
+    "142": 1.0,
+    "143": 1.0,
+    "144": 1.0,
+    "145": 1.0,
+    "146": 1.0,
+    "147": 1.0,
+    "148": 1.0,
+    "149": 1.0,
+    "150": 1.0,
+    "151": 1.0,
+    "152": 1.0,
+    "153": 1.0,
+    "154": 1.0,
+    "155": 1.0,
+    "156": 1.0,
+    "157": 1.0
+  },
+  "gods": [
+    {
+      "id": "app_http_controllers_controller_controller",
+      "label": "Controller",
+      "degree": 36
+    },
+    {
+      "id": "app_http_controllers_projectcontroller_projectcontroller",
+      "label": "ProjectController",
+      "degree": 35
+    },
+    {
+      "id": "app_http_controllers_loancontroller_loancontroller",
+      "label": "LoanController",
+      "degree": 22
+    },
+    {
+      "id": "app_http_controllers_reportcontroller_reportcontroller",
+      "label": "ReportController",
+      "degree": 22
+    },
+    {
+      "id": "vercel_env",
+      "label": "env",
+      "degree": 14
+    },
+    {
+      "id": "app_models_taxtype_taxtype",
+      "label": "TaxType",
+      "degree": 12
+    },
+    {
+      "id": "app_http_controllers_sharelinkcontroller_sharelinkcontroller",
+      "label": "ShareLinkController",
+      "degree": 11
+    },
+    {
+      "id": "app_models_costallocation_costallocation",
+      "label": "CostAllocation",
+      "degree": 11
+    },
+    {
+      "id": "app_jobs_syncemployeesjob_syncemployeesjob",
+      "label": "SyncEmployeesJob",
+      "degree": 10
+    },
+    {
+      "id": "app_http_controllers_currencycontroller_currencycontroller",
+      "label": "CurrencyController",
+      "degree": 9
+    }
+  ],
+  "surprises": [
+    {
+      "source": "AccountController",
+      "target": "Controller",
+      "source_files": [
+        "app/Http/Controllers/AccountController.php",
+        "app/Http/Controllers/Controller.php"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "inherits",
+      "why": "bridges separate communities"
+    },
+    {
+      "source": "ActivityLogController",
+      "target": "Controller",
+      "source_files": [
+        "app/Http/Controllers/ActivityLogController.php",
+        "app/Http/Controllers/Controller.php"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "inherits",
+      "why": "bridges separate communities"
+    },
+    {
+      "source": "ApiIntegrationController",
+      "target": "Controller",
+      "source_files": [
+        "app/Http/Controllers/ApiIntegrationController.php",
+        "app/Http/Controllers/Controller.php"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "inherits",
+      "why": "bridges separate communities"
+    },
+    {
+      "source": "ApprovalController",
+      "target": "Controller",
+      "source_files": [
+        "app/Http/Controllers/ApprovalController.php",
+        "app/Http/Controllers/Controller.php"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "inherits",
+      "why": "bridges separate communities"
+    },
+    {
+      "source": "AuthController",
+      "target": "Controller",
+      "source_files": [
+        "app/Http/Controllers/AuthController.php",
+        "app/Http/Controllers/Controller.php"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "inherits",
+      "why": "bridges separate communities"
+    }
+  ],
+  "questions": [
+    {
+      "type": "bridge_node",
+      "question": "Why does `Controller` connect `Controller` to `Illuminate\\Http\\Request`, `SyncEmployeesJob`, `TaxType`, `LoanController`, `TransactionController`, `ActivityLogService`, `PurchaseOrder`, `CurrencyController`, `FinancialYear`, `ShareLinkController`, `VendorBillController.php`, `FixedAsset`, `Account`, `InvoiceController`, `BudgetController`, `ChequeController`, `DocumentTemplateController`, `ReminderController`, `BankAccountController`, `web.php`, `CategoryController`, `DepartmentController`, `InvoiceTypeController`, `JournalEntryController`, `PartyController`, `ProjectDocumentController`, `ServerController`, `TagController`, `ActivityLogController`?",
+      "why": "High betweenness centrality (0.041) - this node is a cross-community bridge."
+    },
+    {
+      "type": "bridge_node",
+      "question": "Why does `TaxType` connect `TaxType` to `Illuminate\\Database\\Seeder`, `Illuminate\\Database\\Eloquent\\Model`?",
+      "why": "High betweenness centrality (0.012) - this node is a cross-community bridge."
+    },
+    {
+      "type": "bridge_node",
+      "question": "Why does `CostAllocation` connect `TaxType` to `SyncEmployeesJob`, `Illuminate\\Database\\Eloquent\\Model`?",
+      "why": "High betweenness centrality (0.011) - this node is a cross-community bridge."
+    },
+    {
+      "type": "isolated_nodes",
+      "question": "What connects `$schema`, `name`, `type` to the rest of the system?",
+      "why": "91 weakly-connected nodes found - possible documentation gaps or missing edges."
+    },
+    {
+      "type": "low_cohesion",
+      "question": "Should `Illuminate\\Http\\Request` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.07680491551459294 - nodes in this community are weakly interconnected."
+    },
+    {
+      "type": "low_cohesion",
+      "question": "Should `composer.json` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.045454545454545456 - nodes in this community are weakly interconnected."
+    },
+    {
+      "type": "low_cohesion",
+      "question": "Should `SyncEmployeesJob` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.09243697478991597 - nodes in this community are weakly interconnected."
+    }
+  ]
+}

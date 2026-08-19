@@ -11,7 +11,7 @@
         <h1>Tags</h1>
         <p class="subtitle">Manage colored tags for labeling transactions and items.</p>
     </div>
-    <button class="btn btn-primary btn-pill mobile-hide" onclick="openCreateModal()">
+    <button class="btn btn-primary btn-pill" onclick="openCreateModal()">
         <ion-icon name="add-outline"></ion-icon> Add New Tag
     </button>
 </header>

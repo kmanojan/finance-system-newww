@@ -11,7 +11,7 @@
         <h1>Departments</h1>
         <p class="subtitle">Manage company departments and organizational structure.</p>
     </div>
-    <button class="btn btn-primary btn-pill mobile-hide" onclick="openCreateModal()">
+    <button class="btn btn-primary btn-pill" onclick="openCreateModal()">
         <ion-icon name="add-outline"></ion-icon> Add New Department
     </button>
 </header>

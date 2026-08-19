@@ -28,7 +28,7 @@
         <h1 style="font-size:1.75rem; font-weight:800; color:var(--text-heading); margin:0;">Third-Party Loans</h1>
         <p class="subtitle" style="margin-top:0.3rem;">Track borrowing facilities, principal repayments, scheduled interest, and total debt obligations.</p>
     </div>
-    <button class="btn btn-primary-gradient btn-pill mobile-hide" onclick="openModal('createLoanModal')">
+    <button class="btn btn-primary-gradient btn-pill" onclick="openModal('createLoanModal')">
         <ion-icon name="add-outline" style="vertical-align:middle;"></ion-icon> Record New Loan
     </button>
 </header>

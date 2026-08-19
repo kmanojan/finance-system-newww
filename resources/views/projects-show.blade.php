@@ -107,6 +107,31 @@
     .tab-content.active { display: block; animation: fadeIn 0.4s ease; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
+    @media (max-width: 768px) {
+        .metric-grid {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .metric-card {
+            padding: 1.25rem 1rem;
+            border-radius: 12px;
+        }
+        .metric-card .value {
+            font-size: 1.5rem;
+        }
+        .glass-card {
+            padding: 1.25rem 1rem;
+            border-radius: 12px;
+        }
+        .section-title {
+            font-size: 1.05rem;
+            flex-wrap: wrap;
+        }
+        .mini-table {
+            min-width: 500px;
+        }
+    }
 </style>
 
 <header class="page-header">

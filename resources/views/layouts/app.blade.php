@@ -44,15 +44,26 @@
 
 <body>
 
+    <!-- Backdrop Overlay for Mobile Drawers -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
     <!-- Mobile Header -->
-    <div class="mobile-header">
-        <div class="logo">
-            <span>F</span>
+    <header class="mobile-header">
+        <div class="mobile-header-left">
+            <div class="logo">
+                <span>F</span>
+            </div>
+            <span style="font-weight: 700; color: var(--text-heading); font-size: 1.1rem; letter-spacing: -0.5px;">Finance</span>
         </div>
-        <button class="mobile-menu-btn" id="mobileMenuBtn">
-            <ion-icon name="menu-outline"></ion-icon>
-        </button>
-    </div>
+        <div class="mobile-header-right">
+            <button type="button" class="mobile-nav-btn" id="mobileThemeToggleBtn" title="Toggle Dark/Light Mode">
+                <ion-icon name="moon-outline"></ion-icon>
+            </button>
+            <button type="button" class="mobile-nav-btn" id="mobileMenuBtn" title="Main Navigation">
+                <ion-icon name="menu-outline"></ion-icon>
+            </button>
+        </div>
+    </header>
 
     <div class="app-layout">
         <!-- Primary Navbar (Leftmost layer) -->
@@ -160,26 +171,28 @@
         }
 
         // Theme Toggle Logic
-        const themeBtn = document.getElementById('themeToggleBtn');
-        const themeIcon = themeBtn.querySelector('ion-icon');
-        
-        function updateThemeIcon(theme) {
-            if (theme === 'dark') {
-                themeIcon.setAttribute('name', 'sunny-outline');
-            } else {
-                themeIcon.setAttribute('name', 'moon-outline');
-            }
+        function updateThemeIcons(theme) {
+            const icons = document.querySelectorAll('#themeToggleBtn ion-icon, #mobileThemeToggleBtn ion-icon');
+            icons.forEach(icon => {
+                icon.setAttribute('name', theme === 'dark' ? 'sunny-outline' : 'moon-outline');
+            });
         }
         
-        const initialTheme = document.documentElement.getAttribute('data-theme');
-        updateThemeIcon(initialTheme);
+        const initialTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+        updateThemeIcons(initialTheme);
         
-        themeBtn.addEventListener('click', () => {
+        function toggleTheme() {
             const newTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
             document.documentElement.setAttribute('data-theme', newTheme);
             localStorage.setItem('theme', newTheme);
-            updateThemeIcon(newTheme);
-        });
+            updateThemeIcons(newTheme);
+        }
+
+        const themeBtn = document.getElementById('themeToggleBtn');
+        if (themeBtn) themeBtn.addEventListener('click', toggleTheme);
+
+        const mobileThemeBtn = document.getElementById('mobileThemeToggleBtn');
+        if (mobileThemeBtn) mobileThemeBtn.addEventListener('click', toggleTheme);
     </script>
     @yield('scripts')
 </body>

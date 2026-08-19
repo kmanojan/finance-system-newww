@@ -20,7 +20,7 @@
         <h1>Invoices</h1>
         <p class="subtitle">Generate, send, and track client invoices.</p>
     </div>
-    <button class="btn btn-primary btn-pill mobile-hide" onclick="openModal('createInvModal')">
+    <button class="btn btn-primary btn-pill" onclick="openModal('createInvModal')">
         <ion-icon name="add-outline"></ion-icon> Create Invoice
     </button>
 </header>

@@ -11,7 +11,7 @@
         <h1>Document Templates</h1>
         <p class="subtitle">Manage header, footer, background templates, and invoice defaults.</p>
     </div>
-    <button class="btn btn-primary btn-pill mobile-hide" onclick="openCreateModal()">
+    <button class="btn btn-primary btn-pill" onclick="openCreateModal()">
         <ion-icon name="add-outline"></ion-icon> Add New Template
     </button>
 </header>

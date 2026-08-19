@@ -18,7 +18,7 @@
         <h1>Budgets</h1>
         <p class="subtitle">Manage allocations and monitor spending.</p>
     </div>
-    <button class="btn btn-primary btn-pill mobile-hide" onclick="openModal('createBudgetModal')">
+    <button class="btn btn-primary btn-pill" onclick="openModal('createBudgetModal')">
         <ion-icon name="add-outline"></ion-icon> New Budget
     </button>
 </header>

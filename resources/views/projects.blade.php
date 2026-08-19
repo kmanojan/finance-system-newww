@@ -18,7 +18,7 @@
         <h1>Projects Dashboard</h1>
         <p class="subtitle">Track budgets, timesheets, and deliverables.</p>
     </div>
-    <button class="btn btn-primary btn-pill mobile-hide" onclick="openModal('createProjectModal')">
+    <button class="btn btn-primary btn-pill" onclick="openModal('createProjectModal')">
         <ion-icon name="add-outline"></ion-icon> New Project
     </button>
 </header>

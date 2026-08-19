@@ -179,6 +179,56 @@
     .table-action-link:hover {
         text-decoration: underline;
     }
+
+    @media (max-width: 768px) {
+        .dashboard-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.5rem;
+            margin-bottom: 1.25rem;
+        }
+        .dashboard-title {
+            font-size: 1.4rem;
+        }
+        .filter-bar {
+            padding: 1rem;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+        .filter-group {
+            width: 100%;
+        }
+        .filter-select, .filter-input {
+            width: 100%;
+            min-width: 0;
+            font-size: 16px;
+        }
+        .kpi-grid {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .charts-grid {
+            grid-template-columns: 1fr;
+            gap: 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+        .chart-card {
+            padding: 1rem;
+            border-radius: 12px;
+        }
+        .tables-grid {
+            grid-template-columns: 1fr;
+            gap: 1.25rem;
+        }
+        .table-card {
+            padding: 1rem;
+            border-radius: 12px;
+            overflow-x: auto;
+        }
+    }
 </style>
 
 <div class="dashboard-header">

@@ -11,7 +11,7 @@
         <h1>Invoice Types</h1>
         <p class="subtitle">Manage invoice classifications and default categories.</p>
     </div>
-    <button class="btn btn-primary btn-pill mobile-hide" onclick="openCreateModal()">
+    <button class="btn btn-primary btn-pill" onclick="openCreateModal()">
         <ion-icon name="add-outline"></ion-icon> Add New Invoice Type
     </button>
 </header>

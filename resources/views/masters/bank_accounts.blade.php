@@ -11,7 +11,7 @@
         <h1>Bank Accounts</h1>
         <p class="subtitle">Manage company bank accounts and current balances.</p>
     </div>
-    <button class="btn btn-primary btn-pill mobile-hide" onclick="openCreateModal()">
+    <button class="btn btn-primary btn-pill" onclick="openCreateModal()">
         <ion-icon name="add-outline"></ion-icon> Add New Bank Account
     </button>
 </header>

@@ -11,7 +11,7 @@
         <h1>Categories</h1>
         <p class="subtitle">Manage financial account categories.</p>
     </div>
-    <button class="btn btn-primary btn-pill mobile-hide" onclick="openCreateModal()">
+    <button class="btn btn-primary btn-pill" onclick="openCreateModal()">
         <ion-icon name="add-outline"></ion-icon> Add New Category
     </button>
 </header>

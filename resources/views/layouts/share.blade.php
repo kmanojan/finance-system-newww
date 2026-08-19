@@ -103,6 +103,34 @@
         .theme-toggle-btn:hover {
             background: rgba(255, 255, 255, 0.35);
         }
+        @media (max-width: 768px) {
+            .share-banner {
+                padding: 0.65rem 1rem;
+                font-size: 0.75rem;
+                flex-direction: row;
+                gap: 0.5rem;
+            }
+            .share-container {
+                margin: 1rem auto;
+                padding: 0 0.75rem 2rem 0.75rem;
+            }
+            .glass-header {
+                padding: 1.25rem 1rem;
+                border-radius: 12px;
+                margin-bottom: 1.25rem;
+            }
+            .portal-card {
+                padding: 1.15rem 1rem;
+                border-radius: 12px;
+                margin-bottom: 1.25rem;
+            }
+            .interactive-tab-btn {
+                padding: 0.5rem 0.75rem;
+                font-size: 0.8rem;
+                flex: 1;
+                text-align: center;
+            }
+        }
     </style>
 </head>
 <body data-theme="light">

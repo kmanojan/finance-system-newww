@@ -11,7 +11,7 @@
         <h1>Tax Config & Rates</h1>
         <p class="subtitle">Manage statutory tax types, VAT, WHT, CIT rates, and effective date ranges (Sri Lanka baseline).</p>
     </div>
-    <button class="btn btn-primary btn-pill mobile-hide" onclick="openCreateModal()">
+    <button class="btn btn-primary btn-pill" onclick="openCreateModal()">
         <ion-icon name="add-outline"></ion-icon> Add New Tax Rate
     </button>
 </header>

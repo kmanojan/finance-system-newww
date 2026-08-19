@@ -18,8 +18,8 @@
     @forelse($data['parties'] as $p)
         <div class="card" style="padding: 0; overflow: hidden; border: 1px solid var(--border); background: var(--bg-card); border-radius: 12px; box-shadow: var(--shadow-sm);">
             <!-- Accordion Header -->
-            <div style="padding: 1.25rem 1.5rem; display: flex; justify-content: space-between; align-items: center; cursor: pointer; background: var(--bg-sidebar-secondary);" onclick="toggleAccordion('party_{{ $p->party_id }}')">
-                <div style="display: flex; align-items: center; gap: 1rem;">
+            <div style="padding: 1.25rem 1.5rem; display: flex; justify-content: space-between; align-items: center; cursor: pointer; background: var(--bg-sidebar-secondary); flex-wrap: wrap; gap: 0.75rem;" onclick="toggleAccordion('party_{{ $p->party_id }}')">
+                <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
                     <strong style="font-size: 1.15rem; color: var(--text-heading);">{{ $p->party_name }}</strong>
                     @foreach(explode(',', $p->party_types) as $type)
                         @if(!empty($type))

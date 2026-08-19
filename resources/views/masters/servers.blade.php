@@ -11,7 +11,7 @@
         <h1>Servers</h1>
         <p class="subtitle">Manage infrastructure servers and cloud hosting instances.</p>
     </div>
-    <button class="btn btn-primary btn-pill mobile-hide" onclick="openCreateModal()">
+    <button class="btn btn-primary btn-pill" onclick="openCreateModal()">
         <ion-icon name="add-outline"></ion-icon> Add New Server
     </button>
 </header>

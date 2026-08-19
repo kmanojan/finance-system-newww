@@ -7,7 +7,7 @@
         <h1>Share Links</h1>
         <p class="subtitle">Securely share read-only project views with Clients and Partners.</p>
     </div>
-    <button class="btn btn-primary btn-pill mobile-hide" onclick="openModal('createShareLinkModal')">
+    <button class="btn btn-primary btn-pill" onclick="openModal('createShareLinkModal')">
         <ion-icon name="add-outline"></ion-icon> Generate Link
     </button>
 </header>

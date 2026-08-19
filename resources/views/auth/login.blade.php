@@ -169,6 +169,21 @@
             color: var(--primary);
             border-color: var(--primary);
         }
+        @media (max-width: 480px) {
+            body {
+                padding: 1rem;
+            }
+            .login-card {
+                padding: 2rem 1.25rem;
+                border-radius: 16px;
+                margin: 0 auto;
+                max-width: 100%;
+            }
+            .theme-toggle-container {
+                top: 1rem;
+                right: 1rem;
+            }
+        }
     </style>
 </head>
 <body>

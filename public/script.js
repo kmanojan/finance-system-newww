@@ -1,20 +1,55 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Mobile Sidebar Toggle
     const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+    const mobileSubMenuBtn = document.getElementById('mobileSubMenuBtn');
     const sidebarPrimary = document.getElementById('sidebarPrimary');
+    const sidebarSecondary = document.getElementById('sidebarSecondary');
+    const sidebarBackdrop = document.getElementById('sidebarBackdrop');
 
+    function closePrimarySidebar() {
+        if (sidebarPrimary) sidebarPrimary.classList.remove('open');
+        if (mobileMenuBtn) mobileMenuBtn.classList.remove('active');
+        if (sidebarBackdrop) sidebarBackdrop.classList.remove('active');
+    }
+
+    // Toggle Primary Sidebar
     if (mobileMenuBtn && sidebarPrimary) {
-        mobileMenuBtn.addEventListener('click', () => {
-            sidebarPrimary.classList.toggle('open');
+        mobileMenuBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isOpen = sidebarPrimary.classList.contains('open');
+            if (isOpen) {
+                closePrimarySidebar();
+            } else {
+                sidebarPrimary.classList.add('open');
+                mobileMenuBtn.classList.add('active');
+                if (sidebarBackdrop) sidebarBackdrop.classList.add('active');
+            }
         });
     }
 
-    // Close sidebar on outside click on mobile
-    document.addEventListener('click', (e) => {
-        if (sidebarPrimary && sidebarPrimary.classList.contains('open')) {
-            if (!sidebarPrimary.contains(e.target) && !mobileMenuBtn.contains(e.target)) {
-                sidebarPrimary.classList.remove('open');
+    // Click backdrop to close
+    if (sidebarBackdrop) {
+        sidebarBackdrop.addEventListener('click', () => {
+            closePrimarySidebar();
+        });
+    }
+
+    // Close on primary sidebar link clicks
+    document.querySelectorAll('.sidebar-primary a').forEach(link => {
+        link.addEventListener('click', () => {
+            if (window.innerWidth <= 768) {
+                closePrimarySidebar();
             }
+        });
+    });
+
+    // Close on Escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closePrimarySidebar();
+            // Close any open modals as well
+            document.querySelectorAll('.modal-backdrop.active').forEach(modal => {
+                modal.classList.remove('active');
+            });
         }
     });
 });

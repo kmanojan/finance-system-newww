@@ -18,7 +18,7 @@
         <h1>Journal Entries</h1>
         <p class="subtitle">View and manage double-entry journal entries.</p>
     </div>
-    <button class="btn btn-primary btn-pill mobile-hide" onclick="alert('Feature coming soon')">
+    <button class="btn btn-primary btn-pill" onclick="alert('Feature coming soon')">
         <ion-icon name="add-outline"></ion-icon> New Entry
     </button>
 </header>

@@ -18,7 +18,7 @@
         <h1>Transactions</h1>
         <p class="subtitle">Record and view double-entry ledger transactions.</p>
     </div>
-    <button class="btn btn-primary btn-pill mobile-hide" onclick="openModal('createTxModal')">
+    <button class="btn btn-primary btn-pill" onclick="openModal('createTxModal')">
         <ion-icon name="add-outline"></ion-icon> New Transaction
     </button>
 </header>
