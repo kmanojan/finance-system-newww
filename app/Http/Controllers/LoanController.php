@@ -93,9 +93,18 @@ class LoanController extends Controller
                 }
             }
 
-            // Fallback for loans without generated schedule rows yet
+            // Fallback for loans without generated schedule rows yet (e.g. pending loans)
             if ($loanPendingInterest == 0 && DB::table('loan_interest_schedule')->where('loan_id', $loan->id)->count() == 0) {
-                if ($loan->interest_method === 'fixed_amount' && !empty($loan->interest_amount)) {
+                if ($loan->interest_method === 'no_interest') {
+                    $loanPendingInterest = 0;
+                } elseif (!empty($loan->is_upfront_interest)) {
+                    $term = !empty($loan->term_months) ? (int)$loan->term_months : 1;
+                    if ($term > 1) {
+                        $loanPendingInterest = ($term - 1) * ($loan->interest_amount ?? 0);
+                    } else {
+                        $loanPendingInterest = 0;
+                    }
+                } elseif ($loan->interest_method === 'fixed_amount' && !empty($loan->interest_amount)) {
                     $loanPendingInterest = $loan->interest_amount;
                 } elseif (!empty($loan->total_interest)) {
                     $loanPendingInterest = $loan->total_interest;
@@ -275,16 +284,31 @@ class LoanController extends Controller
             }
         }
         
-        $data['is_upfront_interest'] = $request->has('is_upfront_interest') ? 1 : 0;
-        if ($data['is_upfront_interest']) {
-            if (empty($data['upfront_interest_amount'])) {
-                $data['upfront_interest_amount'] = $data['interest_amount'] ?? 0;
-            }
-        } else {
+        if (($data['interest_method'] ?? null) === 'no_interest') {
+            $data['interest_amount'] = 0;
+            $data['total_interest'] = 0;
+            $data['interest_rate'] = null;
+            $data['is_upfront_interest'] = 0;
             $data['upfront_interest_amount'] = null;
+        } else {
+            $data['is_upfront_interest'] = $request->has('is_upfront_interest') ? 1 : 0;
+            if ($data['is_upfront_interest']) {
+                if (empty($data['upfront_interest_amount'])) {
+                    $data['upfront_interest_amount'] = $data['interest_amount'] ?? 0;
+                }
+            } else {
+                $data['upfront_interest_amount'] = null;
+            }
         }
 
-        if (empty($data['maturity_date']) && !empty($data['claimed_date'])) {
+        if (!empty($data['maturity_date']) && !empty($data['claimed_date'])) {
+            $d1 = Carbon::parse($data['claimed_date']);
+            $d2 = Carbon::parse($data['maturity_date']);
+            $diffMonths = $d1->diffInMonths($d2);
+            if ($diffMonths > 0 && empty($request->input('term_months'))) {
+                $data['term_months'] = $diffMonths;
+            }
+        } elseif (empty($data['maturity_date']) && !empty($data['claimed_date'])) {
             $term = !empty($data['term_months']) ? (int)$data['term_months'] : 1;
             $data['maturity_date'] = Carbon::parse($data['claimed_date'])->addMonths($term)->format('Y-m-d');
         }
@@ -366,16 +390,31 @@ class LoanController extends Controller
             }
         }
 
-        $data['is_upfront_interest'] = $request->has('is_upfront_interest') ? 1 : 0;
-        if ($data['is_upfront_interest']) {
-            if (empty($data['upfront_interest_amount'])) {
-                $data['upfront_interest_amount'] = $data['interest_amount'] ?? 0;
-            }
-        } else {
+        if (($data['interest_method'] ?? null) === 'no_interest') {
+            $data['interest_amount'] = 0;
+            $data['total_interest'] = 0;
+            $data['interest_rate'] = null;
+            $data['is_upfront_interest'] = 0;
             $data['upfront_interest_amount'] = null;
+        } else {
+            $data['is_upfront_interest'] = $request->has('is_upfront_interest') ? 1 : 0;
+            if ($data['is_upfront_interest']) {
+                if (empty($data['upfront_interest_amount'])) {
+                    $data['upfront_interest_amount'] = $data['interest_amount'] ?? 0;
+                }
+            } else {
+                $data['upfront_interest_amount'] = null;
+            }
         }
 
-        if (empty($data['maturity_date']) && !empty($data['claimed_date'])) {
+        if (!empty($data['maturity_date']) && !empty($data['claimed_date'])) {
+            $d1 = Carbon::parse($data['claimed_date']);
+            $d2 = Carbon::parse($data['maturity_date']);
+            $diffMonths = $d1->diffInMonths($d2);
+            if ($diffMonths > 0 && empty($request->input('term_months'))) {
+                $data['term_months'] = $diffMonths;
+            }
+        } elseif (empty($data['maturity_date']) && !empty($data['claimed_date'])) {
             $term = !empty($data['term_months']) ? (int)$data['term_months'] : 1;
             $data['maturity_date'] = Carbon::parse($data['claimed_date'])->addMonths($term)->format('Y-m-d');
         }

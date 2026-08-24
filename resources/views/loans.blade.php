@@ -703,7 +703,7 @@
                 </div>
 
                 <!-- Upfront Interest Deduction Feature -->
-                <div class="glass-card" style="margin-top:1.25rem; padding:1rem; border-radius:10px; background:var(--bg-page); border:1px solid var(--border-light);">
+                <div id="edit_upfront_interest_card" class="glass-card" style="margin-top:1.25rem; padding:1rem; border-radius:10px; background:var(--bg-page); border:1px solid var(--border-light);">
                     <label style="display:flex; align-items:center; gap:0.6rem; cursor:pointer; font-weight:600; color:var(--text-heading); font-size:0.9rem; margin-bottom:0.35rem;">
                         <input type="checkbox" name="is_upfront_interest" id="edit_is_upfront_interest" value="1" onchange="toggleUpfrontInterest('edit')" style="width:1.15rem; height:1.15rem; accent-color:var(--primary);">
                         <span>Deduct Interest Upfront (Paid on Claimed Date)</span>
@@ -726,7 +726,7 @@
                 <div class="form-row" style="margin-top:1.25rem;">
                     <div class="form-col">
                         <label class="form-label" style="font-weight:600;">Loan Full Principal Due Date *</label>
-                        <input type="date" name="maturity_date" id="edit_maturity_date" class="form-control" required>
+                        <input type="date" name="maturity_date" id="edit_maturity_date" class="form-control" onchange="autoSetTermFromMaturity('edit')" required>
                         <div style="display:flex; gap:0.3rem; margin-top:0.35rem; flex-wrap:wrap;">
                             <button type="button" class="btn btn-outline" style="font-size:0.72rem; padding:0.15rem 0.45rem;" onclick="setMaturityMonths('edit', 1)">+1 Mo</button>
                             <button type="button" class="btn btn-outline" style="font-size:0.72rem; padding:0.15rem 0.45rem;" onclick="setMaturityMonths('edit', 2)">+2 Mo</button>
@@ -870,7 +870,7 @@
                 </div>
 
                 <!-- Upfront Interest Deduction Feature -->
-                <div class="glass-card" style="margin-top:1.25rem; padding:1rem; border-radius:10px; background:var(--bg-page); border:1px solid var(--border-light);">
+                <div id="create_upfront_interest_card" class="glass-card" style="margin-top:1.25rem; padding:1rem; border-radius:10px; background:var(--bg-page); border:1px solid var(--border-light);">
                     <label style="display:flex; align-items:center; gap:0.6rem; cursor:pointer; font-weight:600; color:var(--text-heading); font-size:0.9rem; margin-bottom:0.35rem;">
                         <input type="checkbox" name="is_upfront_interest" id="create_is_upfront_interest" value="1" onchange="toggleUpfrontInterest('create')" style="width:1.15rem; height:1.15rem; accent-color:var(--primary);">
                         <span>Deduct Interest Upfront (Paid on Claimed Date)</span>
@@ -893,7 +893,7 @@
                 <div class="form-row" style="margin-top:1.25rem;">
                     <div class="form-col">
                         <label class="form-label" style="font-weight:600;">Loan Full Principal Due Date *</label>
-                        <input type="date" name="maturity_date" id="create_maturity_date" class="form-control" required>
+                        <input type="date" name="maturity_date" id="create_maturity_date" class="form-control" onchange="autoSetTermFromMaturity('create')" required>
                         <div style="display:flex; gap:0.3rem; margin-top:0.35rem; flex-wrap:wrap;">
                             <button type="button" class="btn btn-outline" style="font-size:0.72rem; padding:0.15rem 0.45rem;" onclick="setMaturityMonths('create', 1)">+1 Mo</button>
                             <button type="button" class="btn btn-outline" style="font-size:0.72rem; padding:0.15rem 0.45rem;" onclick="setMaturityMonths('create', 2)">+2 Mo</button>
@@ -979,7 +979,17 @@ function toggleInterestFields(method) {
     document.getElementById('field_fixed_amount').style.display = method === 'fixed_amount' ? 'block' : 'none';
     document.getElementById('field_percentage_rate').style.display = method === 'percentage_rate' ? 'flex' : 'none';
     document.getElementById('field_equal_installments').style.display = method === 'equal_installments' ? 'block' : 'none';
-    document.getElementById('field_frequency').style.display = (method === 'no_interest' || method === 'custom_schedule') ? 'none' : 'flex';
+    document.getElementById('field_frequency_col').style.display = (method === 'no_interest' || method === 'custom_schedule') ? 'none' : 'block';
+    
+    const upfrontCard = document.getElementById('create_upfront_interest_card');
+    if (upfrontCard) {
+        upfrontCard.style.display = (method === 'no_interest') ? 'none' : 'block';
+        if (method === 'no_interest') {
+            document.getElementById('create_is_upfront_interest').checked = false;
+            const upCont = document.getElementById('create_upfront_interest_container');
+            if (upCont) upCont.style.display = 'none';
+        }
+    }
 }
 
 function toggleEditInterestFields(method) {
@@ -989,6 +999,16 @@ function toggleEditInterestFields(method) {
     const hasFrequency = (method !== 'no_interest' && method !== 'custom_schedule');
     document.getElementById('edit_field_frequency').style.display = hasFrequency ? 'block' : 'none';
     document.getElementById('edit_field_due_day').style.display = hasFrequency ? 'block' : 'none';
+    
+    const upfrontCard = document.getElementById('edit_upfront_interest_card');
+    if (upfrontCard) {
+        upfrontCard.style.display = (method === 'no_interest') ? 'none' : 'block';
+        if (method === 'no_interest') {
+            document.getElementById('edit_is_upfront_interest').checked = false;
+            const upCont = document.getElementById('edit_upfront_interest_container');
+            if (upCont) upCont.style.display = 'none';
+        }
+    }
 }
 
 function toggleUpfrontInterest(prefix) {
@@ -1043,6 +1063,21 @@ function autoSetMaturity(prefix) {
         const months = parseInt(termInput.value) || 1;
         d.setMonth(d.getMonth() + months);
         maturityInput.value = d.toISOString().split('T')[0];
+    }
+}
+
+function autoSetTermFromMaturity(prefix) {
+    const claimedDateInput = document.getElementById(prefix + '_claimed_date');
+    const termInput = document.getElementById(prefix + '_term_months');
+    const maturityInput = document.getElementById(prefix + '_maturity_date');
+    if (!claimedDateInput || !termInput || !maturityInput) return;
+
+    if (claimedDateInput.value && maturityInput.value) {
+        const d1 = new Date(claimedDateInput.value);
+        const d2 = new Date(maturityInput.value);
+        const diffYears = d2.getFullYear() - d1.getFullYear();
+        const diffMonths = (diffYears * 12) + (d2.getMonth() - d1.getMonth());
+        termInput.value = Math.max(1, diffMonths);
     }
 }
 
