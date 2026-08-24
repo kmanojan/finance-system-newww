@@ -11,7 +11,15 @@ class TransactionController extends Controller
     public function index(Request $request)
     {
         $query = DB::table('transactions')
-            ->orderBy('transaction_date', 'desc');
+            ->leftJoin('categories', 'transactions.category_id', '=', 'categories.id')
+            ->leftJoin('departments', 'transactions.department_id', '=', 'departments.id')
+            ->select(
+                'transactions.*',
+                'categories.name as category_name',
+                'departments.name as department_name'
+            )
+            ->orderBy('transactions.transaction_date', 'desc')
+            ->orderBy('transactions.id', 'desc');
 
         if ($request->filled('tag_id')) {
             $query->join('taggables', function($join) use ($request) {
@@ -19,37 +27,81 @@ class TransactionController extends Controller
                      ->where('taggables.taggable_type', '=', 'transaction')
                      ->where('taggables.tag_id', '=', $request->tag_id);
             });
-            $query->select('transactions.*');
         }
 
-        if ($request->filled('start_date')) {
-            $query->where('transactions.transaction_date', '>=', $request->start_date);
+        $startDate = $request->input('start_date') ?: $request->input('from');
+        $endDate = $request->input('end_date') ?: $request->input('to');
+
+        if (!empty($startDate)) {
+            $query->where('transactions.transaction_date', '>=', $startDate);
         }
         
-        if ($request->filled('end_date')) {
-            $query->where('transactions.transaction_date', '<=', $request->end_date);
+        if (!empty($endDate)) {
+            $query->where('transactions.transaction_date', '<=', $endDate);
         }
         
         if ($request->filled('type') && in_array($request->type, ['income', 'expense'])) {
             $query->where('transactions.type', '=', $request->type);
         }
 
+        if ($request->filled('category_id')) {
+            $query->where('transactions.category_id', '=', $request->category_id);
+        }
+
+        if ($request->filled('department_id')) {
+            $query->where('transactions.department_id', '=', $request->department_id);
+        }
+
         if ($request->filled('payment_method')) {
             $query->where('transactions.payment_method', '=', $request->payment_method);
         }
 
+        if ($request->filled('search')) {
+            $search = '%' . $request->input('search') . '%';
+            $query->where(function($q) use ($search) {
+                $q->where('transactions.description', 'LIKE', $search)
+                  ->orWhere('transactions.reference_no', 'LIKE', $search)
+                  ->orWhere('categories.name', 'LIKE', $search);
+            });
+        }
+
         $transactions = $query->get();
+
+        // Calculate KPI summary figures
+        $totalIncome = $transactions->where('type', 'income')->sum('amount');
+        $totalExpense = $transactions->where('type', 'expense')->sum('amount');
+        $netCashFlow = $totalIncome - $totalExpense;
+        $incomeCount = $transactions->where('type', 'income')->count();
+        $expenseCount = $transactions->where('type', 'expense')->count();
+        $totalCount = $transactions->count();
+
         // Get categories and related entities for dropdowns
-        $categories = DB::table('categories')->get();
+        $categories = DB::table('categories')->orderBy('name')->get();
         $companies = DB::table('companies')->get();
-        $departments = DB::table('departments')->get();
+        $departments = DB::table('departments')->orderBy('name')->get();
         $budgetItems = DB::table('budget_items')
             ->join('budget_groups', 'budget_items.budget_group_id', '=', 'budget_groups.id')
             ->join('budgets', 'budget_groups.budget_id', '=', 'budgets.id')
             ->select('budget_items.id', 'budget_items.name as item_name', 'budget_groups.name as group_name', 'budgets.name as budget_name')
             ->get();
         $tags = DB::table('tags')->get();
-        return view('transactions', compact('transactions', 'categories', 'companies', 'departments', 'budgetItems', 'tags'));
+        $parties = DB::table('parties')->orderBy('name')->get();
+
+        return view('transactions', compact(
+            'transactions', 
+            'categories', 
+            'companies', 
+            'departments', 
+            'budgetItems', 
+            'tags', 
+            'parties',
+            'totalIncome',
+            'totalExpense',
+            'netCashFlow',
+            'incomeCount',
+            'expenseCount',
+            'totalCount'
+        ));
     }
 
     public function store(Request $request)
@@ -109,7 +161,7 @@ class TransactionController extends Controller
     public function update(Request $request, $id)
     {
         $oldTx = DB::table('transactions')->where('id', $id)->first();
-        $data = $request->only(['amount', 'description', 'category_id', 'type', 'payment_method']);
+        $data = $request->only(['amount', 'description', 'category_id', 'type', 'payment_method', 'transaction_date', 'reference_no', 'department_id']);
         $data['updated_at'] = now();
         
         DB::table('transactions')->where('id', $id)->update($data);

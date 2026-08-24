@@ -13,11 +13,24 @@ class LoanController extends Controller
     {
         $query = DB::table('loans')->orderBy('created_at', 'desc');
 
-        if ($request->filled('start_date')) {
-            $query->where('claimed_date', '>=', $request->input('start_date'));
+        if ($request->filled('party_id')) {
+            $query->where('party_id', $request->input('party_id'));
         }
-        if ($request->filled('end_date')) {
-            $query->where('claimed_date', '<=', $request->input('end_date'));
+
+        $startDate = $request->input('start_date') ?: $request->input('from');
+        $endDate = $request->input('end_date') ?: $request->input('to');
+
+        if (!empty($startDate)) {
+            $query->where(function($q) use ($startDate) {
+                $q->where('claimed_date', '>=', $startDate)
+                  ->orWhere('start_date', '>=', $startDate);
+            });
+        }
+        if (!empty($endDate)) {
+            $query->where(function($q) use ($endDate) {
+                $q->where('claimed_date', '<=', $endDate)
+                  ->orWhere('start_date', '<=', $endDate);
+            });
         }
         if ($request->filled('status') && $request->input('status') !== 'all') {
             $query->where('status', '=', $request->input('status'));
@@ -967,7 +980,14 @@ class LoanController extends Controller
             DB::table('loan_principal_records')->where('loan_id', $id)->delete();
 
             // Delete associated reminders
-            DB::table('reminders')->where('type', 'loan_interest')->where('reference_id', $id)->delete();
+            DB::table('reminders')
+                ->where(function($q) {
+                    $q->where('type', 'loan')
+                      ->orWhere('type', 'loan_interest')
+                      ->orWhere('reference_type', 'Loan');
+                })
+                ->where('reference_id', $id)
+                ->delete();
 
             // Delete associated attachments
             $attachments = DB::table('attachments')->where('model_type', 'Loan')->where('model_id', $id)->get();
@@ -979,11 +999,16 @@ class LoanController extends Controller
             DB::table('attachments')->where('model_type', 'Loan')->where('model_id', $id)->delete();
 
             // Delete associated auto-transactions
-            DB::table('transactions')->where('reference_no', 'LIKE', "LOAN-%-{$id}")->delete();
-            DB::table('transactions')->where('reference_no', 'LIKE', "LOAN-ACT-{$id}")->delete();
-            DB::table('transactions')->where('reference_no', 'LIKE', "LOAN-PRIN-{$id}")->delete();
-            DB::table('transactions')->where('reference_no', 'LIKE', "LOAN-DRAW-{$id}")->delete();
-            DB::table('transactions')->where('reference_no', 'LIKE', "LOAN-SETTLE-{$id}")->delete();
+            DB::table('transactions')
+                ->where(function($q) use ($id) {
+                    $q->where('reference_no', "LOAN-ACT-{$id}")
+                      ->orWhere('reference_no', "LOAN-PRIN-{$id}")
+                      ->orWhere('reference_no', "LOAN-DRAW-{$id}")
+                      ->orWhere('reference_no', "LOAN-SETTLE-{$id}")
+                      ->orWhere('reference_no', 'LIKE', "LOAN-INT-{$id}-%")
+                      ->orWhere('reference_no', 'LIKE', "LOAN-%-{$id}");
+                })
+                ->delete();
 
             // Delete the main loan record
             DB::table('loans')->where('id', $id)->delete();

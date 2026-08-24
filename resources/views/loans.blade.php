@@ -278,41 +278,73 @@
     </div>
 </div>
 
-<!-- Status Filter Tabs & Search Bar -->
-<div class="card" style="padding:0.85rem 1.15rem; margin-bottom:1.25rem; border:1px solid var(--border); border-radius:10px; background:var(--bg-card);">
-    <form method="GET" action="/loans" style="display:flex; gap:0.75rem; align-items:center; justify-content:space-between; flex-wrap:wrap; margin:0;">
-        <!-- Left: Quick Status Tabs -->
+<!-- Status Filter Tabs & Advanced Filter Toolbar -->
+<div class="card" style="padding:1rem 1.25rem; margin-bottom:1.25rem; border:1px solid var(--border); border-radius:10px; background:var(--bg-card);">
+    @php 
+        $currStatus = request('status', 'all'); 
+        $queryParams = request()->except('status');
+    @endphp
+
+    <!-- Top Row: Quick Status Tabs -->
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem; margin-bottom:1rem; padding-bottom:0.85rem; border-bottom:1px solid var(--border-light);">
         <div style="display:flex; gap:0.4rem; align-items:center; flex-wrap:wrap;">
-            @php $currStatus = request('status', 'all'); @endphp
-            <a href="/loans?status=all{{ request('search') ? '&search='.request('search') : '' }}" class="loan-filter-tab {{ $currStatus === 'all' ? 'active' : '' }}">
+            <a href="/loans?{{ http_build_query(array_merge($queryParams, ['status' => 'all'])) }}" class="loan-filter-tab {{ $currStatus === 'all' ? 'active' : '' }}">
                 All <span class="tab-badge">{{ $totalLoansCount }}</span>
             </a>
-            <a href="/loans?status=active{{ request('search') ? '&search='.request('search') : '' }}" class="loan-filter-tab {{ $currStatus === 'active' ? 'active' : '' }}">
+            <a href="/loans?{{ http_build_query(array_merge($queryParams, ['status' => 'active'])) }}" class="loan-filter-tab {{ $currStatus === 'active' ? 'active' : '' }}">
                 Active <span class="tab-badge">{{ $activeLoansCount }}</span>
             </a>
-            <a href="/loans?status=pending{{ request('search') ? '&search='.request('search') : '' }}" class="loan-filter-tab {{ $currStatus === 'pending' ? 'active' : '' }}">
+            <a href="/loans?{{ http_build_query(array_merge($queryParams, ['status' => 'pending'])) }}" class="loan-filter-tab {{ $currStatus === 'pending' ? 'active' : '' }}">
                 Pending
             </a>
-            <a href="/loans?status=settled{{ request('search') ? '&search='.request('search') : '' }}" class="loan-filter-tab {{ $currStatus === 'settled' ? 'active' : '' }}">
+            <a href="/loans?{{ http_build_query(array_merge($queryParams, ['status' => 'settled'])) }}" class="loan-filter-tab {{ $currStatus === 'settled' ? 'active' : '' }}">
                 Settled <span class="tab-badge">{{ $settledLoansCount }}</span>
             </a>
-            <a href="/loans?status=closed{{ request('search') ? '&search='.request('search') : '' }}" class="loan-filter-tab {{ $currStatus === 'closed' ? 'active' : '' }}">
+            <a href="/loans?{{ http_build_query(array_merge($queryParams, ['status' => 'closed'])) }}" class="loan-filter-tab {{ $currStatus === 'closed' ? 'active' : '' }}">
                 Closed
             </a>
         </div>
+        
+        @if(request('party_id') || request('start_date') || request('end_date') || request('from') || request('to') || request('search') || (request('status') && request('status') !== 'all'))
+            <a href="/loans" class="btn btn-outline" style="color:var(--danger); border-color:var(--border); padding:0.35rem 0.75rem; font-size:0.8rem; text-decoration:none; display:inline-flex; align-items:center; gap:0.3rem; border-radius:6px;">
+                <ion-icon name="close-circle-outline"></ion-icon> Clear All Filters
+            </a>
+        @endif
+    </div>
 
-        <!-- Right: Search and Date Filter -->
+    <!-- Bottom Row: Party Selector, Date Between Range, Search & Filter -->
+    <form method="GET" action="/loans" style="display:flex; gap:0.85rem; align-items:flex-end; flex-wrap:wrap; margin:0;">
+        <input type="hidden" name="status" value="{{ $currStatus }}">
+
+        <!-- Party Filter (Using Party Selector Component) -->
+        <div style="flex:1; min-width:220px; max-width:300px;">
+            <label style="font-size:0.75rem; font-weight:700; color:var(--text-muted); margin-bottom:0.35rem; display:block; text-transform:uppercase; letter-spacing:0.5px;">Party / Lender</label>
+            <x-party-selector name="party_id" :parties="$parties" :selected="request('party_id')" placeholder="All Parties / Lenders" />
+        </div>
+
+        <!-- Date Between (From & To) -->
         <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
-            <input type="hidden" name="status" value="{{ request('status', 'all') }}">
-            <div style="min-width:180px;">
-                <input type="text" name="search" class="form-control" placeholder="Search lender / purpose..." value="{{ request('search') }}" style="font-size:0.82rem; padding:0.35rem 0.75rem; height:34px;">
+            <div>
+                <label style="font-size:0.75rem; font-weight:700; color:var(--text-muted); margin-bottom:0.35rem; display:block; text-transform:uppercase; letter-spacing:0.5px;">From Date</label>
+                <input type="date" name="start_date" class="form-control" value="{{ request('start_date', request('from')) }}" style="font-size:0.82rem; padding:0.45rem 0.65rem; height:42px; border-radius:8px;">
             </div>
-            <button class="btn btn-outline" type="submit" style="padding:0.35rem 0.85rem; font-size:0.82rem; height:34px;">
-                <ion-icon name="funnel-outline" style="vertical-align:middle;"></ion-icon> Filter
+            <div>
+                <label style="font-size:0.75rem; font-weight:700; color:var(--text-muted); margin-bottom:0.35rem; display:block; text-transform:uppercase; letter-spacing:0.5px;">To Date</label>
+                <input type="date" name="end_date" class="form-control" value="{{ request('end_date', request('to')) }}" style="font-size:0.82rem; padding:0.45rem 0.65rem; height:42px; border-radius:8px;">
+            </div>
+        </div>
+
+        <!-- Keyword Search -->
+        <div style="flex:1; min-width:180px;">
+            <label style="font-size:0.75rem; font-weight:700; color:var(--text-muted); margin-bottom:0.35rem; display:block; text-transform:uppercase; letter-spacing:0.5px;">Search</label>
+            <input type="text" name="search" class="form-control" placeholder="Search lender / purpose..." value="{{ request('search') }}" style="font-size:0.82rem; padding:0.45rem 0.85rem; height:42px; border-radius:8px;">
+        </div>
+
+        <!-- Action Buttons -->
+        <div style="display:flex; gap:0.4rem;">
+            <button class="btn btn-primary-gradient" type="submit" style="padding:0.45rem 1.15rem; font-size:0.85rem; height:42px; border-radius:8px; display:inline-flex; align-items:center; gap:0.35rem;">
+                <ion-icon name="funnel-outline"></ion-icon> Apply Filter
             </button>
-            @if(request('search') || request('start_date') || request('end_date') || (request('status') && request('status') !== 'all'))
-                <a href="/loans" class="btn btn-outline" style="color:var(--text-muted); padding:0.35rem 0.75rem; font-size:0.82rem; height:34px; text-decoration:none; display:inline-flex; align-items:center;">Reset</a>
-            @endif
         </div>
     </form>
 </div>
