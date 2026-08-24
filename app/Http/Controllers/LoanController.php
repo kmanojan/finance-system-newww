@@ -74,6 +74,28 @@ class LoanController extends Controller
             $interestPaid = DB::table('loan_interest_schedule')
                                     ->where('loan_id', $loan->id)
                                     ->sum('paid_amount');
+
+            // For settled loans without schedules or with partial schedule recording
+            if ($loan->status === 'settled') {
+                $contractedInterest = 0;
+                if ($loan->interest_method === 'fixed_amount' && !empty($loan->interest_amount)) {
+                    $term = !empty($loan->term_months) ? (int)$loan->term_months : 1;
+                    $contractedInterest = $term * $loan->interest_amount;
+                } elseif (!empty($loan->total_interest)) {
+                    $contractedInterest = $loan->total_interest;
+                } elseif ($loan->interest_method === 'percentage_rate' && !empty($loan->interest_rate)) {
+                    $term = !empty($loan->term_months) ? (int)$loan->term_months : 1;
+                    $contractedInterest = $term * ($loan->principal_amount * ($loan->interest_rate / 100));
+                }
+                $schedTotal = DB::table('loan_interest_schedule')->where('loan_id', $loan->id)->sum('interest_amount');
+                if ($schedTotal > 0) {
+                    $contractedInterest = max($contractedInterest, $schedTotal);
+                }
+                if ($contractedInterest > 0 && $interestPaid < $contractedInterest) {
+                    $interestPaid = $contractedInterest;
+                }
+            }
+
             $totalInterestPaid += $interestPaid;
             $loan->interest_paid = $interestPaid;
             
@@ -972,6 +994,40 @@ class LoanController extends Controller
             ]);
         }
         
+        // Also settle any remaining pending interest schedules for this loan
+        $pendingInterestSchedules = DB::table('loan_interest_schedule')
+            ->where('loan_id', $id)
+            ->whereIn('status', ['pending', 'partially_paid', 'overdue'])
+            ->get();
+
+        foreach ($pendingInterestSchedules as $sched) {
+            $unpaidInt = max(0, $sched->interest_amount - ($sched->paid_amount ?? 0));
+            DB::table('loan_interest_schedule')->where('id', $sched->id)->update([
+                'paid_amount' => $sched->interest_amount,
+                'paid_date' => $settlementDate,
+                'status' => 'paid',
+                'updated_at' => now()
+            ]);
+
+            if ($unpaidInt > 0) {
+                // Post transaction for interest payment
+                $intCatId = $this->getCategoryId('Interest Expense', 'expense');
+                DB::table('transactions')->insert([
+                    'type' => 'expense',
+                    'category_id' => $intCatId,
+                    'department_id' => $this->getDepartmentId(),
+                    'amount' => $unpaidInt,
+                    'currency' => $loan->currency,
+                    'transaction_date' => $settlementDate,
+                    'description' => "Interest Settlement for Loan {$loan->id} ({$loan->lender_name})",
+                    'reference_no' => "LOAN-INT-{$loan->id}-{$sched->id}",
+                    'payment_method' => $paymentMethod,
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]);
+            }
+        }
+
         DB::table('loans')->where('id', $id)->update(['status' => 'settled', 'updated_at' => now()]);
         
         return back()->with('success', 'Loan fully settled on ' . $settlementDate . ' and transaction posted to ledger!');
@@ -1113,18 +1169,61 @@ class LoanController extends Controller
                 $interestPaid = DB::table('loan_interest_schedule')
                     ->where('loan_id', $loan->id)
                     ->sum('paid_amount');
+
+                // For settled loans without schedules or with partial schedule recording
+                if ($loan->status === 'settled') {
+                    $contractedInterest = 0;
+                    if ($loan->interest_method === 'fixed_amount' && !empty($loan->interest_amount)) {
+                        $term = !empty($loan->term_months) ? (int)$loan->term_months : 1;
+                        $contractedInterest = $term * $loan->interest_amount;
+                    } elseif (!empty($loan->total_interest)) {
+                        $contractedInterest = $loan->total_interest;
+                    } elseif ($loan->interest_method === 'percentage_rate' && !empty($loan->interest_rate)) {
+                        $term = !empty($loan->term_months) ? (int)$loan->term_months : 1;
+                        $contractedInterest = $term * ($loan->principal_amount * ($loan->interest_rate / 100));
+                    }
+                    $schedTotal = DB::table('loan_interest_schedule')->where('loan_id', $loan->id)->sum('interest_amount');
+                    if ($schedTotal > 0) {
+                        $contractedInterest = max($contractedInterest, $schedTotal);
+                    }
+                    if ($contractedInterest > 0 && $interestPaid < $contractedInterest) {
+                        $interestPaid = $contractedInterest;
+                    }
+                }
+
                 $totalInterestPaid += $interestPaid;
 
-                $pendingSchedules = DB::table('loan_interest_schedule')
-                    ->where('loan_id', $loan->id)
-                    ->whereIn('status', ['pending', 'partially_paid', 'overdue'])
-                    ->get();
+                $loanPendingInt = 0;
+                if ($loan->status === 'active' || $loan->status === 'pending') {
+                    $pendingSchedules = DB::table('loan_interest_schedule')
+                        ->where('loan_id', $loan->id)
+                        ->whereIn('status', ['pending', 'partially_paid', 'overdue'])
+                        ->get();
 
-                $pendingInt = 0;
-                foreach ($pendingSchedules as $s) {
-                    $pendingInt += max(0, $s->interest_amount - ($s->paid_amount ?? 0));
+                    foreach ($pendingSchedules as $s) {
+                        $loanPendingInt += max(0, $s->interest_amount - ($s->paid_amount ?? 0));
+                    }
+
+                    // Fallback for loans without generated schedule rows yet (e.g. pending activation)
+                    if ($loanPendingInt == 0 && DB::table('loan_interest_schedule')->where('loan_id', $loan->id)->count() == 0) {
+                        if ($loan->interest_method === 'no_interest') {
+                            $loanPendingInt = 0;
+                        } elseif (!empty($loan->is_upfront_interest)) {
+                            $term = !empty($loan->term_months) ? (int)$loan->term_months : 1;
+                            if ($term > 1) {
+                                $loanPendingInt = ($term - 1) * ($loan->interest_amount ?? 0);
+                            } else {
+                                $loanPendingInt = 0;
+                            }
+                        } elseif ($loan->interest_method === 'fixed_amount' && !empty($loan->interest_amount)) {
+                            $term = !empty($loan->term_months) ? (int)$loan->term_months : 1;
+                            $loanPendingInt = $term * ($loan->interest_amount ?? 0);
+                        } elseif (!empty($loan->total_interest)) {
+                            $loanPendingInt = $loan->total_interest;
+                        }
+                    }
                 }
-                $totalPendingInterest += $pendingInt;
+                $totalPendingInterest += $loanPendingInt;
             }
 
             $outstandingPrincipal = max(0, $totalBorrowed - $totalPrincipalRepaid);

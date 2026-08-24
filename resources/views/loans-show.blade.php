@@ -30,7 +30,8 @@
     });
     $totalContractedInterest = $schedules->sum('interest_amount');
     if ($totalContractedInterest == 0 && !empty($loan->interest_amount) && $loan->interest_method === 'fixed_amount') {
-        $totalContractedInterest = $loan->interest_amount;
+        $term = !empty($loan->term_months) ? (int)$loan->term_months : 1;
+        $totalContractedInterest = $term * $loan->interest_amount;
     } elseif ($totalContractedInterest == 0 && !empty($loan->total_interest)) {
         $totalContractedInterest = $loan->total_interest;
     }
