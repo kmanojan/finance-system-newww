@@ -25,11 +25,46 @@
     <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.ckeditor.com/ckeditor5/39.0.1/classic/ckeditor.js"></script>
     <script>
         const savedTheme = localStorage.getItem('theme') || 'dark';
         document.documentElement.setAttribute('data-theme', savedTheme);
     </script>
     <style>
+        /* CKEditor Custom Theme Adaptation */
+        .ck.ck-editor__main>.ck-editor__editable {
+            background: var(--bg-page) !important;
+            color: var(--text-main) !important;
+            border-color: var(--border) !important;
+            min-height: 120px;
+            border-bottom-left-radius: 8px !important;
+            border-bottom-right-radius: 8px !important;
+            font-family: inherit !important;
+        }
+        .ck.ck-toolbar {
+            background: var(--bg-card) !important;
+            border-color: var(--border) !important;
+            border-top-left-radius: 8px !important;
+            border-top-right-radius: 8px !important;
+        }
+        .ck.ck-toolbar .ck-button, .ck.ck-dropdown__panel {
+            color: var(--text-main) !important;
+        }
+        .ck.ck-toolbar .ck-button:hover, .ck.ck-toolbar .ck-button.ck-on {
+            background: var(--primary-light) !important;
+            color: var(--primary) !important;
+        }
+        .ck.ck-dropdown__panel {
+            background: var(--bg-card) !important;
+            border: 1px solid var(--border) !important;
+        }
+        .ck.ck-list__item .ck-button {
+            color: var(--text-main) !important;
+        }
+        .ck.ck-list__item .ck-button:hover {
+            background: var(--primary-light) !important;
+        }
+        
         /* Base form styles */
         .form-group { margin-bottom: 1.5rem; }
         .form-label { display: block; margin-bottom: 0.5rem; font-weight: 500; color: var(--text-heading); font-size: 0.9rem; }
@@ -311,6 +346,27 @@
 
             openModal('globalConfirmModal');
             return false;
+        };
+
+        // Global Helper to set values for amount-input components
+        window.setAmountInputValue = function(id, val) {
+            const input = document.getElementById(id);
+            if (!input) return;
+            const hidden = input.parentElement ? input.parentElement.querySelector('.amount-hidden') : null;
+            if (val !== null && val !== undefined && val !== '' && !isNaN(val)) {
+                const num = parseFloat(val);
+                input.value = num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                if (hidden) {
+                    hidden.value = num.toFixed(2);
+                    hidden.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+            } else {
+                input.value = '';
+                if (hidden) {
+                    hidden.value = '';
+                    hidden.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+            }
         };
 
         // Double-Submission Guard & Button Loading Spinners on all forms

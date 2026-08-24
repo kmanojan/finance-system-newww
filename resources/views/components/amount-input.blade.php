@@ -64,5 +64,25 @@
             input.parentElement.querySelector('.amount-hidden').value = '';
         }
     }
+
+    window.setAmountInputValue = function(id, val) {
+        const input = document.getElementById(id);
+        if (!input) return;
+        const hidden = input.parentElement ? input.parentElement.querySelector('.amount-hidden') : null;
+        if (val !== null && val !== undefined && val !== '' && !isNaN(val)) {
+            const num = parseFloat(val);
+            input.value = num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            if (hidden) {
+                hidden.value = num.toFixed(2);
+                hidden.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        } else {
+            input.value = '';
+            if (hidden) {
+                hidden.value = '';
+                hidden.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        }
+    };
 </script>
 @endonce

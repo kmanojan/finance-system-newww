@@ -67,7 +67,7 @@
                 <span class="badge" style="background:#fef3c7; color:#b45309; font-weight:600; padding:0.35rem 0.8rem; font-size:0.85rem;">Pending Activation</span>
             @endif
         </div>
-        <p class="subtitle" style="margin-top:0.3rem;">{{ $loan->purpose ?? 'General Loan Facility' }} | Initial Principal: {{ $loan->currency }} {{ number_format($loan->principal_amount, 2) }}</p>
+        <p class="subtitle" style="margin-top:0.3rem;">{{ strip_tags($loan->purpose) ?: 'General Loan Facility' }} | Initial Principal: {{ $loan->currency }} {{ number_format($loan->principal_amount, 2) }}</p>
     </div>
     
     <div class="header-actions" style="display: flex; align-items: center; gap: 0.75rem; flex-wrap:wrap;">
@@ -267,6 +267,18 @@
                 </div>
             @endif
         </div>
+
+        @if(!empty($loan->purpose))
+        <!-- Facility Purpose & Terms Card -->
+        <div class="card" style="padding:1.25rem;">
+            <h3 style="font-size:0.95rem; margin:0 0 0.75rem 0; color:var(--text-heading); font-weight:700; display:flex; align-items:center; gap:0.4rem;">
+                <ion-icon name="document-text-outline" style="color:var(--primary);"></ion-icon> Purpose & Facility Terms
+            </h3>
+            <div class="prose" style="font-size:0.85rem; color:var(--text-main); line-height:1.6;">
+                {!! $loan->purpose !!}
+            </div>
+        </div>
+        @endif
 
         <!-- Attachments Card -->
         <div class="card" style="padding:1.25rem;">
@@ -630,8 +642,8 @@
                 </div>
 
                 <div class="form-group" style="margin-top:1.25rem;">
-                    <label class="form-label">Purpose / Description</label>
-                    <input type="text" name="purpose" id="edit_purpose" class="form-control" value="{{ $loan->purpose }}" placeholder="E.g. Capital investment / Equipment purchase">
+                    <label class="form-label" style="font-weight:700;">Purpose / Description & Terms</label>
+                    <textarea name="purpose" id="show_edit_purpose" class="form-control" rows="3" placeholder="E.g. Capital investment / Equipment purchase / terms...">{{ $loan->purpose }}</textarea>
                 </div>
 
                 <div class="form-row" style="margin-top:1.25rem;">
@@ -1019,5 +1031,20 @@ function toggleEditInterestFields(method) {
     document.getElementById('edit_field_due_day').style.display = hasFrequency ? 'block' : 'none';
     calculateNetDisbursed('edit');
 }
+
+let showEditPurposeEditor = null;
+document.addEventListener('DOMContentLoaded', function() {
+    const editEl = document.querySelector('#show_edit_purpose');
+    if (editEl && typeof ClassicEditor !== 'undefined') {
+        ClassicEditor
+            .create(editEl, {
+                toolbar: ['heading', '|', 'bold', 'italic', 'underline', 'bulletedList', 'numberedList', 'blockQuote', '|', 'undo', 'redo']
+            })
+            .then(editor => {
+                showEditPurposeEditor = editor;
+            })
+            .catch(err => console.error(err));
+    }
+});
 </script>
 @endsection

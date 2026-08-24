@@ -381,7 +381,7 @@
                         @endif
                     </div>
                     <div style="font-size:0.78rem; color:var(--text-muted); margin-top:0.15rem;">
-                        {{ $loan->purpose ?: 'General Borrowing Facility' }} &bull; Claimed {{ $loan->claimed_date ? date('M d, Y', strtotime($loan->claimed_date)) : 'N/A' }}
+                        {{ strip_tags($loan->purpose) ?: 'General Borrowing Facility' }} &bull; Claimed {{ $loan->claimed_date ? date('M d, Y', strtotime($loan->claimed_date)) : 'N/A' }}
                     </div>
                 </div>
             </div>
@@ -536,6 +536,18 @@
                 </div>
             </div>
 
+            @if(!empty($loan->purpose))
+            <!-- Purpose & Facility Terms Notes -->
+            <div style="background:var(--bg-page); border:1px solid var(--border-light); border-radius:8px; padding:0.85rem 1.15rem; margin-bottom:1rem;">
+                <span style="font-size:0.72rem; font-weight:700; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.5px; display:block; margin-bottom:0.35rem;">
+                    <ion-icon name="document-text-outline" style="vertical-align:middle;"></ion-icon> Purpose & Facility Terms
+                </span>
+                <div class="prose" style="font-size:0.85rem; color:var(--text-main); line-height:1.6;">
+                    {!! $loan->purpose !!}
+                </div>
+            </div>
+            @endif
+
             <!-- Drawer Bottom Action Toolbar -->
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem; padding-top:0.75rem; border-top:1px solid var(--border-light);">
                 <div style="display:flex; align-items:center; gap:0.5rem;">
@@ -653,8 +665,8 @@
                 </div>
 
                 <div class="form-group" style="margin-top:1.25rem;">
-                    <label class="form-label">Purpose / Description</label>
-                    <input type="text" name="purpose" id="edit_purpose" class="form-control" placeholder="E.g. Capital investment / Equipment purchase">
+                    <label class="form-label" style="font-weight:700;">Purpose / Description & Terms</label>
+                    <textarea name="purpose" id="edit_purpose" class="form-control" rows="3" placeholder="E.g. Capital investment / Equipment purchase / terms..."></textarea>
                 </div>
 
                 <div class="form-row" style="margin-top:1.25rem;">
@@ -820,8 +832,8 @@
                 </div>
 
                 <div class="form-group" style="margin-top:1.25rem;">
-                    <label class="form-label">Purpose / Description</label>
-                    <input type="text" name="purpose" class="form-control" placeholder="E.g. Capital investment / Equipment purchase">
+                    <label class="form-label" style="font-weight:700;">Purpose / Description & Terms</label>
+                    <textarea name="purpose" id="create_purpose" class="form-control" rows="3" placeholder="E.g. Capital investment / Equipment purchase / terms..."></textarea>
                 </div>
 
                 <div class="form-row" style="margin-top:1.25rem;">
@@ -1099,6 +1111,29 @@ function setMaturityMonths(prefix, months) {
     }
 }
 
+function setAmountInputValue(id, val) {
+    const input = document.getElementById(id);
+    if (!input) return;
+    const hidden = input.parentElement ? input.parentElement.querySelector('.amount-hidden') : null;
+    if (val !== null && val !== undefined && val !== '' && !isNaN(val)) {
+        const num = parseFloat(val);
+        input.value = num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        if (hidden) {
+            hidden.value = num.toFixed(2);
+            hidden.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+    } else {
+        input.value = '';
+        if (hidden) {
+            hidden.value = '';
+            hidden.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+    }
+}
+
+let createPurposeEditor = null;
+let editPurposeEditor = null;
+
 document.addEventListener('DOMContentLoaded', function() {
     autoSetMaturity('create');
     
@@ -1110,6 +1145,32 @@ document.addEventListener('DOMContentLoaded', function() {
             el.addEventListener('blur', () => calculateNetDisbursed('create'));
         }
     });
+
+    // Initialize CKEditor on Create Modal Purpose
+    const createEl = document.querySelector('#create_purpose');
+    if (createEl && typeof ClassicEditor !== 'undefined') {
+        ClassicEditor
+            .create(createEl, {
+                toolbar: ['heading', '|', 'bold', 'italic', 'underline', 'bulletedList', 'numberedList', 'blockQuote', '|', 'undo', 'redo']
+            })
+            .then(editor => {
+                createPurposeEditor = editor;
+            })
+            .catch(err => console.error(err));
+    }
+
+    // Initialize CKEditor on Edit Modal Purpose
+    const editEl = document.querySelector('#edit_purpose');
+    if (editEl && typeof ClassicEditor !== 'undefined') {
+        ClassicEditor
+            .create(editEl, {
+                toolbar: ['heading', '|', 'bold', 'italic', 'underline', 'bulletedList', 'numberedList', 'blockQuote', '|', 'undo', 'redo']
+            })
+            .then(editor => {
+                editPurposeEditor = editor;
+            })
+            .catch(err => console.error(err));
+    }
 });
 
 function openEditLoanModal(loan) {
@@ -1126,7 +1187,12 @@ function openEditLoanModal(loan) {
     
     document.getElementById('edit_claimed_date').value = loan.claimed_date || loan.start_date || '';
     document.getElementById('edit_term_months').value = loan.term_months || 1;
-    document.getElementById('edit_purpose').value = loan.purpose || '';
+    
+    if (editPurposeEditor) {
+        editPurposeEditor.setData(loan.purpose || '');
+    } else {
+        document.getElementById('edit_purpose').value = loan.purpose || '';
+    }
     
     const method = loan.interest_method || 'fixed_amount';
     document.getElementById('edit_interest_method').value = method;
