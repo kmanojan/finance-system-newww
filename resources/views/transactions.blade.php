@@ -354,6 +354,17 @@
         </tbody>
     </table>
 </div>
+
+@if($transactions->hasPages())
+<div style="margin-top:1.5rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+    <div style="font-size:0.85rem; color:var(--text-muted);">
+        Showing <strong style="color:var(--text-heading);">{{ $transactions->firstItem() ?? 0 }}</strong> to <strong style="color:var(--text-heading);">{{ $transactions->lastItem() ?? 0 }}</strong> of <strong style="color:var(--text-heading);">{{ $transactions->total() }}</strong> transactions
+    </div>
+    <div>
+        {{ $transactions->links() }}
+    </div>
+</div>
+@endif
 @endif
 @endsection
 

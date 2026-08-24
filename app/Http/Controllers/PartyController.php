@@ -7,9 +7,31 @@ use Illuminate\Support\Facades\DB;
 
 class PartyController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $data = DB::table('parties')->get();
+        $query = DB::table('parties')->orderBy('name', 'asc');
+
+        if ($request->filled('search')) {
+            $search = '%' . $request->input('search') . '%';
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'LIKE', $search)
+                  ->orWhere('contact_person', 'LIKE', $search)
+                  ->orWhere('email', 'LIKE', $search)
+                  ->orWhere('phone', 'LIKE', $search)
+                  ->orWhere('types', 'LIKE', $search);
+            });
+        }
+
+        if ($request->filled('type') && $request->input('type') !== 'all') {
+            $query->where('types', 'LIKE', '%' . $request->input('type') . '%');
+        }
+
+        if ($request->filled('status') && $request->input('status') !== 'all') {
+            $query->where('status', $request->input('status'));
+        }
+
+        $data = $query->paginate(15)->withQueryString();
+
         foreach ($data as $item) {
             $item->projects_count = DB::table('project_party')
                 ->where('party_id', $item->id)

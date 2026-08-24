@@ -236,30 +236,44 @@
     </div>
 
     <!-- 2. Total Paid To Date -->
-    <div class="metric-card" style="background:var(--bg-card); border:1px solid var(--border); padding:1rem 1.15rem; border-radius:10px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; color:var(--text-muted); font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">
-            <span>Total Paid To Date</span>
-            <ion-icon name="checkmark-circle-outline" style="font-size:1.2rem; color:var(--success);"></ion-icon>
+    <div class="metric-card" style="background:var(--bg-card); border:1px solid var(--border); padding:1rem 1.15rem; border-radius:10px; display:flex; flex-direction:column; justify-content:space-between;">
+        <div>
+            <div style="display:flex; justify-content:space-between; align-items:center; color:var(--text-muted); font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">
+                <span>Total Paid To Date</span>
+                <ion-icon name="checkmark-circle-outline" style="font-size:1.2rem; color:var(--success);"></ion-icon>
+            </div>
+            <div style="font-size:1.35rem; font-weight:800; color:var(--success); margin-top:0.35rem;">
+                LKR {{ number_format($totalPaidAll, 2) }}
+            </div>
         </div>
-        <div style="font-size:1.35rem; font-weight:800; color:var(--success); margin-top:0.35rem;">
-            LKR {{ number_format($totalPaidAll, 2) }}
-        </div>
-        <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.2rem;">
-            Prin: {{ number_format($totalPrincipalRepaid, 2) }} | Int: {{ number_format($totalInterestPaid, 2) }}
+        <div style="margin-top:0.5rem; padding-top:0.35rem; border-top:1px dashed var(--border-light); font-size:0.75rem; display:flex; justify-content:space-between; gap:0.5rem; flex-wrap:wrap;">
+            <span style="color:var(--text-muted);">
+                <strong style="color:var(--text-heading);">Loan:</strong> {{ number_format($totalPrincipalRepaid, 2) }}
+            </span>
+            <span style="color:var(--text-muted);">
+                <strong style="color:var(--primary);">Interest:</strong> {{ number_format($totalInterestPaid, 2) }}
+            </span>
         </div>
     </div>
 
     <!-- 3. Outstanding Debt Obligation -->
-    <div class="metric-card" style="background:var(--bg-card); border:1px solid var(--border); padding:1rem 1.15rem; border-radius:10px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; color:var(--text-muted); font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">
-            <span>Outstanding Balance</span>
-            <ion-icon name="alert-circle-outline" style="font-size:1.2rem; color:var(--danger);"></ion-icon>
+    <div class="metric-card" style="background:var(--bg-card); border:1px solid var(--border); padding:1rem 1.15rem; border-radius:10px; display:flex; flex-direction:column; justify-content:space-between;">
+        <div>
+            <div style="display:flex; justify-content:space-between; align-items:center; color:var(--text-muted); font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">
+                <span>Outstanding Balance</span>
+                <ion-icon name="alert-circle-outline" style="font-size:1.2rem; color:var(--danger);"></ion-icon>
+            </div>
+            <div style="font-size:1.35rem; font-weight:800; color:var(--danger); margin-top:0.35rem;">
+                LKR {{ number_format($totalWantToPaid, 2) }}
+            </div>
         </div>
-        <div style="font-size:1.35rem; font-weight:800; color:var(--danger); margin-top:0.35rem;">
-            LKR {{ number_format($totalWantToPaid, 2) }}
-        </div>
-        <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.2rem;">
-            Rem. Principal + Scheduled Interest
+        <div style="margin-top:0.5rem; padding-top:0.35rem; border-top:1px dashed var(--border-light); font-size:0.75rem; display:flex; justify-content:space-between; gap:0.5rem; flex-wrap:wrap;">
+            <span style="color:var(--text-muted);">
+                <strong style="color:var(--danger);">Loan:</strong> {{ number_format($totalOutstandingPrincipal, 2) }}
+            </span>
+            <span style="color:var(--text-muted);">
+                <strong style="color:#f59e0b;">Interest:</strong> {{ number_format($totalOutstandingInterest, 2) }}
+            </span>
         </div>
     </div>
 

@@ -35,12 +35,21 @@
 @endif
 
 <div class="toolbar">
-    <div class="toolbar-left"></div>
+    <div class="toolbar-left">
+        <span style="font-size:0.85rem; color:var(--text-muted);">
+            Total: <strong style="color:var(--text-heading);">{{ $data->total() }}</strong> parties
+        </span>
+    </div>
     <div class="toolbar-right">
-        <div class="search-input">
-            <ion-icon name="search-outline"></ion-icon>
-            <input type="text" placeholder="Search parties">
-        </div>
+        <form method="GET" action="/master/parties" style="margin:0; display:flex; gap:0.5rem; align-items:center;">
+            <div class="search-input">
+                <ion-icon name="search-outline"></ion-icon>
+                <input type="text" name="search" value="{{ request('search') }}" placeholder="Search parties by name, email, phone...">
+            </div>
+            @if(request('search') || request('type') || request('status'))
+                <a href="/master/parties" class="btn btn-outline" style="padding:0.4rem 0.75rem; font-size:0.85rem;" title="Clear Filters">Clear</a>
+            @endif
+        </form>
     </div>
 </div>
 
@@ -114,6 +123,17 @@
         </tbody>
     </table>
 </div>
+
+@if($data->hasPages())
+<div style="margin-top:1.25rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+    <div style="font-size:0.85rem; color:var(--text-muted);">
+        Showing {{ $data->firstItem() ?? 0 }} to {{ $data->lastItem() ?? 0 }} of {{ $data->total() }} parties
+    </div>
+    <div>
+        {{ $data->links() }}
+    </div>
+</div>
+@endif
 
 <script>
     function toggleCommFields(prefix) {

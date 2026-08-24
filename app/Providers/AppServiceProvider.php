@@ -28,6 +28,8 @@ class AppServiceProvider extends ServiceProvider
                 View::share('baseCurrency', $baseCurrency);
             }
 
+            \Illuminate\Pagination\Paginator::defaultView('pagination.custom');
+
             // Auto-run pending migrations in production / serverless environment if new columns are missing
             if (Schema::hasTable('loans') && !Schema::hasColumn('loans', 'maturity_date')) {
                 \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);

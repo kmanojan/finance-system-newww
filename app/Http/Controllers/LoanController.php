@@ -151,6 +151,8 @@ class LoanController extends Controller
             'totalPrincipalRepaid', 
             'totalInterestPaid',
             'totalPaidAll',
+            'totalOutstandingPrincipal',
+            'totalOutstandingInterest',
             'totalWantToPaid', 
             'thisMonthPayable',
             'totalLoansCount',

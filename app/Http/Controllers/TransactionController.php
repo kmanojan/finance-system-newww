@@ -65,15 +65,17 @@ class TransactionController extends Controller
             });
         }
 
-        $transactions = $query->get();
-
-        // Calculate KPI summary figures
-        $totalIncome = $transactions->where('type', 'income')->sum('amount');
-        $totalExpense = $transactions->where('type', 'expense')->sum('amount');
+        // Calculate KPI summary figures on complete filtered set
+        $allFiltered = (clone $query)->get();
+        $totalIncome = $allFiltered->where('type', 'income')->sum('amount');
+        $totalExpense = $allFiltered->where('type', 'expense')->sum('amount');
         $netCashFlow = $totalIncome - $totalExpense;
-        $incomeCount = $transactions->where('type', 'income')->count();
-        $expenseCount = $transactions->where('type', 'expense')->count();
-        $totalCount = $transactions->count();
+        $incomeCount = $allFiltered->where('type', 'income')->count();
+        $expenseCount = $allFiltered->where('type', 'expense')->count();
+        $totalCount = $allFiltered->count();
+
+        // Paginate transactions
+        $transactions = $query->paginate(20)->withQueryString();
 
         // Get categories and related entities for dropdowns
         $categories = DB::table('categories')->orderBy('name')->get();
