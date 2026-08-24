@@ -64,11 +64,7 @@
 
 <!-- Search and Filter Bar -->
 <div class="toolbar" style="margin-bottom:1.5rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
-    <div class="toolbar-left">
-        <span style="font-size:0.85rem; color:var(--text-muted);">
-            Showing <strong style="color:var(--text-heading);">{{ $partyReports->firstItem() ?? 0 }}</strong> to <strong style="color:var(--text-heading);">{{ $partyReports->lastItem() ?? 0 }}</strong> of <strong style="color:var(--text-heading);">{{ $partyReports->total() }}</strong> parties
-        </span>
-    </div>
+    <div class="toolbar-left"></div>
     <div class="toolbar-right">
         <form method="GET" action="/loans/party-report" style="margin:0; display:flex; gap:0.5rem; align-items:center;">
             <div class="search-input">
