@@ -219,6 +219,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/loans/schedules', [LoanController::class, 'schedules']);
     Route::get('/loans/settlements', [LoanController::class, 'settlements']);
     Route::get('/loans/party-report', [LoanController::class, 'partyReport']);
+    Route::get('/loans/party-report/loans', [LoanController::class, 'partyFacilities']);
     Route::post('/loans', [LoanController::class, 'store']);
 
     Route::get('/loans/{id}', [LoanController::class, 'show']);

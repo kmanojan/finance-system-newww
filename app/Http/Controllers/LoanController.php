@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Pagination\Paginator;
 use Carbon\Carbon;
 
 class LoanController extends Controller
@@ -184,15 +186,52 @@ class LoanController extends Controller
     }
 
 
-    public function schedules()
+    public function schedules(Request $request)
     {
-        $schedules = DB::table('loan_interest_schedule')
+        $query = DB::table('loan_interest_schedule')
             ->join('loans', 'loan_interest_schedule.loan_id', '=', 'loans.id')
-            ->select('loan_interest_schedule.*', 'loans.lender_name', 'loans.currency')
-            ->orderBy('due_date', 'asc')
-            ->get();
+            ->select('loan_interest_schedule.*', 'loans.lender_name', 'loans.currency', 'loans.party_id');
 
-        return view('loans-schedules', compact('schedules'));
+        if ($request->filled('party_id') && $request->input('party_id') !== 'all') {
+            $query->where('loans.party_id', $request->input('party_id'));
+        }
+
+        if ($request->filled('start_date')) {
+            $query->where('loan_interest_schedule.due_date', '>=', $request->input('start_date'));
+        }
+        if ($request->filled('end_date')) {
+            $query->where('loan_interest_schedule.due_date', '<=', $request->input('end_date'));
+        }
+
+        if ($request->filled('status') && $request->input('status') !== 'all') {
+            if ($request->input('status') === 'overdue') {
+                $query->where('loan_interest_schedule.due_date', '<', now()->format('Y-m-d'))
+                      ->whereIn('loan_interest_schedule.status', ['pending', 'partially_paid']);
+            } else {
+                $query->where('loan_interest_schedule.status', $request->input('status'));
+            }
+        }
+
+        $schedules = $query->orderBy('loan_interest_schedule.due_date', 'asc')->get();
+
+        $parties = DB::table('parties')->orderBy('name')->get();
+
+        $totalScheduledInterest = $schedules->sum('interest_amount');
+        $totalPaidInterest = $schedules->sum('paid_amount');
+        $totalPendingInterest = 0;
+        foreach ($schedules as $s) {
+            if (in_array($s->status, ['pending', 'partially_paid', 'overdue'])) {
+                $totalPendingInterest += max(0, $s->interest_amount - ($s->paid_amount ?? 0));
+            }
+        }
+
+        return view('loans-schedules', compact(
+            'schedules',
+            'parties',
+            'totalScheduledInterest',
+            'totalPaidInterest',
+            'totalPendingInterest'
+        ));
     }
 
     public function settlements(Request $request)
@@ -557,21 +596,23 @@ class LoanController extends Controller
             if ($loanData['interest_method'] === 'fixed_amount') {
                 return (float)($loanData['interest_amount'] ?? 0);
             } elseif ($loanData['interest_method'] === 'percentage_rate') {
-                if (isset($loanData['rate_basis']) && $loanData['rate_basis'] === 'reducing') {
-                    return $outstanding * (($loanData['interest_rate'] ?? 0) / 100);
-                } else {
-                    return $outstanding * (($loanData['interest_rate'] ?? 0) / 100);
-                }
+                return $outstanding * ((float)($loanData['interest_rate'] ?? 0) / 100);
             } elseif ($loanData['interest_method'] === 'equal_installments') {
-                $totalToPay = $outstanding + ($loanData['total_interest'] ?? 0);
+                $totalToPay = (float)($loanData['total_interest'] ?? 0);
                 return $totalToPay / max(1, $termMonths);
             }
             return 0;
         };
 
+        $periodicAmount = $computePeriodicInterest();
+        $firstAmount = ($isUpfront && $upfrontAmount !== null && $upfrontAmount > 0) ? $upfrontAmount : $periodicAmount;
+
+        // If interest repayment amount is 0, do not generate schedule rows
+        if ($periodicAmount <= 0 && $firstAmount <= 0) {
+            return;
+        }
+
         if ($isUpfront) {
-            $firstAmount = ($upfrontAmount !== null && $upfrontAmount > 0) ? $upfrontAmount : $computePeriodicInterest();
-            
             // Period 1: Upfront interest paid on Claimed Date
             $inserts[] = [
                 'loan_id' => $loanId,
@@ -1125,7 +1166,11 @@ class LoanController extends Controller
         $query = DB::table('loans');
         if ($request->filled('search')) {
             $search = '%' . $request->input('search') . '%';
-            $query->where('lender_name', 'LIKE', $search);
+            $partyIds = DB::table('parties')->where('name', 'LIKE', $search)->pluck('id');
+            $query->where(function($q) use ($search, $partyIds) {
+                $q->where('lender_name', 'LIKE', $search)
+                  ->orWhereIn('party_id', $partyIds);
+            });
         }
         $loans = $query->get();
 
@@ -1134,7 +1179,7 @@ class LoanController extends Controller
             return $item->party_id ? 'party_' . $item->party_id : 'lender_' . preg_replace('/[^a-z0-9]/i', '_', strtolower($item->lender_name));
         });
 
-        $partyReports = collect();
+        $allPartyReports = collect();
         foreach ($grouped as $key => $partyLoans) {
             $firstLoan = $partyLoans->first();
             $partyId = $firstLoan->party_id;
@@ -1150,9 +1195,13 @@ class LoanController extends Controller
             $totalInterestPaid = 0;
             $totalPendingInterest = 0;
             $activeCount = 0;
+            $settledCount = 0;
+            $pendingCount = 0;
 
             foreach ($partyLoans as $loan) {
                 if ($loan->status === 'active') $activeCount++;
+                elseif ($loan->status === 'settled') $settledCount++;
+                elseif ($loan->status === 'pending') $pendingCount++;
 
                 $repayments = DB::table('loan_principal_records')
                     ->where('loan_id', $loan->id)
@@ -1230,11 +1279,15 @@ class LoanController extends Controller
             $totalPayables = $outstandingPrincipal + $totalPendingInterest;
             $totalPaids = $totalPrincipalRepaid + $totalInterestPaid;
 
-            $partyReports->push((object)[
+            $allPartyReports->push((object)[
+                'key' => $key,
                 'party_id' => $partyId,
+                'lender_name' => $firstLoan->lender_name,
                 'party_name' => $partyName,
                 'loan_count' => $partyLoans->count(),
                 'active_count' => $activeCount,
+                'settled_count' => $settledCount,
+                'pending_count' => $pendingCount,
                 'total_borrowed' => $totalBorrowed,
                 'total_principal_repaid' => $totalPrincipalRepaid,
                 'total_interest_paid' => $totalInterestPaid,
@@ -1246,11 +1299,121 @@ class LoanController extends Controller
             ]);
         }
 
-        $overallBorrowed = $partyReports->sum('total_borrowed');
-        $overallPaids = $partyReports->sum('total_paids');
-        $overallPayables = $partyReports->sum('total_payables');
+        $overallBorrowed = $allPartyReports->sum('total_borrowed');
+        $overallPaids = $allPartyReports->sum('total_paids');
+        $overallPayables = $allPartyReports->sum('total_payables');
+        $totalFacilitiesCount = $allPartyReports->sum('loan_count');
 
-        return view('loans-party-report', compact('partyReports', 'overallBorrowed', 'overallPaids', 'overallPayables'));
+        // Paginate results (15 per page matching party master index)
+        $currentPage = Paginator::resolveCurrentPage() ?: 1;
+        $perPage = 15;
+        $currentItems = $allPartyReports->slice(($currentPage - 1) * $perPage, $perPage)->values();
+        $partyReports = new LengthAwarePaginator($currentItems, $allPartyReports->count(), $perPage, $currentPage, [
+            'path' => Paginator::resolveCurrentPath(),
+            'query' => $request->query(),
+        ]);
+
+        return view('loans-party-report', compact('partyReports', 'overallBorrowed', 'overallPaids', 'overallPayables', 'totalFacilitiesCount'));
+    }
+
+    public function partyFacilities(Request $request)
+    {
+        $query = DB::table('loans');
+
+        if ($request->filled('party_id') && $request->input('party_id') !== 'null') {
+            $query->where('party_id', $request->input('party_id'));
+        } elseif ($request->filled('lender_name')) {
+            $query->where('lender_name', $request->input('lender_name'));
+        } else {
+            return response()->json(['facilities' => []]);
+        }
+
+        $loans = $query->orderBy('created_at', 'desc')->get();
+
+        $facilities = [];
+        foreach ($loans as $loan) {
+            $repayments = DB::table('loan_principal_records')
+                ->where('loan_id', $loan->id)
+                ->where('record_type', 'repayment')
+                ->sum('amount');
+            $draws = DB::table('loan_principal_records')
+                ->where('loan_id', $loan->id)
+                ->where('record_type', 'draw')
+                ->sum('amount');
+
+            $outstandingPrincipal = max(0, $loan->principal_amount + $draws - $repayments);
+
+            $interestPaid = DB::table('loan_interest_schedule')
+                ->where('loan_id', $loan->id)
+                ->sum('paid_amount');
+
+            $pendingSchedules = DB::table('loan_interest_schedule')
+                ->where('loan_id', $loan->id)
+                ->whereIn('status', ['pending', 'partially_paid', 'overdue'])
+                ->get();
+
+            $loanPendingInterest = 0;
+            if ($loan->status === 'active' || $loan->status === 'pending') {
+                foreach ($pendingSchedules as $sched) {
+                    $loanPendingInterest += max(0, $sched->interest_amount - ($sched->paid_amount ?? 0));
+                }
+
+                if ($loanPendingInterest == 0 && DB::table('loan_interest_schedule')->where('loan_id', $loan->id)->count() == 0) {
+                    if ($loan->interest_method === 'no_interest') {
+                        $loanPendingInterest = 0;
+                    } elseif (!empty($loan->is_upfront_interest)) {
+                        $term = !empty($loan->term_months) ? (int)$loan->term_months : 1;
+                        $loanPendingInterest = $term > 1 ? ($term - 1) * ($loan->interest_amount ?? 0) : 0;
+                    } elseif ($loan->interest_method === 'fixed_amount' && !empty($loan->interest_amount)) {
+                        $term = !empty($loan->term_months) ? (int)$loan->term_months : 1;
+                        $loanPendingInterest = $term * ($loan->interest_amount ?? 0);
+                    } elseif (!empty($loan->total_interest)) {
+                        $loanPendingInterest = $loan->total_interest;
+                    }
+                }
+            }
+
+            if ($loan->status === 'settled') {
+                $contractedInterest = 0;
+                if ($loan->interest_method === 'fixed_amount' && !empty($loan->interest_amount)) {
+                    $term = !empty($loan->term_months) ? (int)$loan->term_months : 1;
+                    $contractedInterest = $term * $loan->interest_amount;
+                } elseif (!empty($loan->total_interest)) {
+                    $contractedInterest = $loan->total_interest;
+                } elseif ($loan->interest_method === 'percentage_rate' && !empty($loan->interest_rate)) {
+                    $term = !empty($loan->term_months) ? (int)$loan->term_months : 1;
+                    $contractedInterest = $term * ($loan->principal_amount * ($loan->interest_rate / 100));
+                }
+                $schedTotal = DB::table('loan_interest_schedule')->where('loan_id', $loan->id)->sum('interest_amount');
+                if ($schedTotal > 0) {
+                    $contractedInterest = max($contractedInterest, $schedTotal);
+                }
+                if ($contractedInterest > 0 && $interestPaid < $contractedInterest) {
+                    $interestPaid = $contractedInterest;
+                }
+            }
+
+            $facilities[] = [
+                'id' => $loan->id,
+                'lender_name' => $loan->lender_name,
+                'status' => $loan->status,
+                'principal_amount' => (float)$loan->principal_amount,
+                'principal_repaid' => (float)$repayments,
+                'outstanding_principal' => (float)$outstandingPrincipal,
+                'interest_paid' => (float)$interestPaid,
+                'pending_interest' => (float)$loanPendingInterest,
+                'total_outstanding' => (float)($outstandingPrincipal + $loanPendingInterest),
+                'total_paid' => (float)($repayments + $interestPaid),
+                'claimed_date' => $loan->claimed_date,
+                'maturity_date' => $loan->maturity_date,
+                'term_months' => $loan->term_months,
+                'currency' => $loan->currency ?: 'LKR',
+                'purpose' => $loan->purpose ? strip_tags($loan->purpose) : null,
+                'interest_method' => $loan->interest_method,
+            ];
+        }
+
+        return response()->json(['facilities' => $facilities]);
     }
 }
 

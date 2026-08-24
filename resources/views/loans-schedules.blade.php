@@ -15,12 +15,90 @@
 @endsection
 
 @section('content')
-<header class="page-header" style="margin-bottom: 2rem;">
+<header class="page-header" style="margin-bottom: 1.5rem;">
     <div class="header-titles">
-        <h1>Repayment Schedules</h1>
-        <p class="subtitle">All upcoming and past repayment schedules across all active loans.</p>
+        <h1 style="font-size:1.75rem; font-weight:800; color:var(--text-heading); margin:0;">Repayment Schedules</h1>
+        <p class="subtitle" style="margin-top:0.3rem;">All upcoming and past repayment schedules across all active loans.</p>
     </div>
 </header>
+
+<!-- KPI Stat Tiles -->
+<div class="metric-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:1.25rem; margin-bottom:1.5rem;">
+    <!-- Tile 1: Total Scheduled -->
+    <div class="metric-card" style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); padding: 1.25rem; border-radius: 12px; color: white;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h3 style="margin:0; font-size:0.8rem; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; opacity:0.9;">Total Scheduled</h3>
+            <ion-icon name="calendar-outline" style="font-size:1.3rem; opacity:0.85;"></ion-icon>
+        </div>
+        <div class="value" style="font-size:1.4rem; font-weight:800; margin-top:0.3rem;">LKR {{ number_format($totalScheduledInterest, 2) }}</div>
+        <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">{{ $schedules->count() }} Total Schedule Installments</div>
+    </div>
+
+    <!-- Tile 2: Settled / Paid -->
+    <div class="metric-card" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); padding: 1.25rem; border-radius: 12px; color: white;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h3 style="margin:0; font-size:0.8rem; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; opacity:0.9;">Interest Paid</h3>
+            <ion-icon name="checkmark-circle-outline" style="font-size:1.3rem; opacity:0.85;"></ion-icon>
+        </div>
+        <div class="value" style="font-size:1.4rem; font-weight:800; margin-top:0.3rem;">LKR {{ number_format($totalPaidInterest, 2) }}</div>
+        <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">Settled interest to date</div>
+    </div>
+
+    <!-- Tile 3: Pending / Due -->
+    <div class="metric-card" style="background: linear-gradient(135deg, #dc2626 0%, #f43f5e 100%); padding: 1.25rem; border-radius: 12px; color: white;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h3 style="margin:0; font-size:0.8rem; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; opacity:0.9;">Pending Due</h3>
+            <ion-icon name="time-outline" style="font-size:1.3rem; opacity:0.85;"></ion-icon>
+        </div>
+        <div class="value" style="font-size:1.4rem; font-weight:800; margin-top:0.3rem;">LKR {{ number_format($totalPendingInterest, 2) }}</div>
+        <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">Remaining balance to settle</div>
+    </div>
+</div>
+
+<!-- Filter Toolbar -->
+<div class="card" style="padding:1rem 1.25rem; margin-bottom:1.5rem; border:1px solid var(--border); border-radius:12px; background:var(--bg-card);">
+    <form method="GET" action="/loans/schedules" style="display:flex; gap:1rem; align-items:center; flex-wrap:wrap; margin:0;">
+        <div style="display:flex; gap:0.5rem; align-items:center;">
+            <label style="font-size:0.8rem; font-weight:600; color:var(--text-muted); margin:0;">Party / Lender:</label>
+            <select name="party_id" class="form-control" style="width:auto; min-width:180px; font-size:0.85rem; padding:0.4rem 0.6rem;">
+                <option value="all">All Parties / Lenders</option>
+                @foreach($parties as $p)
+                    <option value="{{ $p->id }}" {{ request('party_id') == $p->id ? 'selected' : '' }}>{{ $p->name }}</option>
+                @endforeach
+            </select>
+        </div>
+
+        <div style="display:flex; gap:0.5rem; align-items:center;">
+            <label style="font-size:0.8rem; font-weight:600; color:var(--text-muted); margin:0;">Start Date:</label>
+            <input type="date" name="start_date" class="form-control" value="{{ request('start_date') }}" style="width:145px; font-size:0.85rem; padding:0.4rem 0.6rem;">
+        </div>
+
+        <div style="display:flex; gap:0.5rem; align-items:center;">
+            <label style="font-size:0.8rem; font-weight:600; color:var(--text-muted); margin:0;">End Date:</label>
+            <input type="date" name="end_date" class="form-control" value="{{ request('end_date') }}" style="width:145px; font-size:0.85rem; padding:0.4rem 0.6rem;">
+        </div>
+
+        <div style="display:flex; gap:0.5rem; align-items:center;">
+            <label style="font-size:0.8rem; font-weight:600; color:var(--text-muted); margin:0;">Status:</label>
+            <select name="status" class="form-control" style="width:auto; font-size:0.85rem; padding:0.4rem 0.6rem;">
+                <option value="all" {{ request('status') === 'all' || !request('status') ? 'selected' : '' }}>All Statuses</option>
+                <option value="pending" {{ request('status') === 'pending' ? 'selected' : '' }}>Pending</option>
+                <option value="partially_paid" {{ request('status') === 'partially_paid' ? 'selected' : '' }}>Partially Paid</option>
+                <option value="paid" {{ request('status') === 'paid' ? 'selected' : '' }}>Paid</option>
+                <option value="overdue" {{ request('status') === 'overdue' ? 'selected' : '' }}>Overdue</option>
+            </select>
+        </div>
+
+        <div style="display:flex; gap:0.5rem; align-items:center;">
+            <button class="btn btn-outline" type="submit" style="padding:0.4rem 1rem; font-size:0.85rem;">
+                <ion-icon name="funnel-outline" style="vertical-align:middle;"></ion-icon> Filter
+            </button>
+            @if(request('party_id') || request('start_date') || request('end_date') || request('status'))
+                <a href="/loans/schedules" class="btn btn-outline" style="color:var(--text-muted); padding:0.4rem 1rem; font-size:0.85rem; text-decoration:none;">Reset</a>
+            @endif
+        </div>
+    </form>
+</div>
 
 <div class="card" style="padding:0; overflow-x: auto;">
     <table class="data-table" style="margin:0; width:100%;">
@@ -59,7 +137,7 @@
                     <div class="dropdown">
                         <button class="action-btn" onclick="toggleDropdown('sched-actions-{{ $sched->id }}')"><ion-icon name="ellipsis-vertical"></ion-icon></button>
                         <div class="dropdown-menu" id="sched-actions-{{ $sched->id }}">
-                            <a href="#" onclick="openSettleModal({{ $sched->loan_id }}, {{ $sched->id }}, {{ $sched->interest_amount - $sched->paid_amount }})">Settle Payment</a>
+                            <a href="#" onclick="openSettleModal({{ $sched->loan_id }}, {{ $sched->id }}, {{ $sched->interest_amount - $sched->paid_amount }}, '{{ $sched->due_date }}')">Settle Payment</a>
                             <a href="#" onclick="openEditModal({{ $sched->loan_id }}, {{ $sched->id }}, {{ $sched->interest_amount }})">Edit Amount</a>
                             <form action="/loans/{{ $sched->loan_id }}/schedule/{{ $sched->id }}/skip" method="POST" style="margin:0;">
                                 @csrf
@@ -96,7 +174,7 @@
                 </div>
                 <div class="form-group" style="margin-top:1rem;">
                     <label class="form-label">Date Paid</label>
-                    <input type="date" name="paid_date" class="form-control" value="{{ date('Y-m-d') }}" required>
+                    <input type="date" name="paid_date" id="sched_settle_paid_date" class="form-control" value="{{ date('Y-m-d') }}" required>
                 </div>
                 <div class="form-group" style="margin-top:1rem;">
                     <label class="form-label">Withholding Tax (WHT)</label>
@@ -147,17 +225,29 @@ window.onclick = function(event) {
     }
 }
 
-function openSettleModal(loanId, schedId, suggestedAmount) {
+function openSettleModal(loanId, schedId, suggestedAmount, dueDate) {
     document.getElementById('settleForm').action = "/loans/" + loanId + "/schedule/" + schedId + "/settle";
-    document.getElementById('settle_amount').nextElementSibling.value = suggestedAmount;
-    if (typeof formatAmountBlur === 'function') formatAmountBlur(document.getElementById('settle_amount'));
+    if (typeof setAmountInputValue === 'function') {
+        setAmountInputValue('settle_amount', suggestedAmount);
+    } else {
+        document.getElementById('settle_amount').nextElementSibling.value = suggestedAmount;
+        if (typeof formatAmountBlur === 'function') formatAmountBlur(document.getElementById('settle_amount'));
+    }
+    const dateInput = document.getElementById('sched_settle_paid_date') || document.querySelector('#settleModal input[name="paid_date"]');
+    if (dateInput && dueDate) {
+        dateInput.value = dueDate;
+    }
     openModal('settleModal');
 }
 
 function openEditModal(loanId, schedId, currentAmount) {
     document.getElementById('editAmountForm').action = "/loans/" + loanId + "/schedule/" + schedId + "/edit";
-    document.getElementById('edit_interest_amount').nextElementSibling.value = currentAmount;
-    if (typeof formatAmountBlur === 'function') formatAmountBlur(document.getElementById('edit_interest_amount'));
+    if (typeof setAmountInputValue === 'function') {
+        setAmountInputValue('edit_interest_amount', currentAmount);
+    } else {
+        document.getElementById('edit_interest_amount').nextElementSibling.value = currentAmount;
+        if (typeof formatAmountBlur === 'function') formatAmountBlur(document.getElementById('edit_interest_amount'));
+    }
     openModal('editAmountModal');
 }
 </script>

@@ -382,7 +382,7 @@
                                         <ion-icon name="ellipsis-horizontal-outline" style="font-size:1.1rem;"></ion-icon>
                                     </button>
                                     <div class="dropdown-menu" id="sched-actions-{{ $sched->id }}" style="position:absolute; right:0; top:100%; z-index:1000; background:var(--bg-card); border:1px solid var(--border); box-shadow:var(--shadow-card); border-radius:8px; min-width:165px; text-align:left; display:none; margin-top:0.25rem;">
-                                        <a href="javascript:void(0)" onclick="openSettleModal({{ $sched->id }}, {{ $remAmt }})" style="display:flex; align-items:center; gap:0.5rem; padding:0.55rem 0.85rem; color:var(--text-main); font-size:0.85rem; text-decoration:none;">
+                                        <a href="javascript:void(0)" onclick="openSettleModal({{ $sched->id }}, {{ $remAmt }}, '{{ $sched->due_date }}')" style="display:flex; align-items:center; gap:0.5rem; padding:0.55rem 0.85rem; color:var(--text-main); font-size:0.85rem; text-decoration:none;">
                                             <ion-icon name="cash-outline" style="color:var(--success); font-size:1rem;"></ion-icon> Settle Payment
                                         </a>
                                         <a href="javascript:void(0)" onclick="openEditInterestModal({{ $sched->id }}, {{ $sched->interest_amount }}, '{{ $sched->due_date }}')" style="display:flex; align-items:center; gap:0.5rem; padding:0.55rem 0.85rem; color:var(--text-main); font-size:0.85rem; text-decoration:none;">
@@ -407,7 +407,9 @@
                         <tr>
                             <td colspan="6" class="text-center text-muted py-4" style="padding:2.5rem; text-align:center;">
                                 <ion-icon name="calendar-outline" style="font-size:2.5rem; opacity:0.4; margin-bottom:0.5rem;"></ion-icon><br>
-                                @if($loan->status === 'pending')
+                                @if($loan->interest_method === 'no_interest' || (($loan->interest_amount ?? 0) <= 0 && empty($loan->total_interest) && empty($loan->interest_rate)))
+                                    This loan has no interest / zero periodic interest (Principal only). No interest schedules required.
+                                @elseif($loan->status === 'pending')
                                     Loan is currently pending. Activate the loan above to generate the interest payment schedule.
                                 @else
                                     No interest schedules found for this loan.
@@ -782,7 +784,7 @@
                 </div>
                 <div class="form-group" style="margin-top:1rem;">
                     <label class="form-label">Date Paid</label>
-                    <input type="date" name="paid_date" class="form-control" value="{{ date('Y-m-d') }}" required>
+                    <input type="date" name="paid_date" id="settle_paid_date" class="form-control" value="{{ date('Y-m-d') }}" required>
                 </div>
             </div>
             <div class="modal-footer">
@@ -951,9 +953,13 @@ function setAmountInputValue(id, val) {
     }
 }
 
-function openSettleModal(id, suggestedAmount) {
+function openSettleModal(id, suggestedAmount, dueDate) {
     document.getElementById('settleForm').action = "/loans/{{ $loan->id }}/schedule/" + id + "/settle";
     setAmountInputValue('settle_amount', suggestedAmount);
+    const dateInput = document.getElementById('settle_paid_date') || document.querySelector('#settleModal input[name="paid_date"]');
+    if (dateInput && dueDate) {
+        dateInput.value = dueDate;
+    }
     openModal('settleModal');
 }
 
