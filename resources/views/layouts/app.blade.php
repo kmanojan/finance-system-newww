@@ -170,16 +170,171 @@
         </main>
     </div>
 
+    <!-- Mobile Bottom Navigation Bar (PWA 1-Handed Navigation) -->
+    <nav class="mobile-bottom-nav">
+        <a href="/dashboard" class="mobile-bottom-nav-item {{ request()->is('dashboard*') || request()->is('/') ? 'active' : '' }}">
+            <ion-icon name="grid-outline"></ion-icon>
+            <span>Home</span>
+        </a>
+        <a href="/transactions" class="mobile-bottom-nav-item {{ request()->is('transactions*') ? 'active' : '' }}">
+            <ion-icon name="cash-outline"></ion-icon>
+            <span>Ledger</span>
+        </a>
+        <a href="/projects" class="mobile-bottom-nav-item {{ request()->is('projects*') ? 'active' : '' }}">
+            <ion-icon name="briefcase-outline"></ion-icon>
+            <span>Projects</span>
+        </a>
+        <a href="/invoices" class="mobile-bottom-nav-item {{ request()->is('invoices*', 'payables*') ? 'active' : '' }}">
+            <ion-icon name="document-text-outline"></ion-icon>
+            <span>Invoices</span>
+        </a>
+        <a href="/loans" class="mobile-bottom-nav-item {{ request()->is('loans*') ? 'active' : '' }}">
+            <ion-icon name="card-outline"></ion-icon>
+            <span>Loans</span>
+        </a>
+        <button type="button" class="mobile-bottom-nav-item" id="mobileMoreNavBtn" style="background:none; border:none; cursor:pointer;">
+            <ion-icon name="ellipsis-horizontal-circle-outline"></ion-icon>
+            <span>More</span>
+        </button>
+    </nav>
+
+    <!-- Global Toast Container -->
+    <div class="toast-container" id="globalToastContainer"></div>
+
+    <!-- Global Confirmation Dialog -->
+    <x-confirm-modal />
+
     @yield('modals')
 
     <script src="{{ asset('script.js') }}"></script>
     <script>
+        // Modal Helpers
         function openModal(id) {
-            document.getElementById(id).classList.add('active');
+            const el = document.getElementById(id);
+            if (el) el.classList.add('active');
         }
         function closeModal(id) {
-            document.getElementById(id).classList.remove('active');
+            const el = document.getElementById(id);
+            if (el) el.classList.remove('active');
         }
+
+        // Close active modal on Escape key press
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                const activeModals = document.querySelectorAll('.modal-backdrop.active');
+                activeModals.forEach(m => m.classList.remove('active'));
+            }
+        });
+
+        // Close modal when clicking outside of modal card
+        document.addEventListener('click', function(e) {
+            if (e.target.classList && e.target.classList.contains('modal-backdrop')) {
+                e.target.classList.remove('active');
+            }
+        });
+
+        // Toast Notification Function
+        window.showToast = function(message, type = 'success') {
+            const container = document.getElementById('globalToastContainer');
+            if (!container) return;
+
+            const toast = document.createElement('div');
+            toast.className = `toast-notification toast-${type}`;
+            
+            let iconName = 'checkmark-circle-outline';
+            if (type === 'error' || type === 'danger') iconName = 'alert-circle-outline';
+            if (type === 'warning') iconName = 'warning-outline';
+            if (type === 'info') iconName = 'information-circle-outline';
+
+            toast.innerHTML = `
+                <div class="toast-icon"><ion-icon name="${iconName}"></ion-icon></div>
+                <div class="toast-content">${message}</div>
+                <button type="button" class="toast-close" onclick="this.parentElement.remove()">&times;</button>
+            `;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.add('toast-hiding');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        };
+
+        // Flash message toasts from Laravel Session
+        @if(session('success'))
+            window.showToast(@json(session('success')), 'success');
+        @endif
+        @if(session('error'))
+            window.showToast(@json(session('error')), 'error');
+        @endif
+        @if(session('warning'))
+            window.showToast(@json(session('warning')), 'warning');
+        @endif
+        @if(session('info'))
+            window.showToast(@json(session('info')), 'info');
+        @endif
+
+        // Global Custom Confirmation Modal
+        window.confirmAction = function(options) {
+            const title = options.title || 'Are you sure?';
+            const message = options.message || 'This action cannot be undone.';
+            const confirmText = options.confirmText || 'Confirm';
+            const isDanger = options.isDanger !== false;
+
+            document.getElementById('globalConfirmTitle').textContent = title;
+            document.getElementById('globalConfirmMessage').textContent = message;
+            
+            const confirmBtn = document.getElementById('globalConfirmBtn');
+            confirmBtn.textContent = confirmText;
+            confirmBtn.style.background = isDanger ? 'var(--danger)' : 'var(--primary)';
+
+            const icon = document.getElementById('globalConfirmIcon');
+            const iconWrap = document.getElementById('globalConfirmIconWrapper');
+            if (isDanger) {
+                icon.name = 'alert-circle-outline';
+                iconWrap.style.background = 'rgba(239, 68, 68, 0.15)';
+                iconWrap.style.color = 'var(--danger)';
+            } else {
+                icon.name = 'help-circle-outline';
+                iconWrap.style.background = 'var(--primary-light)';
+                iconWrap.style.color = 'var(--primary)';
+            }
+
+            confirmBtn.onclick = function() {
+                closeModal('globalConfirmModal');
+                if (typeof options.onConfirm === 'function') {
+                    options.onConfirm();
+                } else if (options.formId) {
+                    document.getElementById(options.formId).submit();
+                }
+            };
+
+            openModal('globalConfirmModal');
+            return false;
+        };
+
+        // Double-Submission Guard & Button Loading Spinners on all forms
+        document.addEventListener('submit', function(e) {
+            const form = e.target;
+            if (form.dataset.submitting === 'true') {
+                e.preventDefault();
+                return false;
+            }
+            const submitBtn = form.querySelector('button[type="submit"]:not([data-no-spinner])');
+            if (submitBtn) {
+                form.dataset.submitting = 'true';
+                const originalText = submitBtn.innerHTML;
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = `<span class="spinner-icon"></span> Processing...`;
+                
+                // Safety timeout in case of client-side abort
+                setTimeout(() => {
+                    form.dataset.submitting = 'false';
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalText;
+                }, 8000);
+            }
+        });
 
         // Theme Toggle Logic
         function updateThemeIcons(theme) {
@@ -204,6 +359,19 @@
 
         const mobileThemeBtn = document.getElementById('mobileThemeToggleBtn');
         if (mobileThemeBtn) mobileThemeBtn.addEventListener('click', toggleTheme);
+
+        // Mobile More Menu trigger
+        const moreNavBtn = document.getElementById('mobileMoreNavBtn');
+        if (moreNavBtn) {
+            moreNavBtn.addEventListener('click', function() {
+                const primarySidebar = document.getElementById('sidebarPrimary');
+                const backdrop = document.getElementById('sidebarBackdrop');
+                if (primarySidebar && backdrop) {
+                    primarySidebar.classList.toggle('active');
+                    backdrop.classList.toggle('active');
+                }
+            });
+        }
 
         // Service Worker Registration for PWA
         if ('serviceWorker' in navigator) {

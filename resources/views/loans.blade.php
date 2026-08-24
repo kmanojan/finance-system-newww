@@ -23,230 +23,522 @@
 @endsection
 
 @section('content')
-<header class="page-header" style="margin-bottom: 1.5rem;">
+<style>
+/* Loan Index Minimal & Accordion Styles */
+.loan-accordion-item {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 0.75rem;
+    transition: all 0.2s ease;
+    overflow: hidden;
+}
+
+.loan-accordion-item:hover {
+    border-color: var(--primary);
+    box-shadow: var(--shadow-sm);
+}
+
+.loan-accordion-item.expanded {
+    border-color: var(--primary);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+}
+
+.loan-summary-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.9rem 1.25rem;
+    cursor: pointer;
+    user-select: none;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.loan-summary-main {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex: 1;
+    min-width: 260px;
+}
+
+.loan-summary-metrics {
+    display: flex;
+    align-items: center;
+    gap: 1.75rem;
+    flex-wrap: wrap;
+}
+
+.loan-summary-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.loan-chevron {
+    transition: transform 0.25s ease;
+    font-size: 1.15rem;
+    color: var(--text-muted);
+}
+
+.loan-accordion-item.expanded .loan-chevron {
+    transform: rotate(180deg);
+    color: var(--primary);
+}
+
+.loan-drawer {
+    display: none;
+    padding: 1.25rem;
+    background: var(--bg-page);
+    border-top: 1px dashed var(--border);
+    animation: fadeInDrawer 0.2s ease;
+}
+
+.loan-accordion-item.expanded .loan-drawer {
+    display: block;
+}
+
+@keyframes fadeInDrawer {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.loan-drawer-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.loan-drawer-box {
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+.loan-drawer-title {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.loan-stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.35rem 0;
+    font-size: 0.85rem;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.loan-stat-row:last-child {
+    border-bottom: none;
+}
+
+.loan-stat-label {
+    color: var(--text-muted);
+}
+
+.loan-stat-val {
+    font-weight: 600;
+    color: var(--text-heading);
+}
+
+.loan-progress-bar-wrap {
+    background: var(--border-light);
+    height: 6px;
+    border-radius: 999px;
+    overflow: hidden;
+    margin: 0.5rem 0 0.75rem 0;
+}
+
+.loan-progress-bar-fill {
+    height: 100%;
+    background: var(--primary);
+    border-radius: 999px;
+    transition: width 0.3s ease;
+}
+
+.loan-filter-tab {
+    padding: 0.4rem 0.85rem;
+    border-radius: 20px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-decoration: none;
+    color: var(--text-muted);
+    background: var(--bg-page);
+    border: 1px solid var(--border);
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.loan-filter-tab:hover, .loan-filter-tab.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+.loan-filter-tab .tab-badge {
+    background: rgba(0,0,0,0.12);
+    border-radius: 10px;
+    padding: 0.1rem 0.45rem;
+    font-size: 0.72rem;
+}
+
+.loan-filter-tab.active .tab-badge {
+    background: rgba(255,255,255,0.25);
+    color: white;
+}
+</style>
+
+<!-- Page Header -->
+<header class="page-header" style="margin-bottom: 1.25rem;">
     <div class="header-titles">
-        <h1 style="font-size:1.75rem; font-weight:800; color:var(--text-heading); margin:0;">Third-Party Loans</h1>
-        <p class="subtitle" style="margin-top:0.3rem;">Track borrowing facilities, principal repayments, scheduled interest, and total debt obligations.</p>
+        <h1 style="font-size:1.65rem; font-weight:800; color:var(--text-heading); margin:0;">Third-Party Loans</h1>
+        <p class="subtitle" style="margin-top:0.25rem; font-size:0.85rem; color:var(--text-muted);">
+            Overview of borrowing facilities, repayments, scheduled interest, and debt obligations.
+        </p>
     </div>
-    <button class="btn btn-primary-gradient btn-pill" onclick="openModal('createLoanModal')">
-        <ion-icon name="add-outline" style="vertical-align:middle;"></ion-icon> Record New Loan
-    </button>
+    <div style="display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap;">
+        <button type="button" class="btn btn-outline" onclick="toggleAllAccordions()" id="btnToggleAll" style="font-size:0.82rem; padding:0.45rem 0.85rem; border-radius:8px;">
+            <ion-icon name="reorder-four-outline" style="vertical-align:middle;"></ion-icon> <span id="toggleAllText">Expand All</span>
+        </button>
+        <button class="btn btn-primary-gradient btn-pill" onclick="openModal('createLoanModal')">
+            <ion-icon name="add-outline" style="vertical-align:middle; font-size:1.1rem;"></ion-icon> Record New Loan
+        </button>
+    </div>
 </header>
 
-<!-- 5 KPI Stat Tiles Grid -->
-<div class="metric-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:1.25rem; margin-bottom:1.5rem;">
-    <!-- Tile 1: Total Borrowed -->
-    <div class="metric-card" style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); padding: 1.25rem; border-radius: 12px; color: white;">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-            <h3 style="margin:0; font-size:0.8rem; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; opacity:0.9;">Total Borrowed Base</h3>
-            <ion-icon name="wallet-outline" style="font-size:1.3rem; opacity:0.85;"></ion-icon>
+<!-- Streamlined Metric Summary Cards (4 Sleek Cards) -->
+<div class="metric-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap:1rem; margin-bottom:1.25rem;">
+    <!-- 1. Total Facilities Borrowed -->
+    <div class="metric-card" style="background:var(--bg-card); border:1px solid var(--border); padding:1rem 1.15rem; border-radius:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; color:var(--text-muted); font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">
+            <span>Total Borrowed</span>
+            <ion-icon name="wallet-outline" style="font-size:1.2rem; color:var(--primary);"></ion-icon>
         </div>
-        <div class="value" style="font-size:1.4rem; font-weight:800; margin-top:0.3rem;">LKR {{ number_format($totalBorrowed, 2) }}</div>
-        <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">Total principal borrowed</div>
+        <div style="font-size:1.35rem; font-weight:800; color:var(--text-heading); margin-top:0.35rem;">
+            LKR {{ number_format($totalBorrowed, 2) }}
+        </div>
+        <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.2rem;">
+            {{ $totalLoansCount }} facilities ({{ $activeLoansCount }} active)
+        </div>
     </div>
 
-    <!-- Tile 2: Total Paid To Date -->
-    <div class="metric-card" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); padding: 1.25rem; border-radius: 12px; color: white;">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-            <h3 style="margin:0; font-size:0.8rem; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; opacity:0.9;">Total Paid To Date</h3>
-            <ion-icon name="checkmark-circle-outline" style="font-size:1.3rem; opacity:0.85;"></ion-icon>
+    <!-- 2. Total Paid To Date -->
+    <div class="metric-card" style="background:var(--bg-card); border:1px solid var(--border); padding:1rem 1.15rem; border-radius:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; color:var(--text-muted); font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">
+            <span>Total Paid To Date</span>
+            <ion-icon name="checkmark-circle-outline" style="font-size:1.2rem; color:var(--success);"></ion-icon>
         </div>
-        <div class="value" style="font-size:1.4rem; font-weight:800; margin-top:0.3rem;">LKR {{ number_format($totalPaidAll, 2) }}</div>
-        <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">Principal: {{ number_format($totalPrincipalRepaid, 2) }} | Interest: {{ number_format($totalInterestPaid, 2) }}</div>
+        <div style="font-size:1.35rem; font-weight:800; color:var(--success); margin-top:0.35rem;">
+            LKR {{ number_format($totalPaidAll, 2) }}
+        </div>
+        <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.2rem;">
+            Prin: {{ number_format($totalPrincipalRepaid, 2) }} | Int: {{ number_format($totalInterestPaid, 2) }}
+        </div>
     </div>
 
-    <!-- Tile 3: Total Interest Paid -->
-    <div class="metric-card" style="background: linear-gradient(135deg, #0284c7 0%, #06b6d4 100%); padding: 1.25rem; border-radius: 12px; color: white;">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-            <h3 style="margin:0; font-size:0.8rem; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; opacity:0.9;">Interest Paid</h3>
-            <ion-icon name="cash-outline" style="font-size:1.3rem; opacity:0.85;"></ion-icon>
+    <!-- 3. Outstanding Debt Obligation -->
+    <div class="metric-card" style="background:var(--bg-card); border:1px solid var(--border); padding:1rem 1.15rem; border-radius:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; color:var(--text-muted); font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">
+            <span>Outstanding Balance</span>
+            <ion-icon name="alert-circle-outline" style="font-size:1.2rem; color:var(--danger);"></ion-icon>
         </div>
-        <div class="value" style="font-size:1.4rem; font-weight:800; margin-top:0.3rem;">LKR {{ number_format($totalInterestPaid, 2) }}</div>
-        <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">Total interest settled</div>
+        <div style="font-size:1.35rem; font-weight:800; color:var(--danger); margin-top:0.35rem;">
+            LKR {{ number_format($totalWantToPaid, 2) }}
+        </div>
+        <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.2rem;">
+            Rem. Principal + Scheduled Interest
+        </div>
     </div>
 
-    <!-- Tile 4: Total Outstanding Obligation -->
-    <div class="metric-card" style="background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%); padding: 1.25rem; border-radius: 12px; color: white;">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-            <h3 style="margin:0; font-size:0.8rem; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; opacity:0.9;">Total Outstanding (P+I)</h3>
-            <ion-icon name="alert-circle-outline" style="font-size:1.3rem; opacity:0.85;"></ion-icon>
+    <!-- 4. This Month Due -->
+    <div class="metric-card" style="background:var(--bg-card); border:1px solid var(--border); padding:1rem 1.15rem; border-radius:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; color:var(--text-muted); font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">
+            <span>This Month Due</span>
+            <ion-icon name="calendar-outline" style="font-size:1.2rem; color:#f59e0b;"></ion-icon>
         </div>
-        <div class="value" style="font-size:1.4rem; font-weight:800; margin-top:0.3rem;">LKR {{ number_format($totalWantToPaid, 2) }}</div>
-        <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">Rem. Principal + Rem. Interest</div>
-    </div>
-
-    <!-- Tile 5: This Month Payable -->
-    <div class="metric-card" style="background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%); padding: 1.25rem; border-radius: 12px; color: white;">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-            <h3 style="margin:0; font-size:0.8rem; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; opacity:0.9;">This Month Payable</h3>
-            <ion-icon name="calendar-outline" style="font-size:1.3rem; opacity:0.85;"></ion-icon>
+        <div style="font-size:1.35rem; font-weight:800; color:var(--text-heading); margin-top:0.35rem;">
+            LKR {{ number_format($thisMonthPayable, 2) }}
         </div>
-        <div class="value" style="font-size:1.4rem; font-weight:800; margin-top:0.3rem;">LKR {{ number_format($thisMonthPayable, 2) }}</div>
-        <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">Interest due current month</div>
+        <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.2rem;">
+            Interest payable this month
+        </div>
     </div>
 </div>
 
-<!-- Advanced Filter Toolbar -->
-<div class="card" style="padding:1rem 1.25rem; margin-bottom:1.5rem; border:1px solid var(--border); border-radius:12px; background:var(--bg-card);">
-    <form method="GET" action="/loans" style="display:flex; gap:1rem; align-items:center; flex-wrap:wrap; margin:0;">
-        <div style="display:flex; gap:0.5rem; align-items:center;">
-            <label style="font-size:0.8rem; font-weight:600; color:var(--text-muted); margin:0;">Start Date:</label>
-            <input type="date" name="start_date" class="form-control" value="{{ request('start_date') }}" style="width:140px; font-size:0.85rem; padding:0.4rem 0.6rem;">
+<!-- Status Filter Tabs & Search Bar -->
+<div class="card" style="padding:0.85rem 1.15rem; margin-bottom:1.25rem; border:1px solid var(--border); border-radius:10px; background:var(--bg-card);">
+    <form method="GET" action="/loans" style="display:flex; gap:0.75rem; align-items:center; justify-content:space-between; flex-wrap:wrap; margin:0;">
+        <!-- Left: Quick Status Tabs -->
+        <div style="display:flex; gap:0.4rem; align-items:center; flex-wrap:wrap;">
+            @php $currStatus = request('status', 'all'); @endphp
+            <a href="/loans?status=all{{ request('search') ? '&search='.request('search') : '' }}" class="loan-filter-tab {{ $currStatus === 'all' ? 'active' : '' }}">
+                All <span class="tab-badge">{{ $totalLoansCount }}</span>
+            </a>
+            <a href="/loans?status=active{{ request('search') ? '&search='.request('search') : '' }}" class="loan-filter-tab {{ $currStatus === 'active' ? 'active' : '' }}">
+                Active <span class="tab-badge">{{ $activeLoansCount }}</span>
+            </a>
+            <a href="/loans?status=pending{{ request('search') ? '&search='.request('search') : '' }}" class="loan-filter-tab {{ $currStatus === 'pending' ? 'active' : '' }}">
+                Pending
+            </a>
+            <a href="/loans?status=settled{{ request('search') ? '&search='.request('search') : '' }}" class="loan-filter-tab {{ $currStatus === 'settled' ? 'active' : '' }}">
+                Settled <span class="tab-badge">{{ $settledLoansCount }}</span>
+            </a>
+            <a href="/loans?status=closed{{ request('search') ? '&search='.request('search') : '' }}" class="loan-filter-tab {{ $currStatus === 'closed' ? 'active' : '' }}">
+                Closed
+            </a>
         </div>
 
-        <div style="display:flex; gap:0.5rem; align-items:center;">
-            <label style="font-size:0.8rem; font-weight:600; color:var(--text-muted); margin:0;">End Date:</label>
-            <input type="date" name="end_date" class="form-control" value="{{ request('end_date') }}" style="width:140px; font-size:0.85rem; padding:0.4rem 0.6rem;">
-        </div>
-
-        <div style="display:flex; gap:0.5rem; align-items:center;">
-            <label style="font-size:0.8rem; font-weight:600; color:var(--text-muted); margin:0;">Status:</label>
-            <select name="status" class="form-control" style="width:140px; font-size:0.85rem; padding:0.4rem 0.6rem;">
-                <option value="all">All Statuses</option>
-                <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Active</option>
-                <option value="pending" {{ request('status') === 'pending' ? 'selected' : '' }}>Pending</option>
-                <option value="settled" {{ request('status') === 'settled' ? 'selected' : '' }}>Settled</option>
-                <option value="closed" {{ request('status') === 'closed' ? 'selected' : '' }}>Closed</option>
-            </select>
-        </div>
-
-        <div style="flex:1; min-width:180px;">
-            <input type="text" name="search" class="form-control" placeholder="Search lender name or purpose..." value="{{ request('search') }}" style="font-size:0.85rem; padding:0.4rem 0.8rem;">
-        </div>
-
-        <div style="display:flex; gap:0.5rem; align-items:center;">
-            <button class="btn btn-outline" type="submit" style="padding:0.4rem 1rem; font-size:0.85rem;">
+        <!-- Right: Search and Date Filter -->
+        <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+            <input type="hidden" name="status" value="{{ request('status', 'all') }}">
+            <div style="min-width:180px;">
+                <input type="text" name="search" class="form-control" placeholder="Search lender / purpose..." value="{{ request('search') }}" style="font-size:0.82rem; padding:0.35rem 0.75rem; height:34px;">
+            </div>
+            <button class="btn btn-outline" type="submit" style="padding:0.35rem 0.85rem; font-size:0.82rem; height:34px;">
                 <ion-icon name="funnel-outline" style="vertical-align:middle;"></ion-icon> Filter
             </button>
-            @if(request('start_date') || request('end_date') || (request('status') && request('status') !== 'all') || request('search'))
-                <a href="/loans" class="btn btn-outline" style="color:var(--text-muted); padding:0.4rem 1rem; font-size:0.85rem; text-decoration:none;">Reset</a>
+            @if(request('search') || request('start_date') || request('end_date') || (request('status') && request('status') !== 'all'))
+                <a href="/loans" class="btn btn-outline" style="color:var(--text-muted); padding:0.35rem 0.75rem; font-size:0.82rem; height:34px; text-decoration:none; display:inline-flex; align-items:center;">Reset</a>
             @endif
         </div>
     </form>
 </div>
 
-<!-- Loans Table -->
-<div class="card" style="padding:0; overflow:visible; background:var(--bg-card); border-radius:12px; border:1px solid var(--border);">
-    <table class="data-table" style="margin:0; width:100%; border-collapse:collapse;">
-        <thead style="background:var(--bg-page); border-bottom:1px solid var(--border);">
-            <tr>
-                <th style="padding:0.85rem 1rem; text-align:left; font-size:0.8rem; color:var(--text-muted);">Lender & Purpose</th>
-                <th style="padding:0.85rem 1rem; text-align:right; font-size:0.8rem; color:var(--text-muted);">Principal</th>
-                <th style="padding:0.85rem 1rem; text-align:right; font-size:0.8rem; color:var(--text-muted);">Total Paid (P+I)</th>
-                <th style="padding:0.85rem 1rem; text-align:right; font-size:0.8rem; color:var(--text-muted);">Total Outstanding (P+I)</th>
-                <th style="padding:0.85rem 1rem; text-align:left; font-size:0.8rem; color:var(--text-muted);">Interest Method</th>
-                <th style="padding:0.85rem 1rem; text-align:left; font-size:0.8rem; color:var(--text-muted);">Next Due Date</th>
-                <th style="padding:0.85rem 1rem; text-align:center; font-size:0.8rem; color:var(--text-muted);">Status</th>
-                <th style="padding:0.85rem 1rem; text-align:center; font-size:0.8rem; color:var(--text-muted);">Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach($loans as $loan)
-            <tr style="border-bottom: 1px solid var(--border-light);">
-                <td style="padding:0.85rem 1rem; text-align:left;">
-                    <a href="/loans/{{ $loan->id }}" style="font-weight:700; color:var(--text-heading); text-decoration:none; font-size:0.9rem;">
-                        {{ $loan->lender_name }}
-                    </a>
-                    @if($loan->purpose)
-                        <div style="font-size:0.78rem; color:var(--text-muted); margin-top:0.1rem;">{{ $loan->purpose }}</div>
-                    @endif
-                </td>
-                <td style="padding:0.85rem 1rem; text-align:right; font-weight:600; color:var(--text-heading); font-size:0.85rem;">
-                    <div>{{ $loan->currency }} {{ number_format($loan->principal_amount, 2) }}</div>
-                    @if(!empty($loan->is_upfront_interest ?? null))
-                        <div style="font-size:0.74rem; color:var(--primary); font-weight:700;" title="Disbursed after upfront interest deduction">
-                            Net Recv: {{ number_format($loan->net_disbursed ?? $loan->principal_amount, 2) }}
-                        </div>
-                    @endif
-                </td>
-                <td style="padding:0.85rem 1rem; text-align:right;">
-                    <span style="color:var(--success); font-weight:800; font-size:0.9rem;">
-                        {{ $loan->currency }} {{ number_format($loan->total_paid, 2) }}
-                    </span>
-                    <div style="font-size:0.75rem; color:var(--text-muted);">
-                        Prin: {{ number_format($loan->principal_repaid ?? 0, 2) }} | Int: {{ number_format($loan->interest_paid ?? 0, 2) }}
-                    </div>
-                </td>
-                <td style="padding:0.85rem 1rem; text-align:right;">
-                    <span style="color:var(--danger); font-weight:800; font-size:0.9rem;">
-                        {{ $loan->currency }} {{ number_format($loan->total_outstanding, 2) }}
-                    </span>
-                    <div style="font-size:0.75rem; color:var(--text-muted);">
-                        Prin: {{ number_format($loan->outstanding_principal, 2) }} | Int: {{ number_format($loan->pending_interest, 2) }}
-                    </div>
-                </td>
-                <td style="padding:0.85rem 1rem; text-align:left;">
-                    @if($loan->interest_method === 'fixed_amount')
-                        <span class="badge" style="background:#e0e7ff; color:#3730a3; font-size:0.75rem;">Fixed: {{ $loan->currency }} {{ number_format($loan->interest_amount, 2) }}</span>
-                    @elseif($loan->interest_method === 'percentage_rate')
-                        <span class="badge" style="background:#fce7f3; color:#9d174d; font-size:0.75rem;">Rate: {{ $loan->interest_rate }}% ({{ ucfirst($loan->rate_basis ?? 'flat') }})</span>
-                    @elseif($loan->interest_method === 'equal_installments')
-                        <span class="badge" style="background:#e0f2fe; color:#0369a1; font-size:0.75rem;">Equal Installments</span>
-                    @elseif($loan->interest_method === 'custom_schedule')
-                        <span class="badge" style="background:#f3e8ff; color:#6b21a8; font-size:0.75rem;">Custom Schedule</span>
-                    @else
-                        <span class="text-muted" style="font-size:0.8rem;">No Interest</span>
-                    @endif
-                </td>
-                <td style="padding:0.85rem 1rem; text-align:left;">
-                    <div class="font-medium {{ $loan->next_due_date !== 'N/A' && \Carbon\Carbon::parse($loan->next_due_date)->isPast() ? 'text-danger' : '' }}" style="font-size:0.85rem;">
-                        {{ $loan->next_due_date }}
-                    </div>
-                    @if(!empty($loan->is_upfront_interest ?? null))
-                        <span class="badge" style="background:#fef3c7; color:#b45309; font-size:0.68rem; margin-top:0.2rem; display:inline-block;">Upfront Int. Paid</span>
-                    @endif
-                    @if(!empty($loan->maturity_date ?? null) && ($loan->maturity_date ?? null) !== $loan->next_due_date)
-                        <div style="font-size:0.72rem; color:var(--text-muted); margin-top:0.15rem;">
-                            Maturity: {{ $loan->maturity_date }}
-                        </div>
-                    @endif
-                </td>
-                <td style="padding:0.85rem 1rem; text-align:center;">
-                    @if($loan->status === 'pending')
-                        <span class="badge" style="background:#fef3c7; color:#b45309; font-weight:600;">Pending</span>
-                    @elseif($loan->status === 'active')
-                        <span class="badge" style="background:var(--primary-light); color:var(--primary); font-weight:600;">Active</span>
-                    @elseif($loan->status === 'settled')
-                        <span class="badge" style="background:#dcfce7; color:#166534; font-weight:600;">Settled</span>
-                    @elseif($loan->status === 'closed')
-                        <span class="badge" style="background:#f1f5f9; color:#475569; font-weight:600;">Closed</span>
-                    @else
-                        <span class="badge" style="background:#fee2e2; color:#991b1b; font-weight:600;">{{ ucfirst($loan->status) }}</span>
-                    @endif
-                </td>
-                <td style="padding:0.85rem 1rem; text-align:center;">
-                    <div style="display:flex; justify-content:center; align-items:center; gap:0.4rem;">
-                        <a href="/loans/{{ $loan->id }}" class="btn btn-outline" style="padding:0.25rem 0.65rem; font-size:0.8rem; text-decoration:none; border-radius:6px;">
-                            View
+<!-- Accordion Loans List -->
+<div class="loans-accordion-container" id="loansAccordionContainer">
+    @forelse($loans as $loan)
+    @php
+        $principalRepaidPct = $loan->principal_amount > 0 ? min(100, round(($loan->principal_repaid / $loan->principal_amount) * 100)) : 0;
+        $isOverdue = ($loan->next_due_date !== 'N/A' && \Carbon\Carbon::parse($loan->next_due_date)->isPast() && $loan->status === 'active');
+    @endphp
+    <div class="loan-accordion-item" id="loan-item-{{ $loan->id }}">
+        <!-- Minimal Summary Row (Primary Collapsed View) -->
+        <div class="loan-summary-row" onclick="toggleLoanAccordion({{ $loan->id }})">
+            <!-- 1. Lender Info & Purpose -->
+            <div class="loan-summary-main">
+                <div style="width:36px; height:36px; border-radius:8px; background:var(--primary-light); color:var(--primary); display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:1.15rem;">
+                    <ion-icon name="business-outline"></ion-icon>
+                </div>
+                <div>
+                    <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+                        <a href="/loans/{{ $loan->id }}" onclick="event.stopPropagation();" style="font-weight:700; color:var(--text-heading); font-size:0.95rem; text-decoration:none;" class="hover-underline">
+                            {{ $loan->lender_name }}
                         </a>
-                        <button type="button" class="action-btn" title="Edit Loan" onclick='openEditLoanModal(@json($loan))' style="background:var(--bg-page); border:1px solid var(--border); border-radius:6px; padding:0.25rem 0.5rem; cursor:pointer; color:var(--primary);">
-                            <ion-icon name="create-outline" style="font-size:0.95rem;"></ion-icon>
-                        </button>
-                        <button type="button" class="action-btn" title="Change Status" onclick="openChangeStatusModal({{ $loan->id }}, '{{ $loan->status }}')" style="background:var(--bg-page); border:1px solid var(--border); border-radius:6px; padding:0.25rem 0.5rem; cursor:pointer; color:var(--text-heading);">
-                            <ion-icon name="swap-horizontal-outline" style="font-size:0.95rem;"></ion-icon>
-                        </button>
-                        <form action="/loans/{{ $loan->id }}" method="POST" style="display:inline; margin:0;" onsubmit="return confirm('Delete this loan and all associated schedule/repayment records?');">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="action-btn" title="Delete Loan" style="background:var(--bg-page); border:1px solid var(--border); border-radius:6px; padding:0.25rem 0.5rem; cursor:pointer; color:var(--danger);">
-                                <ion-icon name="trash-outline" style="font-size:0.95rem;"></ion-icon>
-                            </button>
-                        </form>
+                        <!-- Status Badge -->
+                        @if($loan->status === 'pending')
+                            <span class="badge" style="background:#fef3c7; color:#b45309; font-size:0.7rem; padding:0.15rem 0.5rem;">Pending</span>
+                        @elseif($loan->status === 'active')
+                            <span class="badge" style="background:var(--primary-light); color:var(--primary); font-size:0.7rem; padding:0.15rem 0.5rem;">Active</span>
+                        @elseif($loan->status === 'settled')
+                            <span class="badge" style="background:#dcfce7; color:#166534; font-size:0.7rem; padding:0.15rem 0.5rem;">Settled</span>
+                        @elseif($loan->status === 'closed')
+                            <span class="badge" style="background:#f1f5f9; color:#475569; font-size:0.7rem; padding:0.15rem 0.5rem;">Closed</span>
+                        @endif
                     </div>
-                </td>
-            </tr>
-            @endforeach
+                    <div style="font-size:0.78rem; color:var(--text-muted); margin-top:0.15rem;">
+                        {{ $loan->purpose ?: 'General Borrowing Facility' }} &bull; Claimed {{ $loan->claimed_date ? date('M d, Y', strtotime($loan->claimed_date)) : 'N/A' }}
+                    </div>
+                </div>
+            </div>
 
-            @if($loans->isEmpty())
-            <tr>
-                <td colspan="8" class="text-center text-muted py-4" style="padding:2.5rem; text-align:center;">
-                    <ion-icon name="cash-outline" style="font-size:2.5rem; opacity:0.4; margin-bottom:0.5rem;"></ion-icon><br>
-                    No loans found matching the specified criteria.
-                </td>
-            </tr>
-            @endif
-        </tbody>
-    </table>
+            <!-- 2. Minimal High-Level Numbers -->
+            <div class="loan-summary-metrics">
+                <!-- Principal -->
+                <div style="text-align:right;">
+                    <div style="font-size:0.72rem; color:var(--text-muted); text-transform:uppercase; font-weight:600;">Principal</div>
+                    <div style="font-weight:700; font-size:0.88rem; color:var(--text-heading);">
+                        {{ $loan->currency }} {{ number_format($loan->principal_amount, 2) }}
+                    </div>
+                </div>
+
+                <!-- Outstanding (P+I) -->
+                <div style="text-align:right;">
+                    <div style="font-size:0.72rem; color:var(--text-muted); text-transform:uppercase; font-weight:600;">Outstanding Balance</div>
+                    <div style="font-weight:800; font-size:0.95rem; color: {{ $loan->total_outstanding > 0 ? 'var(--danger)' : 'var(--success)' }};">
+                        {{ $loan->currency }} {{ number_format($loan->total_outstanding, 2) }}
+                    </div>
+                </div>
+
+                <!-- Next Due -->
+                <div style="text-align:left; min-width:90px;">
+                    <div style="font-size:0.72rem; color:var(--text-muted); text-transform:uppercase; font-weight:600;">Next Due</div>
+                    <div style="font-size:0.82rem; font-weight:600; color: {{ $isOverdue ? 'var(--danger)' : 'var(--text-main)' }};">
+                        {{ $loan->next_due_date !== 'N/A' ? date('M d, Y', strtotime($loan->next_due_date)) : 'N/A' }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Actions & Accordion Expander -->
+            <div class="loan-summary-actions" onclick="event.stopPropagation();">
+                <!-- Direct View Button -->
+                <a href="/loans/{{ $loan->id }}" class="btn btn-outline" style="padding:0.35rem 0.75rem; font-size:0.8rem; font-weight:600; border-radius:6px; display:inline-flex; align-items:center; gap:0.3rem;">
+                    <ion-icon name="eye-outline"></ion-icon> View
+                </a>
+
+                <!-- Quick Edit Button -->
+                <button type="button" class="btn btn-outline" title="Edit Loan" onclick='openEditLoanModal(@json($loan))' style="padding:0.35rem 0.55rem; font-size:0.85rem; border-radius:6px; color:var(--primary);">
+                    <ion-icon name="create-outline"></ion-icon>
+                </button>
+
+                <!-- Accordion Toggle Chevron -->
+                <button type="button" class="btn btn-outline" onclick="toggleLoanAccordion({{ $loan->id }})" style="padding:0.35rem 0.55rem; font-size:0.85rem; border-radius:6px; color:var(--text-muted);" title="Toggle Details">
+                    <ion-icon name="chevron-down-outline" class="loan-chevron"></ion-icon>
+                </button>
+            </div>
+        </div>
+
+        <!-- Accordion Expanded Drawer (Detailed breakdown revealed cleanly) -->
+        <div class="loan-drawer" id="loan-drawer-{{ $loan->id }}">
+            <div class="loan-drawer-grid">
+                <!-- Box 1: Principal & Payment Breakdown -->
+                <div class="loan-drawer-box">
+                    <div class="loan-drawer-title">
+                        <ion-icon name="pie-chart-outline"></ion-icon> Principal & Repayment
+                    </div>
+                    <div>
+                        <div style="display:flex; justify-content:space-between; font-size:0.78rem; color:var(--text-muted);">
+                            <span>Repayment Progress</span>
+                            <span style="font-weight:700; color:var(--text-heading);">{{ $principalRepaidPct }}%</span>
+                        </div>
+                        <div class="loan-progress-bar-wrap">
+                            <div class="loan-progress-bar-fill" style="width: {{ $principalRepaidPct }}%;"></div>
+                        </div>
+                    </div>
+                    <div class="loan-stat-row">
+                        <span class="loan-stat-label">Initial Principal</span>
+                        <span class="loan-stat-val">{{ $loan->currency }} {{ number_format($loan->principal_amount, 2) }}</span>
+                    </div>
+                    @if(!empty($loan->is_upfront_interest ?? null))
+                    <div class="loan-stat-row">
+                        <span class="loan-stat-label">Net Disbursed Received</span>
+                        <span class="loan-stat-val" style="color:var(--primary);">{{ $loan->currency }} {{ number_format($loan->net_disbursed, 2) }}</span>
+                    </div>
+                    @endif
+                    <div class="loan-stat-row">
+                        <span class="loan-stat-label">Principal Repaid</span>
+                        <span class="loan-stat-val" style="color:var(--success);">{{ $loan->currency }} {{ number_format($loan->principal_repaid, 2) }}</span>
+                    </div>
+                    <div class="loan-stat-row">
+                        <span class="loan-stat-label">Remaining Principal</span>
+                        <span class="loan-stat-val" style="color:var(--danger);">{{ $loan->currency }} {{ number_format($loan->outstanding_principal, 2) }}</span>
+                    </div>
+                </div>
+
+                <!-- Box 2: Interest & Scheduled Obligations -->
+                <div class="loan-drawer-box">
+                    <div class="loan-drawer-title">
+                        <ion-icon name="cash-outline"></ion-icon> Interest & Obligations
+                    </div>
+                    <div class="loan-stat-row">
+                        <span class="loan-stat-label">Interest Method</span>
+                        <span class="loan-stat-val">
+                            @if($loan->interest_method === 'fixed_amount')
+                                Fixed: {{ $loan->currency }} {{ number_format($loan->interest_amount, 2) }}
+                            @elseif($loan->interest_method === 'percentage_rate')
+                                {{ $loan->interest_rate }}% ({{ ucfirst($loan->rate_basis ?? 'flat') }})
+                            @elseif($loan->interest_method === 'equal_installments')
+                                Equal Installments
+                            @elseif($loan->interest_method === 'custom_schedule')
+                                Custom Schedule
+                            @else
+                                No Interest
+                            @endif
+                        </span>
+                    </div>
+                    <div class="loan-stat-row">
+                        <span class="loan-stat-label">Payment Frequency</span>
+                        <span class="loan-stat-val">{{ ucfirst($loan->frequency ?? 'monthly') }}</span>
+                    </div>
+                    <div class="loan-stat-row">
+                        <span class="loan-stat-label">Interest Paid</span>
+                        <span class="loan-stat-val" style="color:var(--success);">{{ $loan->currency }} {{ number_format($loan->interest_paid, 2) }}</span>
+                    </div>
+                    <div class="loan-stat-row">
+                        <span class="loan-stat-label">Pending / Scheduled Interest</span>
+                        <span class="loan-stat-val" style="color:var(--warning);">{{ $loan->currency }} {{ number_format($loan->pending_interest, 2) }}</span>
+                    </div>
+                    <div class="loan-stat-row">
+                        <span class="loan-stat-label">Total Paid (P + I)</span>
+                        <span class="loan-stat-val" style="color:var(--success); font-weight:700;">{{ $loan->currency }} {{ number_format($loan->total_paid, 2) }}</span>
+                    </div>
+                </div>
+
+                <!-- Box 3: Dates, Terms & Security Details -->
+                <div class="loan-drawer-box">
+                    <div class="loan-drawer-title">
+                        <ion-icon name="document-text-outline"></ion-icon> Terms & Security
+                    </div>
+                    <div class="loan-stat-row">
+                        <span class="loan-stat-label">Start / Claimed Date</span>
+                        <span class="loan-stat-val">{{ $loan->claimed_date ?: ($loan->start_date ?: 'N/A') }}</span>
+                    </div>
+                    <div class="loan-stat-row">
+                        <span class="loan-stat-label">Term & Maturity</span>
+                        <span class="loan-stat-val">{{ $loan->term_months }} mo @if($loan->maturity_date) &bull; Due {{ $loan->maturity_date }} @endif</span>
+                    </div>
+                    <div class="loan-stat-row">
+                        <span class="loan-stat-label">Due Day of Month</span>
+                        <span class="loan-stat-val">{{ $loan->due_day ? 'Day '.$loan->due_day : 'N/A' }}</span>
+                    </div>
+                    <div class="loan-stat-row">
+                        <span class="loan-stat-label">Guarantor</span>
+                        <span class="loan-stat-val">{{ $loan->guarantor ?: 'None specified' }}</span>
+                    </div>
+                    <div class="loan-stat-row">
+                        <span class="loan-stat-label">Collateral / Security</span>
+                        <span class="loan-stat-val">{{ $loan->collateral ?: 'None' }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Drawer Bottom Action Toolbar -->
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem; padding-top:0.75rem; border-top:1px solid var(--border-light);">
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                    <a href="/loans/{{ $loan->id }}" class="btn btn-primary-gradient" style="font-size:0.82rem; padding:0.4rem 1rem; border-radius:6px; font-weight:600; display:inline-flex; align-items:center; gap:0.35rem;">
+                        <ion-icon name="open-outline"></ion-icon> View Full Loan Workspace & Schedules
+                    </a>
+                </div>
+
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                    <button type="button" class="btn btn-outline" onclick='openEditLoanModal(@json($loan))' style="font-size:0.8rem; padding:0.35rem 0.75rem; border-radius:6px;">
+                        <ion-icon name="create-outline" style="vertical-align:middle;"></ion-icon> Edit Details
+                    </button>
+                    <button type="button" class="btn btn-outline" onclick="openChangeStatusModal({{ $loan->id }}, '{{ $loan->status }}')" style="font-size:0.8rem; padding:0.35rem 0.75rem; border-radius:6px;">
+                        <ion-icon name="swap-horizontal-outline" style="vertical-align:middle;"></ion-icon> Status ({{ ucfirst($loan->status) }})
+                    </button>
+                    <form id="delete_loan_{{ $loan->id }}" action="/loans/{{ $loan->id }}" method="POST" style="display:inline; margin:0;">
+                        @csrf
+                        @method('DELETE')
+                        <button type="button" class="btn btn-outline" onclick="return confirmAction({title:'Delete Loan?', message:'Delete loan from {{ addslashes($loan->lender_name) }} and all associated schedules?', confirmText:'Delete Loan', formId:'delete_loan_{{ $loan->id }}'})" style="font-size:0.8rem; padding:0.35rem 0.75rem; border-radius:6px; color:var(--danger); border-color:var(--danger);">
+                            <ion-icon name="trash-outline" style="vertical-align:middle;"></ion-icon> Delete
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    @empty
+    <x-empty-state 
+        icon="card-outline" 
+        title="No Loans Found" 
+        description="Track third-party borrowing facilities, interest payment schedules, deductions, and settlements." 
+        actionModal="createLoanModal" 
+        actionText="Record New Loan" 
+    />
+    @endforelse
 </div>
 @endsection
 
@@ -620,6 +912,31 @@
 </div>
 
 <script>
+// Accordion Toggle Functions
+function toggleLoanAccordion(loanId) {
+    const item = document.getElementById('loan-item-' + loanId);
+    if (!item) return;
+    item.classList.toggle('expanded');
+}
+
+let allExpanded = false;
+function toggleAllAccordions() {
+    allExpanded = !allExpanded;
+    const items = document.querySelectorAll('.loan-accordion-item');
+    items.forEach(item => {
+        if (allExpanded) {
+            item.classList.add('expanded');
+        } else {
+            item.classList.remove('expanded');
+        }
+    });
+    
+    const toggleText = document.getElementById('toggleAllText');
+    if (toggleText) {
+        toggleText.textContent = allExpanded ? 'Collapse All' : 'Expand All';
+    }
+}
+
 function openChangeStatusModal(id, currentStatus) {
     document.getElementById('changeStatusForm').action = '/loans/' + id + '/status';
     document.getElementById('modal_status').value = currentStatus;

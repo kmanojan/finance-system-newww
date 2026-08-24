@@ -592,26 +592,89 @@ ion-icon {
 }
 
 /* ==================================================
-   Badges & Micro UI
+   Badges & Micro UI System (Theme Adaptive)
    ================================================== */
 .badge {
-    padding: 0.25em 0.6em;
-    border-radius: 4px;
-    font-size: 0.7rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3em 0.7em;
+    border-radius: 6px;
+    font-size: 0.72rem;
     font-weight: 600;
-    border: 1px solid transparent;
+    line-height: 1.2;
+    letter-spacing: 0.02em;
     white-space: nowrap;
+    border: 1px solid transparent;
 }
-.badge-draft {
+
+.badge-success {
+    background-color: rgba(16, 185, 129, 0.15);
+    border-color: rgba(16, 185, 129, 0.3);
+    color: #10b981;
+}
+
+.badge-danger {
+    background-color: rgba(239, 68, 68, 0.15);
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+}
+
+.badge-warning {
+    background-color: rgba(245, 158, 11, 0.15);
+    border-color: rgba(245, 158, 11, 0.3);
+    color: #f59e0b;
+}
+
+.badge-info {
+    background-color: rgba(59, 130, 246, 0.15);
+    border-color: rgba(59, 130, 246, 0.3);
+    color: #3b82f6;
+}
+
+.badge-primary, .badge-purple {
+    background-color: var(--primary-light);
+    border-color: rgba(139, 92, 246, 0.3);
+    color: var(--primary);
+}
+
+.badge-draft, .badge-neutral {
     background-color: var(--badge-draft-bg);
     border-color: var(--border-light);
     color: var(--badge-draft-color);
 }
+
 .badge-expired {
     background-color: rgba(239, 68, 68, 0.15);
     border-color: rgba(239, 68, 68, 0.3);
-    color: #fca5a5;
+    color: #ef4444;
 }
+
+/* Tabular Numerals & Typography Alignment */
+.tabular-nums {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+}
+
+.amount-cell {
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.text-right {
+    text-align: right !important;
+}
+
+.text-left {
+    text-align: left !important;
+}
+
+.text-center {
+    text-align: center !important;
+}
+
 .btn-share {
     display: inline-flex;
     align-items: center;
@@ -624,23 +687,30 @@ ion-icon {
 .btn-share ion-icon { font-size: 1.1rem; }
 .btn-share:hover { color: var(--primary-hover); }
 
-.actions { display: flex; gap: 0.5rem; color: var(--text-light); }
+.actions { display: flex; gap: 0.4rem; color: var(--text-light); align-items: center; }
 .action-btn {
-    background: none;
-    border: none;
-    color: inherit;
-    font-size: 1.1rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    color: var(--text-main);
+    font-size: 1rem;
     cursor: pointer;
     transition: all 0.2s ease;
-    padding: 0.2rem;
-    border-radius: 4px;
-    display: flex;
+    padding: 0.35rem 0.45rem;
+    border-radius: 6px;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
+    line-height: 1;
 }
 .action-btn:hover {
-    color: var(--text-heading);
-    background-color: var(--btn-outline-hover);
+    color: var(--primary);
+    border-color: var(--primary);
+    background-color: var(--primary-light);
+}
+.action-btn.action-danger:hover {
+    color: var(--danger);
+    border-color: var(--danger);
+    background-color: rgba(239, 68, 68, 0.1);
 }
 
 /* Pagination */
@@ -1330,6 +1400,227 @@ ion-icon {
 .main-content.full-width {
     margin-left: 70px;
     width: calc(100% - 70px);
+}
+
+/* ==================================================
+   Empty State UI Component
+   ================================================== */
+.empty-state-card {
+    text-align: center;
+    padding: 3.5rem 1.5rem;
+    background: var(--bg-card);
+    border: 1px dashed var(--border);
+    border-radius: 16px;
+    margin: 1.5rem 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.empty-state-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: var(--primary-light);
+    color: var(--primary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.85rem;
+    margin-bottom: 1rem;
+}
+
+.empty-state-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text-heading);
+    margin-bottom: 0.35rem;
+}
+
+.empty-state-desc {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    max-width: 440px;
+    margin: 0 auto 1.25rem;
+    line-height: 1.5;
+}
+
+/* ==================================================
+   Toast Notification System
+   ================================================== */
+.toast-container {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    z-index: 100000;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    max-width: 400px;
+    pointer-events: none;
+}
+
+.toast-notification {
+    pointer-events: auto;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+    border-radius: 12px;
+    padding: 0.9rem 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    animation: toastSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: all 0.3s ease;
+}
+
+.toast-notification.toast-hiding {
+    opacity: 0;
+    transform: translateY(12px) scale(0.95);
+}
+
+@keyframes toastSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.92);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.toast-icon {
+    font-size: 1.4rem;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+}
+
+.toast-content {
+    flex: 1;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-heading);
+    line-height: 1.4;
+}
+
+.toast-close {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0.2rem;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    transition: color 0.2s;
+}
+
+.toast-close:hover {
+    color: var(--text-heading);
+}
+
+.toast-success { border-left: 4px solid var(--success); }
+.toast-success .toast-icon { color: var(--success); }
+
+.toast-error { border-left: 4px solid var(--danger); }
+.toast-error .toast-icon { color: var(--danger); }
+
+.toast-warning { border-left: 4px solid var(--warning); }
+.toast-warning .toast-icon { color: var(--warning); }
+
+.toast-info { border-left: 4px solid var(--primary); }
+.toast-info .toast-icon { color: var(--primary); }
+
+/* ==================================================
+   Button Spinners & Loading States
+   ================================================== */
+.spinner-icon {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: btnSpin 0.6s linear infinite;
+    vertical-align: middle;
+    margin-right: 0.4rem;
+}
+
+@keyframes btnSpin {
+    to { transform: rotate(360deg); }
+}
+
+.btn:disabled, .btn[disabled] {
+    opacity: 0.65 !important;
+    cursor: not-allowed !important;
+    pointer-events: none !important;
+}
+
+/* ==================================================
+   Mobile Bottom Navigation Bar (PWA Experience)
+   ================================================== */
+.mobile-bottom-nav {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: calc(58px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: var(--bg-sidebar-primary);
+    border-top: 1px solid var(--border);
+    z-index: 9998;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(10px);
+}
+
+.mobile-bottom-nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-decoration: none;
+    gap: 0.15rem;
+    transition: all 0.2s ease;
+    padding: 0.35rem 0;
+}
+
+.mobile-bottom-nav-item ion-icon {
+    font-size: 1.35rem;
+    transition: transform 0.2s;
+}
+
+.mobile-bottom-nav-item.active {
+    color: var(--primary);
+}
+
+.mobile-bottom-nav-item.active ion-icon {
+    transform: scale(1.1);
+}
+
+@media (max-width: 768px) {
+    .mobile-bottom-nav {
+        display: flex;
+    }
+
+    body {
+        padding-bottom: calc(65px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .toast-container {
+        bottom: calc(75px + env(safe-area-inset-bottom, 0px));
+        right: 1rem;
+        left: 1rem;
+        max-width: none;
+    }
 }
 
 

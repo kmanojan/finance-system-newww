@@ -37,6 +37,15 @@
     </div>
 </div>
 
+@if($projects->isEmpty())
+    <x-empty-state 
+        icon="briefcase-outline" 
+        title="No Projects Found" 
+        description="Track client deliverables, payment milestones, timesheets, and profitability." 
+        actionModal="createProjectModal" 
+        actionText="Create First Project" 
+    />
+@else
 <div class="data-table-container">
     <table class="data-table">
         <thead>
@@ -44,51 +53,51 @@
                 <th>Project Name</th>
                 <th>Client</th>
                 <th>Department</th>
-                <th>Budget Limit</th>
-                <th>Status</th>
-                <th>Actions</th>
+                <th class="text-right">Budget Limit</th>
+                <th class="text-center">Status</th>
+                <th class="text-center">Actions</th>
             </tr>
         </thead>
         <tbody>
             @foreach($projects as $project)
             <tr>
                 <td data-label="Project Name">
-                    <span class="font-medium">{{ $project->name }}</span>
+                    <a href="/projects/{{ $project->id }}" class="font-medium" style="color:var(--text-heading); text-decoration:none;">{{ $project->name }}</a>
                     @if(isset($project->milestones_due_today_count) && $project->milestones_due_today_count > 0)
-                        <span class="badge" style="background:var(--danger); color:#fff; font-size:0.65rem; margin-left:8px; padding:0.1rem 0.4rem; border-radius:12px;">Milestone Due Today</span>
+                        <span class="badge badge-danger" style="font-size:0.65rem; margin-left:6px;">Milestone Due Today</span>
                     @endif
                 </td>
                 <td data-label="Client"><span class="text-muted">{{ $project->client_name ?? '-' }}</span></td>
                 <td data-label="Department"><span class="text-muted">{{ $project->department_name ?? '-' }}</span></td>
-                <td data-label="Budget Limit"><span class="text-muted">{{ $project->currency }} {{ number_format($project->budget_limit, 2) }}</span></td>
-                <td data-label="Status">
+                <td data-label="Budget Limit" class="amount-cell"><span class="text-muted tabular-nums">{{ $project->currency }} {{ number_format($project->budget_limit, 2) }}</span></td>
+                <td data-label="Status" class="text-center">
                     @if($project->status === 'active')
-                        <span class="badge" style="background:#DCFCE7;color:#166534;">Active</span>
+                        <span class="badge badge-success">Active</span>
                     @elseif($project->status === 'completed')
-                        <span class="badge" style="background:#F3F4F6;color:#4B5563;">Completed</span>
+                        <span class="badge badge-neutral">Completed</span>
                     @else
-                        <span class="badge badge-draft">{{ ucfirst($project->status) }}</span>
+                        <span class="badge badge-warning">{{ ucfirst($project->status) }}</span>
                     @endif
                 </td>
-                <td data-label="Action">
-                    <div class="actions">
-                        <a href="/projects/{{ $project->id }}" class="action-btn" title="View"><ion-icon name="eye-outline"></ion-icon></a>
-                        <button type="button" class="action-btn" title="Edit" onclick="openModal('editProjectModal_{{ $project->id }}')"><ion-icon name="create-outline"></ion-icon></button>
-                        <form action="/projects/{{ $project->id }}" method="POST" style="display:inline;" onsubmit="return confirm('Delete this project?');">
+                <td data-label="Action" class="text-center">
+                    <div class="actions" style="justify-content:center;">
+                        <a href="/projects/{{ $project->id }}" class="action-btn" title="View Project"><ion-icon name="eye-outline"></ion-icon></a>
+                        <button type="button" class="action-btn" title="Edit Project" onclick="openModal('editProjectModal_{{ $project->id }}')"><ion-icon name="create-outline"></ion-icon></button>
+                        <form id="delete_project_{{ $project->id }}" action="/projects/{{ $project->id }}" method="POST" style="display:inline; margin:0;">
                             @csrf
                             @method('DELETE')
-                            <button type="submit" class="action-btn" title="Delete"><ion-icon name="trash-outline"></ion-icon></button>
+                            <button type="button" class="action-btn action-danger" title="Delete Project" onclick="return confirmAction({title:'Delete Project?', message:'Delete {{ addslashes($project->name) }} and all associated milestones?', confirmText:'Delete Project', formId:'delete_project_{{ $project->id }}'})">
+                                <ion-icon name="trash-outline"></ion-icon>
+                            </button>
                         </form>
                     </div>
                 </td>
             </tr>
             @endforeach
-            @if($projects->isEmpty())
-            <tr><td colspan="5" class="text-center text-muted py-4">No projects found.</td></tr>
-            @endif
         </tbody>
     </table>
 </div>
+@endif
 @endsection
 
 @section('modals')

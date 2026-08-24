@@ -23,18 +23,6 @@
     </button>
 </header>
 
-@if(session('error'))
-<div style="background: #fee2e2; color: #991b1b; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
-    {{ session('error') }}
-</div>
-@endif
-
-@if(session('success'))
-<div style="background: #dcfce7; color: #166534; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
-    {{ session('success') }}
-</div>
-@endif
-
 <div class="toolbar">
     <div class="toolbar-left">
     </div>
@@ -46,61 +34,70 @@
     </div>
 </div>
 
+@if($budgets->isEmpty())
+    <x-empty-state 
+        icon="pie-chart-outline" 
+        title="No Budgets Defined" 
+        description="Set up department and category budgets to monitor and limit expenditures." 
+        actionModal="createBudgetModal" 
+        actionText="Create Budget" 
+    />
+@else
 <div class="data-table-container">
     <table class="data-table">
         <thead>
             <tr>
                 <th>Budget (Period)</th>
-                <th>Allocated</th>
-                <th>Actual Spent</th>
+                <th class="text-right">Allocated</th>
+                <th class="text-right">Actual Spent</th>
                 <th>% Used</th>
-                <th>Remaining</th>
-                <th>Status</th>
-                <th>Actions</th>
+                <th class="text-right">Remaining</th>
+                <th class="text-center">Status</th>
+                <th class="text-center">Actions</th>
             </tr>
         </thead>
         <tbody>
             @foreach($budgets as $budget)
             <tr>
                 <td data-label="Budget">
-                    <span class="font-medium" style="font-size:1.1rem; color:var(--text-heading);">{{ $budget->name }}</span><br>
+                    <a href="/budgets/{{ $budget->id }}" class="font-medium" style="font-size:1rem; color:var(--text-heading); text-decoration:none;">{{ $budget->name }}</a><br>
                     <small class="text-muted">{{ ucfirst($budget->period) }} | {{ $budget->start_date }} to {{ $budget->end_date }}</small>
                 </td>
-                <td data-label="Allocated"><x-amount-display :amount="$budget->allocated_amount" :currency="$budget->currency" /></td>
-                <td data-label="Actual Spent"><x-amount-display :amount="$budget->actual_spent" :currency="$budget->currency" /></td>
+                <td data-label="Allocated" class="amount-cell"><x-amount-display :amount="$budget->allocated_amount" :currency="$budget->currency" /></td>
+                <td data-label="Actual Spent" class="amount-cell"><x-amount-display :amount="$budget->actual_spent" :currency="$budget->currency" /></td>
                 <td data-label="Percent Used">
                     <div style="display: flex; align-items: center; gap: 8px;">
-                        <div style="flex-grow: 1; background: #e2e8f0; border-radius: 4px; height: 8px; overflow: hidden;">
+                        <div style="flex-grow: 1; background: var(--bg-page); border-radius: 4px; height: 8px; overflow: hidden; border:1px solid var(--border-light);">
                             <div style="background: {{ $budget->status_text_class }}; width: {{ min($budget->percent_used, 100) }}%; height: 100%;"></div>
                         </div>
-                        <span class="text-muted" style="font-size: 0.85rem;">{{ $budget->percent_used }}%</span>
+                        <span class="text-muted tabular-nums" style="font-size: 0.85rem;">{{ $budget->percent_used }}%</span>
                     </div>
                 </td>
-                <td data-label="Remaining">
+                <td data-label="Remaining" class="amount-cell">
                     <x-amount-display :amount="$budget->remaining" :currency="$budget->currency" class="font-medium" style="color:{{ $budget->remaining >= 0 ? 'var(--success)' : 'var(--danger)' }};" />
                 </td>
-                <td data-label="Status">
+                <td data-label="Status" class="text-center">
                     <span class="badge" style="background:{{ $budget->status_class }};color:{{ $budget->status_text_class }};">{{ $budget->status_label }}</span>
                 </td>
-                <td data-label="Action">
-                    <div class="actions" style="display:flex; gap:0.5rem; align-items:center;">
+                <td data-label="Action" class="text-center">
+                    <div class="actions" style="justify-content:center;">
                         <a href="/budgets/{{ $budget->id }}" class="action-btn" title="View Details"><ion-icon name="eye-outline"></ion-icon></a>
                         <button type="button" class="action-btn" title="Clone Budget" onclick="cloneBudget({{ $budget->id }})"><ion-icon name="copy-outline"></ion-icon></button>
-                        <form action="/budgets/{{ $budget->id }}" method="POST" style="display:inline; margin:0;" onsubmit="return confirm('Delete this budget?');">
+                        <form id="delete_budget_{{ $budget->id }}" action="/budgets/{{ $budget->id }}" method="POST" style="display:inline; margin:0;">
                             @csrf
                             @method('DELETE')
-                            <button type="submit" class="action-btn" title="Delete"><ion-icon name="trash-outline" style="color:var(--danger);"></ion-icon></button>
+                            <button type="button" class="action-btn action-danger" title="Delete Budget" onclick="return confirmAction({title:'Delete Budget?', message:'Delete budget {{ addslashes($budget->name) }}?', confirmText:'Delete Budget', formId:'delete_budget_{{ $budget->id }}'})">
+                                <ion-icon name="trash-outline"></ion-icon>
+                            </button>
                         </form>
                     </div>
                 </td>
             </tr>
             @endforeach
-            @if($budgets->isEmpty())
-            <tr><td colspan="7" class="text-center text-muted py-4">No budgets found.</td></tr>
-            @endif
         </tbody>
     </table>
 </div>
+@endif
 @endsection
 
 @section('modals')

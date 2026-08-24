@@ -54,74 +54,83 @@
 <div id="invoices-tab" class="tab-content active">
 
 @if(isset($clientMetrics))
-<div class="summary-cards" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:1.5rem; margin-bottom:2rem;">
-    <div class="card" style="padding:1.5rem; border-left:4px solid var(--primary);">
-        <div style="color:var(--slate-500); font-size:0.85rem; font-weight:600; text-transform:uppercase;">Total Invoices Sent</div>
-        <div style="font-size:1.8rem; font-weight:700; color:var(--slate-800); margin-top:0.5rem;">${{ number_format($clientMetrics->total_sent, 2) }}</div>
+<div class="summary-cards" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:1.25rem; margin-bottom:2rem;">
+    <div class="card" style="padding:1.25rem; border-left:4px solid var(--primary);">
+        <div style="color:var(--text-muted); font-size:0.8rem; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Total Invoices Sent</div>
+        <div style="font-size:1.6rem; font-weight:700; color:var(--text-heading); margin-top:0.4rem;" class="tabular-nums">{{ $baseCurrency ?? 'LKR' }} {{ number_format($clientMetrics->total_sent, 2) }}</div>
     </div>
-    <div class="card" style="padding:1.5rem; border-left:4px solid var(--success);">
-        <div style="color:var(--slate-500); font-size:0.85rem; font-weight:600; text-transform:uppercase;">Total Paid</div>
-        <div style="font-size:1.8rem; font-weight:700; color:var(--slate-800); margin-top:0.5rem;">${{ number_format($clientMetrics->total_paid, 2) }}</div>
+    <div class="card" style="padding:1.25rem; border-left:4px solid var(--success);">
+        <div style="color:var(--text-muted); font-size:0.8rem; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Total Paid</div>
+        <div style="font-size:1.6rem; font-weight:700; color:var(--success); margin-top:0.4rem;" class="tabular-nums">{{ $baseCurrency ?? 'LKR' }} {{ number_format($clientMetrics->total_paid, 2) }}</div>
     </div>
-    <div class="card" style="padding:1.5rem; border-left:4px solid var(--danger);">
-        <div style="color:var(--slate-500); font-size:0.85rem; font-weight:600; text-transform:uppercase;">Balance to Pay</div>
-        <div style="font-size:1.8rem; font-weight:700; color:var(--slate-800); margin-top:0.5rem;">${{ number_format($clientMetrics->balance, 2) }}</div>
+    <div class="card" style="padding:1.25rem; border-left:4px solid var(--danger);">
+        <div style="color:var(--text-muted); font-size:0.8rem; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Balance to Pay</div>
+        <div style="font-size:1.6rem; font-weight:700; color:var(--danger); margin-top:0.4rem;" class="tabular-nums">{{ $baseCurrency ?? 'LKR' }} {{ number_format($clientMetrics->balance, 2) }}</div>
     </div>
-    <div class="card" style="padding:1.5rem; border-left:4px solid var(--warning);">
-        <div style="color:var(--slate-500); font-size:0.85rem; font-weight:600; text-transform:uppercase;">Draft Invoice Amount</div>
-        <div style="font-size:1.8rem; font-weight:700; color:var(--slate-800); margin-top:0.5rem;">${{ number_format($clientMetrics->total_draft, 2) }}</div>
+    <div class="card" style="padding:1.25rem; border-left:4px solid var(--warning);">
+        <div style="color:var(--text-muted); font-size:0.8rem; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Draft Invoices</div>
+        <div style="font-size:1.6rem; font-weight:700; color:var(--warning); margin-top:0.4rem;" class="tabular-nums">{{ $baseCurrency ?? 'LKR' }} {{ number_format($clientMetrics->total_draft, 2) }}</div>
     </div>
 </div>
 @endif
 
+@if($invoices->isEmpty())
+    <x-empty-state 
+        icon="document-text-outline" 
+        title="No Invoices Found" 
+        description="Generate invoices, send them to clients, and track received payments." 
+        actionModal="createInvModal" 
+        actionText="Create Invoice" 
+    />
+@else
 <div class="data-table-container">
     <table class="data-table">
         <thead>
             <tr>
                 <th>Invoice #</th>
                 <th>Client</th>
-                <th>Total Amount</th>
-                <th>Paid Amount</th>
+                <th class="text-right">Total Amount</th>
+                <th class="text-right">Paid Amount</th>
                 <th>Due Date</th>
-                <th>Status</th>
-                <th>Actions</th>
+                <th class="text-center">Status</th>
+                <th class="text-center">Actions</th>
             </tr>
         </thead>
         <tbody>
             @foreach($invoices as $invoice)
             <tr>
-                <td data-label="Invoice #"><span class="font-medium">{{ $invoice->invoice_no }}</span></td>
+                <td data-label="Invoice #"><span class="font-medium" style="color:var(--text-heading);">{{ $invoice->invoice_no }}</span></td>
                 <td data-label="Client"><span class="text-muted">{{ collect($clients)->firstWhere('id', $invoice->client_id)->name ?? 'Unknown' }}</span></td>
-                <td data-label="Total Amount"><span class="text-heading font-medium">${{ number_format($invoice->amount, 2) }}</span></td>
-                <td data-label="Paid Amount"><span class="text-success font-medium" style="color:var(--success);">${{ number_format($invoice->paid_amount, 2) }}</span></td>
+                <td data-label="Total Amount" class="amount-cell"><span class="text-heading font-medium tabular-nums">{{ $invoice->currency ?? ($baseCurrency ?? 'LKR') }} {{ number_format($invoice->amount, 2) }}</span></td>
+                <td data-label="Paid Amount" class="amount-cell"><span class="text-success font-medium tabular-nums" style="color:var(--success);">{{ $invoice->currency ?? ($baseCurrency ?? 'LKR') }} {{ number_format($invoice->paid_amount, 2) }}</span></td>
                 <td data-label="Due Date"><span class="text-muted">{{ $invoice->due_date }}</span></td>
-                <td data-label="Status">
+                <td data-label="Status" class="text-center">
                     @if($invoice->status === 'paid')
-                        <span class="badge" style="background:#DCFCE7;color:#166534;">Paid</span>
+                        <span class="badge badge-success">Paid</span>
                     @elseif($invoice->status === 'overdue')
-                        <span class="badge badge-expired">Overdue</span>
+                        <span class="badge badge-danger">Overdue</span>
                     @else
-                        <span class="badge badge-draft">{{ ucfirst($invoice->status) }}</span>
+                        <span class="badge badge-warning">{{ ucfirst($invoice->status) }}</span>
                     @endif
                 </td>
-                <td data-label="Action">
-                    <div class="actions">
+                <td data-label="Action" class="text-center">
+                    <div class="actions" style="justify-content:center;">
                         <a href="/invoices/{{ $invoice->id }}/pdf" class="action-btn" title="Download PDF"><ion-icon name="download-outline"></ion-icon></a>
-                        <form action="/invoices/{{ $invoice->id }}" method="POST" style="display:inline;" onsubmit="return confirm('Delete this invoice?');">
+                        <form id="delete_inv_{{ $invoice->id }}" action="/invoices/{{ $invoice->id }}" method="POST" style="display:inline; margin:0;">
                             @csrf
                             @method('DELETE')
-                            <button type="submit" class="action-btn" title="Delete"><ion-icon name="trash-outline"></ion-icon></button>
+                            <button type="button" class="action-btn action-danger" title="Delete Invoice" onclick="return confirmAction({title:'Delete Invoice?', message:'Delete invoice {{ addslashes($invoice->invoice_no) }}?', confirmText:'Delete Invoice', formId:'delete_inv_{{ $invoice->id }}'})">
+                                <ion-icon name="trash-outline"></ion-icon>
+                            </button>
                         </form>
                     </div>
                 </td>
             </tr>
             @endforeach
-            @if($invoices->isEmpty())
-            <tr><td colspan="6" class="text-center text-muted py-4">No invoices found.</td></tr>
-            @endif
         </tbody>
     </table>
 </div>
+@endif
 </div> <!-- End invoices-tab -->
 
 <div id="payments-tab" class="tab-content">

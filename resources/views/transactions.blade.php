@@ -64,59 +64,68 @@
     </div>
 </div>
 
+@if($transactions->isEmpty())
+    <x-empty-state 
+        icon="cash-outline" 
+        title="No Transactions Found" 
+        description="Record income, expense, and transfer transactions in your double-entry ledger." 
+        actionModal="createTxModal" 
+        actionText="New Transaction" 
+    />
+@else
 <div class="data-table-container">
     <table class="data-table">
         <thead>
             <tr>
                 <th>Date</th>
                 <th>Description</th>
-                <th>Amount</th>
-                <th>Type</th>
-                <th>Mode</th>
-                <th>Reconciled</th>
-                <th>Actions</th>
+                <th class="text-right">Amount</th>
+                <th class="text-center">Type</th>
+                <th class="text-center">Mode</th>
+                <th class="text-center">Reconciled</th>
+                <th class="text-center">Actions</th>
             </tr>
         </thead>
         <tbody>
             @foreach($transactions as $tx)
             <tr>
-                <td data-label="Date"><span class="font-medium">{{ $tx->transaction_date }}</span></td>
+                <td data-label="Date"><span class="font-medium tabular-nums">{{ $tx->transaction_date }}</span></td>
                 <td data-label="Description"><span class="text-muted">{{ $tx->description }}</span></td>
-                <td data-label="Amount"><x-amount-display :amount="$tx->amount" currency="{{ $tx->currency }}" class="text-heading font-medium" /></td>
-                <td data-label="Type">
+                <td data-label="Amount" class="amount-cell"><x-amount-display :amount="$tx->amount" currency="{{ $tx->currency }}" class="text-heading font-medium tabular-nums" /></td>
+                <td data-label="Type" class="text-center">
                     @if($tx->type === 'income')
-                        <span class="badge" style="background:#dcfce7;color:#166534;">Income</span>
+                        <span class="badge badge-success">Income</span>
                     @else
-                        <span class="badge" style="background:#fee2e2;color:#991b1b;">Expense</span>
+                        <span class="badge badge-danger">Expense</span>
                     @endif
                 </td>
-                <td data-label="Mode">
-                    <span class="badge" style="background:var(--bg-sidebar-primary);color:var(--text-heading); border:1px solid var(--border);">{{ $tx->payment_method ?? 'Normal' }}</span>
+                <td data-label="Mode" class="text-center">
+                    <span class="badge badge-neutral">{{ $tx->payment_method ?? 'Normal' }}</span>
                 </td>
-                <td data-label="Reconciled">
+                <td data-label="Reconciled" class="text-center">
                     @if($tx->reconciled)
-                        <span class="badge" style="background:#e0f2fe;color:#075985;">Yes</span>
+                        <span class="badge badge-info">Yes</span>
                     @else
-                        <span class="badge" style="background:#f1f5f9;color:#475569;">No</span>
+                        <span class="badge badge-neutral">No</span>
                     @endif
                 </td>
-                <td data-label="Action">
-                    <div class="actions">
-                        <form action="/transactions/{{ $tx->id }}" method="POST" style="display:inline;" onsubmit="return confirm('Delete this transaction?');">
+                <td data-label="Action" class="text-center">
+                    <div class="actions" style="justify-content:center;">
+                        <form id="delete_tx_{{ $tx->id }}" action="/transactions/{{ $tx->id }}" method="POST" style="display:inline; margin:0;">
                             @csrf
                             @method('DELETE')
-                            <button type="submit" class="action-btn" title="Delete"><ion-icon name="trash-outline"></ion-icon></button>
+                            <button type="button" class="action-btn action-danger" title="Delete Transaction" onclick="return confirmAction({title:'Delete Transaction?', message:'Delete transaction for {{ addslashes($tx->description) }}?', confirmText:'Delete', formId:'delete_tx_{{ $tx->id }}'})">
+                                <ion-icon name="trash-outline"></ion-icon>
+                            </button>
                         </form>
                     </div>
                 </td>
             </tr>
             @endforeach
-            @if($transactions->isEmpty())
-            <tr><td colspan="6" class="text-center text-muted py-4">No transactions found.</td></tr>
-            @endif
         </tbody>
     </table>
 </div>
+@endif
 @endsection
 
 @section('modals')
