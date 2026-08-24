@@ -158,9 +158,12 @@
                         <ion-icon name="card-outline"></ion-icon>
                         <span>Loans</span>
                     </a>
-                    <a href="/reminders" class="nav-item {{ request()->is('reminders*', 'approvals*', 'cheques*', 'activity-logs*', 'treasury*', 'assets*') ? 'active' : '' }}">
+                    <a href="/reminders" class="nav-item {{ request()->is('reminders*', 'approvals*', 'cheques*', 'activity-logs*', 'treasury*', 'assets*') ? 'active' : '' }}" style="position:relative;">
                         <ion-icon name="cog-outline"></ion-icon>
                         <span>Operations</span>
+                        @if(!empty($hasActiveReminders))
+                            <span class="notification-dot" style="position:absolute; top:6px; right:8px; width:8px; height:8px; background:#ef4444; border-radius:50%; box-shadow:0 0 0 2px var(--bg-card); display:inline-block;" title="Active Reminders Available"></span>
+                        @endif
                     </a>
 
                     <a href="/reports" class="nav-item {{ request()->is('reports*') ? 'active' : '' }}">
