@@ -79,12 +79,9 @@
                 </button>
             </form>
         @elseif($loan->status === 'active')
-            <form action="/loans/{{ $loan->id }}/settle-fully" method="POST" onsubmit="return confirm('Settle remaining principal of {{ $loan->currency }} {{ number_format($loan->outstanding_principal, 2) }}?');" style="margin: 0;">
-                @csrf
-                <button type="submit" class="btn btn-primary-gradient btn-pill">
-                    <ion-icon name="checkmark-done-outline" style="vertical-align:middle;"></ion-icon> Settle Principal Fully
-                </button>
-            </form>
+            <button type="button" class="btn btn-primary-gradient btn-pill" onclick="openModal('settlePrincipalFullyModal')">
+                <ion-icon name="checkmark-done-outline" style="vertical-align:middle;"></ion-icon> Settle Principal Fully
+            </button>
         @endif
         <button class="btn btn-primary-gradient btn-pill" onclick="openModal('editLoanModal')">
             <ion-icon name="create-outline" style="vertical-align:middle;"></ion-icon> Edit Loan
@@ -467,6 +464,67 @@
 @endsection
 
 @section('modals')
+<!-- Settle Principal Fully Modal -->
+<div class="modal-backdrop" id="settlePrincipalFullyModal">
+    <div class="modal-card" style="max-width:540px;">
+        <div class="modal-header">
+            <h3 class="modal-title" style="display:flex; align-items:center; gap:0.5rem;">
+                <ion-icon name="checkmark-done-circle-outline" style="color:var(--success); font-size:1.4rem;"></ion-icon> Settle Principal Fully
+            </h3>
+            <button type="button" class="btn-close" onclick="closeModal('settlePrincipalFullyModal')">&times;</button>
+        </div>
+        <form action="/loans/{{ $loan->id }}/settle-fully" method="POST">
+            @csrf
+            <div class="modal-body">
+                <!-- Outstanding Balance Overview Banner -->
+                <div style="background:var(--primary-light); border:1px solid var(--border-light); border-radius:10px; padding:1.1rem 1.25rem; margin-bottom:1.25rem; text-align:center;">
+                    <span style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.5px; display:block;">Total Remaining Principal</span>
+                    <div style="font-size:1.65rem; font-weight:800; color:var(--text-heading); margin-top:0.25rem;">
+                        {{ $loan->currency }} {{ number_format($loan->outstanding_principal, 2) }}
+                    </div>
+                    <span style="font-size:0.75rem; color:var(--text-muted); margin-top:0.2rem; display:block;">
+                        Settles the remaining principal obligation and records the ledger expense transaction.
+                    </span>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" style="font-weight:700;">Paid Date / Transaction Date *</label>
+                    <input type="date" name="settlement_date" class="form-control" value="{{ date('Y-m-d') }}" required>
+                    <small class="text-muted" style="font-size:0.75rem; margin-top:0.25rem; display:block;">
+                        This date will be applied to the principal repayment record and ledger transaction.
+                    </small>
+                </div>
+
+                <div class="form-row" style="margin-top:1.25rem;">
+                    <div class="form-col">
+                        <label class="form-label" style="font-weight:700;">Payment Mode</label>
+                        <select name="payment_method" class="form-control" required>
+                            <option value="Normal">Normal</option>
+                            <option value="Bank Transfer">Bank Transfer</option>
+                            <option value="Cheque">Cheque</option>
+                            <option value="Petty Cash">Petty Cash</option>
+                            <option value="Credit Card">Credit Card</option>
+                        </select>
+                    </div>
+                    <div class="form-col">
+                        <label class="form-label">Reference Number (Optional)</label>
+                        <input type="text" name="reference_no" class="form-control" placeholder="E.g. TXN-1049 / CHQ-882">
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-top:1.25rem;">
+                    <label class="form-label">Notes</label>
+                    <input type="text" name="notes" class="form-control" value="Full Principal Settlement" placeholder="E.g. Final principal clearance">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="closeModal('settlePrincipalFullyModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary-gradient">Confirm & Settle Principal</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- Add Interest Schedule Modal -->
 <div class="modal-backdrop" id="addScheduleModal">
     <div class="modal-card">

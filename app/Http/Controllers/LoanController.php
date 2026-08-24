@@ -936,14 +936,20 @@ class LoanController extends Controller
         $draws = DB::table('loan_principal_records')->where('loan_id', $id)->where('record_type', 'draw')->sum('amount');
         
         $outstanding = $loan->principal_amount + $draws - $repayments;
+        $settlementDate = $request->input('settlement_date') ?: ($request->input('paid_date') ?: now()->format('Y-m-d'));
+        $paymentMethod = is_array($request->input('payment_method')) ? current($request->input('payment_method')) : ($request->input('payment_method') ?: 'Normal');
+        $referenceNo = $request->input('reference_no') ?: "LOAN-SETTLE-{$loan->id}";
+        $notes = $request->input('notes') ?: 'Full Principal Settlement';
         
         if ($outstanding > 0) {
             DB::table('loan_principal_records')->insert([
                 'loan_id' => $id,
                 'record_type' => 'repayment',
                 'amount' => $outstanding,
-                'record_date' => now()->format('Y-m-d'),
-                'notes' => 'Full Settlement',
+                'record_date' => $settlementDate,
+                'payment_mode' => $paymentMethod,
+                'reference_no' => $referenceNo,
+                'notes' => $notes,
                 'created_at' => now()
             ]);
 
@@ -955,18 +961,18 @@ class LoanController extends Controller
                 'department_id' => $this->getDepartmentId(),
                 'amount' => $outstanding,
                 'currency' => $loan->currency,
-                'transaction_date' => now()->format('Y-m-d'),
+                'transaction_date' => $settlementDate,
                 'description' => "Full Principal Settlement to {$loan->lender_name}",
-                'reference_no' => "LOAN-SETTLE-{$loan->id}",
-                'payment_method' => 'Normal',
+                'reference_no' => $referenceNo,
+                'payment_method' => $paymentMethod,
                 'created_at' => now(),
                 'updated_at' => now()
             ]);
         }
         
-        DB::table('loans')->where('id', $id)->update(['status' => 'settled']);
+        DB::table('loans')->where('id', $id)->update(['status' => 'settled', 'updated_at' => now()]);
         
-        return back()->with('success', 'Loan fully settled and transaction posted to ledger!');
+        return back()->with('success', 'Loan fully settled on ' . $settlementDate . ' and transaction posted to ledger!');
     }
     
     private function getCategoryId($name, $type)
