@@ -11,6 +11,7 @@
         <a href="/master/servers" class="nav-link {{ request()->is('master/servers*') ? 'active' : '' }}">Servers</a>
         <a href="/master/currencies" class="nav-link {{ request()->is('master/currencies*') ? 'active' : '' }}">Currencies</a>
         <a href="/master/tax-types" class="nav-link {{ request()->is('master/tax-types*') ? 'active' : '' }}">Tax Config & Rates</a>
+        <a href="/master/users" class="nav-link {{ request()->is('master/users*') ? 'active' : '' }}">Users</a>
     </nav>
 </aside>
 

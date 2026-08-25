@@ -168,6 +168,15 @@ class LoanController extends Controller
         
         $parties = DB::table('parties')->orderBy('name')->get();
 
+        // Paginate loans collection
+        $currentPage = Paginator::resolveCurrentPage() ?: 1;
+        $perPage = 15;
+        $currentItems = $loans->slice(($currentPage - 1) * $perPage, $perPage)->values();
+        $loans = new LengthAwarePaginator($currentItems, $loans->count(), $perPage, $currentPage, [
+            'path' => Paginator::resolveCurrentPath(),
+            'query' => $request->query(),
+        ]);
+
         return view('loans', compact(
             'loans', 
             'parties',
@@ -224,6 +233,15 @@ class LoanController extends Controller
                 $totalPendingInterest += max(0, $s->interest_amount - ($s->paid_amount ?? 0));
             }
         }
+
+        // Paginate schedules collection
+        $currentPage = Paginator::resolveCurrentPage() ?: 1;
+        $perPage = 15;
+        $currentItems = $schedules->slice(($currentPage - 1) * $perPage, $perPage)->values();
+        $schedules = new LengthAwarePaginator($currentItems, $schedules->count(), $perPage, $currentPage, [
+            'path' => Paginator::resolveCurrentPath(),
+            'query' => $request->query(),
+        ]);
 
         return view('loans-schedules', compact(
             'schedules',
@@ -321,6 +339,15 @@ class LoanController extends Controller
         $totalDraws = $principalRecords->where('category', 'draw')->sum('amount');
         $totalInterestPaid = $interestRecords->sum('amount');
         $totalPaidAll = $totalPrincipalRepaid + $totalInterestPaid;
+
+        // Paginate settlements collection
+        $currentPage = Paginator::resolveCurrentPage() ?: 1;
+        $perPage = 15;
+        $currentItems = $settlements->slice(($currentPage - 1) * $perPage, $perPage)->values();
+        $settlements = new LengthAwarePaginator($currentItems, $settlements->count(), $perPage, $currentPage, [
+            'path' => Paginator::resolveCurrentPath(),
+            'query' => $request->query(),
+        ]);
 
         return view('loans-settlements', compact(
             'settlements',

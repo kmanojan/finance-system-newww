@@ -155,6 +155,17 @@
         </tbody>
     </table>
 </div>
+
+@if(!$schedules->isEmpty())
+<div style="margin-top:1.5rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+    <div style="font-size:0.85rem; color:var(--text-muted);">
+        Showing {{ $schedules->firstItem() ?? 0 }} to {{ $schedules->lastItem() ?? 0 }} of {{ $schedules->total() }} schedules
+    </div>
+    <div>
+        {{ $schedules->links() }}
+    </div>
+</div>
+@endif
 @endsection
 
 @section('modals')

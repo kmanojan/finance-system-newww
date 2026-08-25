@@ -1,20 +1,24 @@
-const CACHE_NAME = "finance-system-v1";
+const CACHE_NAME = "finance-system-v2";
 const STATIC_ASSETS = [
-    "/",
-    "/styles.css",
-    "/script.js",
     "/manifest.json",
     "/offline.html",
     "/icons/icon-192x192.png",
     "/icons/icon-512x512.png",
+    "/icons/icon-maskable.png",
     "/icons/icon.svg"
 ];
 
 // Install Event
 self.addEventListener("install", (event) => {
     event.waitUntil(
-        caches.open(CACHE_NAME).then((cache) => {
-            return cache.addAll(STATIC_ASSETS);
+        caches.open(CACHE_NAME).then(async (cache) => {
+            for (const asset of STATIC_ASSETS) {
+                try {
+                    await cache.add(asset);
+                } catch (e) {
+                    console.warn("SW: failed to pre-cache", asset, e);
+                }
+            }
         })
     );
     self.skipWaiting();

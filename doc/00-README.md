@@ -30,6 +30,7 @@ This spec is split into one file per feature/module for easier reading and refer
 | `24-accounts_payable.md` | Accounts Payable (AP), Purchase Orders, Vendor Bills & AP Aging |
 | `25-bank_reconciliation.md` | Bank statement import (CSV/OFX), auto-matching & BRS reporting |
 | `26-fixed_assets.md` | Fixed Asset Register, Capitalization & Automated Depreciation |
+| `27-users-master.md` | User Management Master (Add, Create, Edit, Delete, Status Change) |
 
 Cross-references between files use section numbers (e.g. "§6") which match the numbering used across this whole set.
 

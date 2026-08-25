@@ -15,26 +15,170 @@
 <header class="page-header" style="margin-bottom: 2rem;">
     <div class="header-titles">
         <h1>Profile & Settings</h1>
-        <p class="subtitle">Manage your account and system-wide configurations.</p>
+        <p class="subtitle">Manage your account information, security settings, and system configurations.</p>
     </div>
 </header>
 
+@if(session('error'))
+<div style="background: #fee2e2; color: #991b1b; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border: 1px solid #fecaca; display: flex; align-items: center; gap: 0.5rem;">
+    <ion-icon name="alert-circle-outline" style="font-size: 1.25rem;"></ion-icon>
+    <span>{{ session('error') }}</span>
+</div>
+@endif
+
 @if(session('success'))
-<div style="background: #dcfce7; color: #166534; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
-    {{ session('success') }}
+<div style="background: #dcfce7; color: #166534; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; border: 1px solid #bbf7d0; display: flex; align-items: center; gap: 0.5rem;">
+    <ion-icon name="checkmark-circle-outline" style="font-size: 1.25rem;"></ion-icon>
+    <span>{{ session('success') }}</span>
+</div>
+@endif
+
+@if($errors->any())
+<div style="background: #fee2e2; color: #991b1b; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; border: 1px solid #fecaca;">
+    <ul style="margin: 0; padding-left: 1.25rem;">
+        @foreach ($errors->all() as $error)
+            <li>{{ $error }}</li>
+        @endforeach
+    </ul>
 </div>
 @endif
 
 @if($tab === 'general')
-<div class="card" style="padding: 2rem;">
-    <h2 class="section-title">General Information</h2>
-    <p class="text-muted">User profile settings will appear here in the future.</p>
-    
-    <div class="user-avatar" style="width: 100px; height: 100px; font-size: 2.5rem; margin-top: 2rem;">
-        <span>Admin</span>
+<div style="display: grid; grid-template-columns: 320px 1fr; gap: 1.5rem; align-items: start;">
+    <!-- User Summary Card -->
+    <div class="card" style="padding: 2rem; text-align: center;">
+        <div style="width: 88px; height: 88px; border-radius: 50%; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 2.2rem; margin: 0 auto 1.25rem; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);">
+            {{ strtoupper(substr($user->name ?? 'User', 0, 2)) }}
+        </div>
+        
+        <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--text-heading); margin-bottom: 0.25rem;">
+            {{ $user->name ?? 'User' }}
+        </h3>
+        <p class="text-muted" style="font-size: 0.875rem; margin-bottom: 1rem;">{{ $user->email }}</p>
+
+        @php
+            $roleColors = [
+                'admin' => ['bg' => '#f3e8ff', 'text' => '#7e22ce'],
+                'manager' => ['bg' => '#e0f2fe', 'text' => '#0369a1'],
+                'accountant' => ['bg' => '#fef3c7', 'text' => '#b45309'],
+                'staff' => ['bg' => '#ecfdf5', 'text' => '#047857'],
+                'viewer' => ['bg' => '#f1f5f9', 'text' => '#475569'],
+            ];
+            $role = strtolower($user->role ?? 'staff');
+            $roleStyle = $roleColors[$role] ?? ['bg' => '#f1f5f9', 'text' => '#475569'];
+        @endphp
+        
+        <div style="display: inline-block; margin-bottom: 1.5rem;">
+            <span class="badge" style="background: {{ $roleStyle['bg'] }}; color: {{ $roleStyle['text'] }}; font-size: 0.8rem; padding: 0.35rem 0.75rem; border-radius: 6px; font-weight: 600; text-transform: capitalize;">
+                {{ ucfirst($user->role ?? 'Staff') }}
+            </span>
+        </div>
+
+        <div style="border-top: 1px solid var(--border-light); padding-top: 1.25rem; text-align: left; display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.875rem;">
+            <div style="display: flex; justify-content: space-between;">
+                <span class="text-muted">Department:</span>
+                <span class="font-medium" style="color: var(--text-heading);">{{ $user->department?->name ?? 'Global / None' }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+                <span class="text-muted">Phone:</span>
+                <span class="font-medium" style="color: var(--text-heading);">{{ $user->phone ?: '-' }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+                <span class="text-muted">Status:</span>
+                <span class="badge" style="background: {{ $user->is_active ? 'var(--success-light, #dcfce7)' : '#fee2e2' }}; color: {{ $user->is_active ? 'var(--success, #166534)' : '#991b1b' }}; font-size: 0.75rem; padding: 0.15rem 0.5rem; border-radius: 4px; font-weight: 600;">
+                    {{ $user->is_active ? 'Active' : 'Inactive' }}
+                </span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+                <span class="text-muted">Member Since:</span>
+                <span class="font-medium" style="color: var(--text-heading);">{{ $user->created_at ? $user->created_at->format('M d, Y') : '-' }}</span>
+            </div>
+        </div>
     </div>
-    <div style="margin-top: 1rem;">
-        <strong>Role:</strong> Administrator
+
+    <!-- Edit Forms Container -->
+    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+        <!-- Edit Profile Details Card -->
+        <div class="card" style="padding: 2rem;">
+            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-light); padding-bottom: 1rem;">
+                <div style="width: 36px; height: 36px; border-radius: 8px; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
+                    <ion-icon name="person-outline"></ion-icon>
+                </div>
+                <div>
+                    <h2 class="section-title" style="margin: 0; font-size: 1.1rem;">Personal Information</h2>
+                    <p class="text-muted" style="font-size: 0.8rem; margin: 0;">Update your basic account details and contact information.</p>
+                </div>
+            </div>
+
+            <form action="{{ route('profile.general.update') }}" method="POST">
+                @csrf
+                @method('PUT')
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label class="form-label">Full Name <span style="color:red;">*</span></label>
+                        <input type="text" name="name" class="form-control" value="{{ old('name', $user->name) }}" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Email Address <span style="color:red;">*</span></label>
+                        <input type="email" name="email" class="form-control" value="{{ old('email', $user->email) }}" required>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-top: 1rem;">
+                    <label class="form-label">Phone Number</label>
+                    <input type="text" name="phone" class="form-control" value="{{ old('phone', $user->phone) }}" placeholder="e.g. +94 77 123 4567">
+                </div>
+
+                <div style="margin-top: 1.5rem; display: flex; justify-content: flex-end;">
+                    <button type="submit" class="btn btn-primary-gradient">
+                        <ion-icon name="save-outline"></ion-icon> Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Change Password Card -->
+        <div class="card" style="padding: 2rem;">
+            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-light); padding-bottom: 1rem;">
+                <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(245, 158, 11, 0.15); color: #d97706; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
+                    <ion-icon name="lock-closed-outline"></ion-icon>
+                </div>
+                <div>
+                    <h2 class="section-title" style="margin: 0; font-size: 1.1rem;">Change Password</h2>
+                    <p class="text-muted" style="font-size: 0.8rem; margin: 0;">Ensure your account remains secure with a strong password.</p>
+                </div>
+            </div>
+
+            <form action="{{ route('profile.password.update') }}" method="POST">
+                @csrf
+                @method('PUT')
+
+                <div class="form-group">
+                    <label class="form-label">Current Password <span style="color:red;">*</span></label>
+                    <input type="password" name="current_password" class="form-control" placeholder="Enter your current password" required>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+                    <div class="form-group">
+                        <label class="form-label">New Password <span style="color:red;">*</span></label>
+                        <input type="password" name="password" class="form-control" placeholder="Min. 8 characters" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Confirm New Password <span style="color:red;">*</span></label>
+                        <input type="password" name="password_confirmation" class="form-control" placeholder="Confirm new password" required>
+                    </div>
+                </div>
+
+                <div style="margin-top: 1.5rem; display: flex; justify-content: flex-end;">
+                    <button type="submit" class="btn btn-primary-gradient">
+                        <ion-icon name="key-outline"></ion-icon> Update Password
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 @endif

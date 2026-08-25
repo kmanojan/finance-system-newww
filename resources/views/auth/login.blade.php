@@ -286,6 +286,46 @@
                     .catch(err => console.log('PWA Service Worker registration failed:', err));
             });
         }
+
+        // PWA Install Prompt Handling
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            const installBanner = document.getElementById('pwaInstallBanner');
+            if (installBanner) {
+                installBanner.style.display = 'flex';
+            }
+        });
+
+        window.installPWA = function() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('User accepted the PWA install prompt');
+                    }
+                    deferredPrompt = null;
+                    const installBanner = document.getElementById('pwaInstallBanner');
+                    if (installBanner) installBanner.style.display = 'none';
+                });
+            }
+        };
     </script>
+
+    <!-- PWA Install Banner -->
+    <div id="pwaInstallBanner" style="display:none; position:fixed; bottom:20px; left:50%; transform:translateX(-50%); width:calc(100% - 32px); max-width:440px; background:var(--bg-card); border:1px solid var(--primary); border-radius:14px; padding:0.85rem 1rem; box-shadow:0 12px 36px rgba(0,0,0,0.35); z-index:99999; justify-content:space-between; align-items:center; gap:0.75rem;">
+        <div style="display:flex; align-items:center; gap:0.75rem;">
+            <img src="/icons/icon-192x192.png" alt="App Logo" style="width:40px; height:40px; border-radius:10px; flex-shrink:0;">
+            <div>
+                <strong style="font-size:0.9rem; color:var(--text-heading); display:block; line-height:1.2;">Install Finance App</strong>
+                <span style="font-size:0.75rem; color:var(--text-muted);">Standalone Mobile Experience</span>
+            </div>
+        </div>
+        <div style="display:flex; gap:0.4rem; align-items:center;">
+            <button type="button" onclick="document.getElementById('pwaInstallBanner').style.display='none'" style="background:transparent; border:none; color:var(--text-muted); font-size:1.2rem; cursor:pointer; padding:0.2rem 0.4rem;">&times;</button>
+            <button type="button" onclick="installPWA()" class="btn btn-primary" style="padding:0.4rem 0.85rem; font-size:0.82rem; font-weight:700; border-radius:8px;">Install</button>
+        </div>
+    </div>
 </body>
 </html>

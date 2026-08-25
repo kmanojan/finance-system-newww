@@ -171,4 +171,15 @@
         </tbody>
     </table>
 </div>
+
+@if(!$settlements->isEmpty())
+<div style="margin-top:1.5rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+    <div style="font-size:0.85rem; color:var(--text-muted);">
+        Showing {{ $settlements->firstItem() ?? 0 }} to {{ $settlements->lastItem() ?? 0 }} of {{ $settlements->total() }} settlement records
+    </div>
+    <div>
+        {{ $settlements->links() }}
+    </div>
+</div>
+@endif
 @endsection

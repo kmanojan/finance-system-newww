@@ -598,6 +598,17 @@
     />
     @endforelse
 </div>
+
+@if(!$loans->isEmpty())
+<div style="margin-top:1.5rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+    <div style="font-size:0.85rem; color:var(--text-muted);">
+        Showing {{ $loans->firstItem() ?? 0 }} to {{ $loans->lastItem() ?? 0 }} of {{ $loans->total() }} loans
+    </div>
+    <div>
+        {{ $loans->links() }}
+    </div>
+</div>
+@endif
 @endsection
 
 @section('modals')

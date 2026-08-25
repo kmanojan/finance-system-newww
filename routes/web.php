@@ -20,6 +20,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ShareLinkController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ProjectDocumentController;
+use App\Http\Controllers\UserController;
 
 // Authentication Routes
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login')->middleware('guest');
@@ -29,6 +30,27 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 // Public Share Links (No Auth Required)
 Route::get('/share/{token}', [ShareLinkController::class, 'showPublic']);
 Route::post('/share/{token}/password', [ShareLinkController::class, 'verifyPassword']);
+
+// PWA Manifest and Service Worker routes with explicit MIME and Service-Worker headers
+Route::get('/manifest.json', function () {
+    $path = public_path('manifest.json');
+    if (!file_exists($path)) abort(404);
+    return response()->file($path, [
+        'Content-Type' => 'application/manifest+json; charset=utf-8',
+        'Access-Control-Allow-Origin' => '*',
+        'Cache-Control' => 'no-cache, no-store, must-revalidate',
+    ]);
+});
+
+Route::get('/sw.js', function () {
+    $path = public_path('sw.js');
+    if (!file_exists($path)) abort(404);
+    return response()->file($path, [
+        'Content-Type' => 'application/javascript; charset=utf-8',
+        'Service-Worker-Allowed' => '/',
+        'Cache-Control' => 'no-cache, no-store, must-revalidate',
+    ]);
+});
 
 // Dynamic Upload File Serving (Vercel Serverless Compatible)
 Route::get('/uploads/{path}', function ($path) {
@@ -112,6 +134,12 @@ Route::middleware(['auth'])->group(function () {
 
         Route::get('/accounts', [\App\Http\Controllers\AccountController::class, 'index'])->name('masters.accounts.index');
         Route::post('/accounts', [\App\Http\Controllers\AccountController::class, 'store'])->name('masters.accounts.store');
+
+        Route::get('/users', [UserController::class, 'index'])->name('masters.users.index');
+        Route::post('/users', [UserController::class, 'store'])->name('masters.users.store');
+        Route::put('/users/{id}', [UserController::class, 'update'])->name('masters.users.update');
+        Route::delete('/users/{id}', [UserController::class, 'destroy'])->name('masters.users.destroy');
+        Route::patch('/users/{id}/toggle-status', [UserController::class, 'toggleStatus'])->name('masters.users.toggle_status');
     });
 
     // Financial Years & Fiscal Period Locking
@@ -152,6 +180,8 @@ Route::middleware(['auth'])->group(function () {
 
     // Profile
     Route::get('/profile', [ProfileController::class, 'index']);
+    Route::put('/profile/general', [ProfileController::class, 'updateGeneral'])->name('profile.general.update');
+    Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password.update');
     Route::post('/profile/config', [ProfileController::class, 'updateConfig']);
 
     // Share Links (Admin)
