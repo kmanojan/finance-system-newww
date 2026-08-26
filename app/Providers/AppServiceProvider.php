@@ -95,7 +95,10 @@ class AppServiceProvider extends ServiceProvider
             });
 
             // Auto-run pending migrations in production / serverless environment if new columns are missing
-            if (Schema::hasTable('loans') && !Schema::hasColumn('loans', 'maturity_date')) {
+            if (
+                (Schema::hasTable('loans') && !Schema::hasColumn('loans', 'maturity_date')) ||
+                (Schema::hasTable('users') && !Schema::hasColumn('users', 'deleted_at'))
+            ) {
                 \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
             }
         } catch (\Throwable $e) {
