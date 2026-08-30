@@ -19,7 +19,9 @@ class AuthController extends Controller
             'password' => ['required'],
         ]);
 
-        if (Auth::attempt($credentials)) {
+        $remember = $request->boolean('remember', true);
+
+        if (Auth::attempt($credentials, $remember)) {
             $user = Auth::user();
             if (!$user->is_active) {
                 Auth::logout();

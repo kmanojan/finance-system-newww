@@ -243,8 +243,8 @@
 
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; font-size: 0.85rem;">
                 <label style="display: flex; align-items: center; gap: 0.5rem; color: var(--text-muted); cursor: pointer;">
-                    <input type="checkbox" name="remember" style="accent-color: var(--primary); width: 16px; height: 16px; border-radius: 4px;">
-                    Remember me
+                    <input type="checkbox" name="remember" value="1" checked style="accent-color: var(--primary); width: 16px; height: 16px; border-radius: 4px;">
+                    Keep me signed in (Remember me)
                 </label>
             </div>
 
