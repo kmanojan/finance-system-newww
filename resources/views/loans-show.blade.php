@@ -741,8 +741,8 @@
 
                 <div class="form-row" style="margin-top:1.25rem;">
                     <div class="form-col" id="edit_field_due_day">
-                        <label class="form-label">Due Day of Month</label>
-                        <input type="number" name="due_day" id="edit_due_day" class="form-control" value="{{ $loan->due_day ?: 5 }}" min="1" max="31">
+                        <label class="form-label">Due Day of Month (Optional)</label>
+                        <input type="number" name="due_day" id="edit_due_day" class="form-control" value="{{ $loan->due_day }}" placeholder="Dynamic (Loan Claim Date)" min="1" max="31">
                     </div>
                     <div class="form-col">
                         <label class="form-label">Guarantor (Optional)</label>

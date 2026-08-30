@@ -288,27 +288,37 @@
         }
 
         // PWA Install Prompt Handling
-        let deferredPrompt;
+        window.deferredPrompt = null;
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
-            deferredPrompt = e;
+            window.deferredPrompt = e;
+            
+            const isDismissed = localStorage.getItem('pwa_install_dismissed') === 'true';
             const installBanner = document.getElementById('pwaInstallBanner');
-            if (installBanner) {
+            if (installBanner && !isDismissed) {
                 installBanner.style.display = 'flex';
             }
         });
 
+        window.dismissPWAInstall = function() {
+            localStorage.setItem('pwa_install_dismissed', 'true');
+            const installBanner = document.getElementById('pwaInstallBanner');
+            if (installBanner) installBanner.style.display = 'none';
+        };
+
         window.installPWA = function() {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                deferredPrompt.userChoice.then((choiceResult) => {
+            if (window.deferredPrompt) {
+                window.deferredPrompt.prompt();
+                window.deferredPrompt.userChoice.then((choiceResult) => {
                     if (choiceResult.outcome === 'accepted') {
-                        console.log('User accepted the PWA install prompt');
+                        localStorage.setItem('pwa_install_dismissed', 'true');
                     }
-                    deferredPrompt = null;
+                    window.deferredPrompt = null;
                     const installBanner = document.getElementById('pwaInstallBanner');
                     if (installBanner) installBanner.style.display = 'none';
                 });
+            } else {
+                alert('To install on iOS: Tap Share > "Add to Home Screen". On Chrome/Desktop: Click install in browser address bar.');
             }
         };
     </script>
@@ -323,7 +333,7 @@
             </div>
         </div>
         <div style="display:flex; gap:0.4rem; align-items:center;">
-            <button type="button" onclick="document.getElementById('pwaInstallBanner').style.display='none'" style="background:transparent; border:none; color:var(--text-muted); font-size:1.2rem; cursor:pointer; padding:0.2rem 0.4rem;">&times;</button>
+            <button type="button" onclick="dismissPWAInstall()" style="background:transparent; border:none; color:var(--text-muted); font-size:1.2rem; cursor:pointer; padding:0.2rem 0.4rem;" title="Don't show again">&times;</button>
             <button type="button" onclick="installPWA()" class="btn btn-primary" style="padding:0.4rem 0.85rem; font-size:0.82rem; font-weight:700; border-radius:8px;">Install</button>
         </div>
     </div>

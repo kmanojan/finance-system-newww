@@ -904,7 +904,8 @@ ion-icon {
         align-items: stretch;
     }
 
-    .sidebar-primary.open {
+    .sidebar-primary.open,
+    .sidebar-primary.active {
         transform: translateX(0);
         box-shadow: 10px 0 35px rgba(0, 0, 0, 0.4);
     }

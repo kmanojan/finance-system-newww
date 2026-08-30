@@ -953,8 +953,8 @@
 
                 <div class="form-row" style="margin-top:1.25rem;">
                     <div class="form-col" id="field_due_day">
-                        <label class="form-label">Due Day of Month</label>
-                        <input type="number" name="due_day" class="form-control" value="5" min="1" max="31">
+                        <label class="form-label">Due Day of Month (Optional)</label>
+                        <input type="number" name="due_day" id="create_due_day" class="form-control" placeholder="Dynamic (e.g. Day from Claim Date)" min="1" max="31">
                     </div>
                     <div class="form-col">
                         <label class="form-label">Guarantor (Optional)</label>
@@ -1227,7 +1227,8 @@ function openEditLoanModal(loan) {
     document.getElementById('edit_rate_basis').value = loan.rate_basis || 'flat';
     setAmountInputValue('edit_total_interest', loan.total_interest);
     document.getElementById('edit_frequency').value = loan.frequency || 'monthly';
-    document.getElementById('edit_due_day').value = loan.due_day || 5;
+    document.getElementById('edit_due_day').value = loan.due_day || (loan.claimed_date ? new Date(loan.claimed_date).getDate() : '');
+    document.getElementById('edit_due_day').placeholder = 'Dynamic (Loan Claim Date)';
     document.getElementById('edit_guarantor').value = loan.guarantor || '';
     document.getElementById('edit_collateral').value = loan.collateral || '';
 

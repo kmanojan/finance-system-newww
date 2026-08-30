@@ -6,25 +6,34 @@ document.addEventListener('DOMContentLoaded', () => {
     const sidebarBackdrop = document.getElementById('sidebarBackdrop');
 
     function closePrimarySidebar() {
-        if (sidebarPrimary) sidebarPrimary.classList.remove('open');
+        if (sidebarPrimary) {
+            sidebarPrimary.classList.remove('open');
+            sidebarPrimary.classList.remove('active');
+        }
         if (mobileMenuBtn) mobileMenuBtn.classList.remove('active');
+        if (mobileMoreNavBtn) mobileMoreNavBtn.classList.remove('active');
         if (sidebarBackdrop) sidebarBackdrop.classList.remove('active');
     }
 
-    // Toggle Primary Sidebar
-    if (mobileMenuBtn && sidebarPrimary) {
-        mobileMenuBtn.addEventListener('click', (e) => {
+    const mobileMoreNavBtn = document.getElementById('mobileMoreNavBtn');
+
+    // Toggle Primary Sidebar from Hamburger or More Button
+    const toggleButtons = [mobileMenuBtn, mobileMoreNavBtn].filter(Boolean);
+    toggleButtons.forEach(btn => {
+        btn.addEventListener('click', (e) => {
             e.stopPropagation();
-            const isOpen = sidebarPrimary.classList.contains('open');
+            if (!sidebarPrimary) return;
+            const isOpen = sidebarPrimary.classList.contains('open') || sidebarPrimary.classList.contains('active');
             if (isOpen) {
                 closePrimarySidebar();
             } else {
                 sidebarPrimary.classList.add('open');
-                mobileMenuBtn.classList.add('active');
+                sidebarPrimary.classList.add('active');
+                btn.classList.add('active');
                 if (sidebarBackdrop) sidebarBackdrop.classList.add('active');
             }
         });
-    }
+    });
 
     // Click backdrop to close
     if (sidebarBackdrop) {

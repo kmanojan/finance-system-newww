@@ -6,6 +6,7 @@
     <h2 class="sidebar-title">Settings</h2>
     <nav class="nav-links">
         <a href="/profile?tab=general" class="nav-link {{ $tab === 'general' ? 'active' : '' }}">General Info</a>
+        <a href="/profile?tab=app" class="nav-link {{ $tab === 'app' ? 'active' : '' }}">Install App</a>
         <a href="/profile?tab=config" class="nav-link {{ $tab === 'config' ? 'active' : '' }}">Configuration</a>
     </nav>
 </aside>
@@ -94,6 +95,12 @@
                 <span class="font-medium" style="color: var(--text-heading);">{{ $user->created_at ? $user->created_at->format('M d, Y') : '-' }}</span>
             </div>
         </div>
+
+        <div style="margin-top: 1.5rem; border-top: 1px solid var(--border-light); padding-top: 1.25rem;">
+            <a href="/profile?tab=app" class="btn btn-outline" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem; font-size: 0.85rem;">
+                <ion-icon name="phone-portrait-outline"></ion-icon> App Installation
+            </a>
+        </div>
     </div>
 
     <!-- Edit Forms Container -->
@@ -181,6 +188,93 @@
         </div>
     </div>
 </div>
+@endif
+
+@if($tab === 'app')
+<div style="display: flex; flex-direction: column; gap: 1.5rem; max-width: 800px;">
+    <div class="card" style="padding: 2rem;">
+        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-light); padding-bottom: 1.25rem;">
+            <div style="width: 52px; height: 52px; border-radius: 14px; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: white; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);">
+                <ion-icon name="phone-portrait-outline"></ion-icon>
+            </div>
+            <div>
+                <h2 class="section-title" style="margin: 0; font-size: 1.25rem;">Install Finance App</h2>
+                <p class="text-muted" style="font-size: 0.85rem; margin: 0.2rem 0 0;">Add the Finance Management System directly to your device home screen for quick offline-ready standalone access.</p>
+            </div>
+        </div>
+
+        <div style="background: var(--bg-page); border: 1px solid var(--border-light); border-radius: 12px; padding: 1.25rem; margin-bottom: 1.75rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <img src="/icons/icon-192x192.png" alt="App Icon" style="width: 48px; height: 48px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                <div>
+                    <strong style="color: var(--text-heading); font-size: 1rem; display: block;">Finance Management App</strong>
+                    <span id="appInstallStatusText" class="text-muted" style="font-size: 0.8rem;">Ready for standalone installation</span>
+                </div>
+            </div>
+            <div>
+                <button type="button" onclick="installPWA()" id="btnInstallPWAProfile" class="btn btn-primary-gradient" style="padding: 0.65rem 1.25rem; font-size: 0.9rem; font-weight: 600; display: flex; align-items: center; gap: 0.4rem;">
+                    <ion-icon name="download-outline" style="font-size: 1.1rem;"></ion-icon> Install App Now
+                </button>
+            </div>
+        </div>
+
+        <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-heading); margin-bottom: 1rem;">
+            Installation Instructions by Device
+        </h3>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">
+            <!-- iOS Safari -->
+            <div style="background: var(--bg-page); border: 1px solid var(--border-light); border-radius: 12px; padding: 1.25rem;">
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
+                    <ion-icon name="logo-apple" style="font-size: 1.4rem; color: var(--text-heading);"></ion-icon>
+                    <strong style="color: var(--text-heading); font-size: 0.95rem;">iOS (iPhone / iPad)</strong>
+                </div>
+                <ol style="margin: 0; padding-left: 1.2rem; font-size: 0.85rem; color: var(--text-muted); line-height: 1.6;">
+                    <li>Open this site in <strong>Safari</strong>.</li>
+                    <li>Tap the <strong>Share</strong> button (bottom bar).</li>
+                    <li>Scroll down and tap <strong>"Add to Home Screen"</strong>.</li>
+                    <li>Tap <strong>Add</strong> in the top right.</li>
+                </ol>
+            </div>
+
+            <!-- Android & Desktop -->
+            <div style="background: var(--bg-page); border: 1px solid var(--border-light); border-radius: 12px; padding: 1.25rem;">
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
+                    <ion-icon name="logo-android" style="font-size: 1.4rem; color: #10b981;"></ion-icon>
+                    <strong style="color: var(--text-heading); font-size: 0.95rem;">Android & Desktop Chrome</strong>
+                </div>
+                <ol style="margin: 0; padding-left: 1.2rem; font-size: 0.85rem; color: var(--text-muted); line-height: 1.6;">
+                    <li>Click the <strong>"Install App Now"</strong> button above.</li>
+                    <li>Or click the <strong>Install</strong> icon in the browser address bar.</li>
+                    <li>Confirm by clicking <strong>Install</strong> on the prompt.</li>
+                </ol>
+            </div>
+        </div>
+
+        <div style="margin-top: 1.5rem; text-align: right;">
+            <button type="button" onclick="localStorage.removeItem('pwa_install_dismissed'); showToast('Popup banner reset for this browser.', 'info');" class="btn btn-outline" style="font-size: 0.8rem; color: var(--text-muted);">
+                Reset dismissed popup banner
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+        const statusEl = document.getElementById('appInstallStatusText');
+        const btnEl = document.getElementById('btnInstallPWAProfile');
+        if (isStandalone) {
+            if (statusEl) statusEl.innerHTML = '<span style="color:#10b981; font-weight:600;">✓ App is installed & running in Standalone Mode</span>';
+            if (btnEl) {
+                btnEl.textContent = 'Installed';
+                btnEl.disabled = true;
+                btnEl.classList.remove('btn-primary-gradient');
+                btnEl.classList.add('btn-outline');
+            }
+        }
+    });
+</script>
 @endif
 
 @if($tab === 'config')

@@ -184,6 +184,9 @@
                 <button id="themeToggleBtn" style="background:none; border:none; color:var(--text-light); font-size:1.4rem; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:color 0.2s;" title="Toggle Theme">
                     <ion-icon name="moon-outline"></ion-icon>
                 </button>
+                <a href="/profile?tab=app" style="text-decoration: none; color:var(--text-light); font-size:1.3rem; display:flex; align-items:center; justify-content:center; transition:color 0.2s;" title="Install App (PWA)" onmouseover="this.style.color='var(--primary)'" onmouseout="this.style.color='var(--text-light)'">
+                    <ion-icon name="phone-portrait-outline"></ion-icon>
+                </a>
                 <a href="/profile" style="text-decoration: none;">
                     <div class="user-avatar" title="{{ Auth::user()->name ?? 'Profile & Settings' }}">
                         <span>{{ Auth::check() ? strtoupper(substr(Auth::user()->name, 0, 1)) : 'A' }}</span>
@@ -419,19 +422,6 @@
         const mobileThemeBtn = document.getElementById('mobileThemeToggleBtn');
         if (mobileThemeBtn) mobileThemeBtn.addEventListener('click', toggleTheme);
 
-        // Mobile More Menu trigger
-        const moreNavBtn = document.getElementById('mobileMoreNavBtn');
-        if (moreNavBtn) {
-            moreNavBtn.addEventListener('click', function() {
-                const primarySidebar = document.getElementById('sidebarPrimary');
-                const backdrop = document.getElementById('sidebarBackdrop');
-                if (primarySidebar && backdrop) {
-                    primarySidebar.classList.toggle('active');
-                    backdrop.classList.toggle('active');
-                }
-            });
-        }
-
         // Service Worker Registration for PWA
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
@@ -442,27 +432,53 @@
         }
 
         // PWA Install Prompt Handling
-        let deferredPrompt;
+        window.deferredPrompt = null;
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
-            deferredPrompt = e;
+            window.deferredPrompt = e;
+            
+            // Only auto-show popup if user has not dismissed it in this browser
+            const isDismissed = localStorage.getItem('pwa_install_dismissed') === 'true';
             const installBanner = document.getElementById('pwaInstallBanner');
-            if (installBanner) {
+            if (installBanner && !isDismissed) {
                 installBanner.style.display = 'flex';
+            }
+
+            const profileInstallBtn = document.getElementById('btnInstallPWAProfile');
+            if (profileInstallBtn) {
+                profileInstallBtn.disabled = false;
             }
         });
 
+        window.dismissPWAInstall = function() {
+            localStorage.setItem('pwa_install_dismissed', 'true');
+            const installBanner = document.getElementById('pwaInstallBanner');
+            if (installBanner) installBanner.style.display = 'none';
+        };
+
         window.installPWA = function() {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                deferredPrompt.userChoice.then((choiceResult) => {
+            if (window.deferredPrompt) {
+                window.deferredPrompt.prompt();
+                window.deferredPrompt.userChoice.then((choiceResult) => {
                     if (choiceResult.outcome === 'accepted') {
-                        console.log('User accepted the PWA install prompt');
+                        localStorage.setItem('pwa_install_dismissed', 'true');
                     }
-                    deferredPrompt = null;
+                    window.deferredPrompt = null;
                     const installBanner = document.getElementById('pwaInstallBanner');
                     if (installBanner) installBanner.style.display = 'none';
                 });
+            } else if (window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches) {
+                if (typeof showToast === 'function') {
+                    showToast('App is already installed and running in standalone mode!', 'info');
+                } else {
+                    alert('App is already installed!');
+                }
+            } else {
+                if (typeof showToast === 'function') {
+                    showToast('To install: Tap the Share button in Safari, then select "Add to Home Screen".', 'info');
+                } else {
+                    alert('To install on iOS: Tap Share > "Add to Home Screen". On desktop: Click the install icon in browser URL bar.');
+                }
             }
         };
     </script>
@@ -477,7 +493,7 @@
             </div>
         </div>
         <div style="display:flex; gap:0.4rem; align-items:center;">
-            <button type="button" onclick="document.getElementById('pwaInstallBanner').style.display='none'" style="background:transparent; border:none; color:var(--text-muted); font-size:1.2rem; cursor:pointer; padding:0.2rem 0.4rem;">&times;</button>
+            <button type="button" onclick="dismissPWAInstall()" style="background:transparent; border:none; color:var(--text-muted); font-size:1.2rem; cursor:pointer; padding:0.2rem 0.4rem;" title="Don't show again">&times;</button>
             <button type="button" onclick="installPWA()" class="btn btn-primary" style="padding:0.4rem 0.85rem; font-size:0.82rem; font-weight:700; border-radius:8px;">Install</button>
         </div>
     </div>
