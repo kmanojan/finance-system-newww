@@ -138,6 +138,27 @@
         .form-control-icon::placeholder {
             color: var(--text-light);
         }
+        .password-toggle-btn {
+            position: absolute;
+            right: 1rem;
+            background: none;
+            border: none;
+            color: var(--text-light);
+            font-size: 1.25rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.2rem;
+            transition: color 0.2s ease, transform 0.1s ease;
+            z-index: 2;
+        }
+        .password-toggle-btn:hover {
+            color: var(--text-heading);
+        }
+        .password-toggle-btn:active {
+            transform: scale(0.92);
+        }
         .error-message {
             color: var(--danger);
             font-size: 0.8rem;
@@ -234,7 +255,10 @@
                 <label class="form-label" for="password">Password</label>
                 <div class="input-group">
                     <ion-icon name="lock-closed-outline" class="input-icon"></ion-icon>
-                    <input id="password" type="password" name="password" class="form-control-icon" value="password" required placeholder="••••••••">
+                    <input id="password" type="password" name="password" class="form-control-icon" value="password" required placeholder="••••••••" style="padding-right: 2.75rem;">
+                    <button type="button" class="password-toggle-btn" id="togglePasswordBtn" title="Show password" aria-label="Toggle password visibility">
+                        <ion-icon name="eye-outline" id="togglePasswordIcon"></ion-icon>
+                    </button>
                 </div>
                 @error('password')
                     <span class="error-message">{{ $message }}</span>
@@ -277,6 +301,21 @@
             localStorage.setItem('theme', newTheme);
             updateThemeIcon(newTheme);
         });
+
+        // Show / Hide Password Toggle
+        const togglePasswordBtn = document.getElementById('togglePasswordBtn');
+        const passwordInput = document.getElementById('password');
+        const togglePasswordIcon = document.getElementById('togglePasswordIcon');
+
+        if (togglePasswordBtn && passwordInput && togglePasswordIcon) {
+            togglePasswordBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const isPassword = passwordInput.getAttribute('type') === 'password';
+                passwordInput.setAttribute('type', isPassword ? 'text' : 'password');
+                togglePasswordIcon.setAttribute('name', isPassword ? 'eye-off-outline' : 'eye-outline');
+                togglePasswordBtn.setAttribute('title', isPassword ? 'Hide password' : 'Show password');
+            });
+        }
 
         // Service Worker Registration for PWA
         if ('serviceWorker' in navigator) {
