@@ -1,58 +1,102 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# 💼 Apptimus Finance Management System
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+A robust, multi-entity financial management system designed for **Apptimus** and its sub-entities. Built with **Laravel 12**, **PostgreSQL / Supabase**, and modern **Blade + Alpine.js** UI with progressive web app (PWA) capabilities.
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## 🚀 Key Modules & Capabilities
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- **📊 Executive Dashboard**: Real-time KPI summary, revenue vs expense trends, cash balance breakdown, and milestone alerts.
+- **💼 Projects & Milestone Billing**: Track deliverables, client payment milestones, budget limits, and profitability.
+- **📄 Invoicing & Payments**: Client invoices, PDF generation, partial payments, and overdue tracking.
+- **💳 Double-Entry Ledger**: Unified transactions (Income, Expense, Petty Cash, Transfers) with tags and department allocation.
+- **🏦 Third-Party Loans (Borrowing)**:
+  - Supports **Fixed Amount**, **Percentage Rate**, **Equal Installments**, and **Upfront Interest Deduction**.
+  - Automatically posts single net income transactions on disbursement.
+  - Principal maturity due dates (`maturity_date`) with automatic lead-time reminders.
+  - Per-schedule date and amount editing with thousand-separator inputs.
+- **📊 Budgets & Cost Allocation**: Period-based allocations with real-time actual vs budget tracking.
+- **🔔 Unified Reminders**: Centralized reminder engine for loan interest, milestones, invoices, and cheques.
+- **📈 Comprehensive Reports**: Profit & Loss, Balance Sheet, Party Ledger statements, and Tax summaries.
+- **📱 PWA & Mobile Ergonomics**: Native-like bottom navigation bar, safe-area support, dark/light theme, and offline service worker.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+---
 
-## Learning Laravel
+## 🛠️ Tech Stack & Architecture
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+- **Backend**: Laravel 12.x (PHP 8.2+)
+- **Database**: PostgreSQL (Supabase) / MySQL / SQLite
+- **Frontend**: Laravel Blade, Vanilla CSS Tokens, Alpine.js, Chart.js, Ionicons
+- **Deployment**: Vercel Serverless & Docker support
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+---
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+## ⚙️ Quick Start & Setup
 
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
-
+### 1. Clone & Install Dependencies
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+git clone <repository-url>
+cd "Finance System"
+composer install
+npm install && npm run build
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+### 2. Environment Configuration
+Copy the `.env.example` file and configure your database credentials (e.g. Supabase PostgreSQL):
+```bash
+cp .env.example .env
+php artisan key:generate
+```
 
-## Contributing
+### 3. Database Migration
+Run database migrations and seeders:
+```bash
+php artisan migrate
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+> **For Supabase / Vercel Production**:
+> You can also trigger database migrations via the web route:
+> `https://your-domain.vercel.app/migrate`
 
-## Code of Conduct
+### 4. Run Development Server
+```bash
+php artisan serve
+```
+Visit `http://localhost:8000` in your browser.
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+---
 
-## Security Vulnerabilities
+## 🎨 UI/UX & Design System Highlights
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+- **Theme Adaptive Badges**: Semantic alpha badges (`.badge-success`, `.badge-danger`, `.badge-warning`, `.badge-info`, `.badge-primary`) looking clean in both Light and Dark modes.
+- **Tabular Numerals**: Numeric tabular formatting (`.tabular-nums`, `.amount-cell`) for aligned currency numbers.
+- **Micro-interactions**:
+  - Floating Toast notification system (`window.showToast()`).
+  - Automated double-submission protection with button loading spinners.
+  - Themed `<x-confirm-modal>` replacing browser `confirm()` popups.
+  - `<x-empty-state>` cards for empty tables.
+  - `<x-amount-input>` live thousand-separator formatting.
 
-## License
+---
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## 📚 Detailed Documentation
+
+Comprehensive specifications for each module are located in the [`doc/`](doc/00-README.md) directory:
+
+- [`01-cross-cutting-requirements.md`](doc/01-cross-cutting-requirements.md) — Cross-cutting features
+- [`02-master-data.md`](doc/02-master-data.md) — Categories, Departments, Bank Accounts
+- [`03-daily-income-expense.md`](doc/03-daily-income-expense.md) — Routine Transactions & Petty Cash
+- [`04-project-module.md`](doc/04-project-module.md) — Projects, Milestones & Timesheets
+- [`05-all-invoices-page.md`](doc/05-all-invoices-page.md) — Invoices & Receivables
+- [`06-reminders-page.md`](doc/06-reminders-page.md) — Reminders Engine
+- [`07-budget-module.md`](doc/07-budget-module.md) — Budgets & Allocation
+- [`08-loans-third-party.md`](doc/08-loans-third-party.md) — Loans & Upfront Interest
+- [`09-client-partner-sharing.md`](doc/09-client-partner-sharing.md) — Secure Share Links
+- [`10-reports-module.md`](doc/10-reports-module.md) — Financial Reports
+- [`28-pwa-session-security.md`](doc/28-pwa-session-security.md) — PWA & Session Architecture
+- [`29-ui-ux-design-system.md`](doc/29-ui-ux-design-system.md) — UI/UX Tokens & Blade Components
+
+---
+
+## 📄 License
+Proprietary software for Apptimus. All rights reserved.
