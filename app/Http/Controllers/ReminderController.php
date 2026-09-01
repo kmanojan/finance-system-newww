@@ -79,6 +79,7 @@ class ReminderController extends Controller
                     'loans.lender_name', 
                     'loans.currency',
                     'loans.principal_amount',
+                    'loans.maturity_date',
                     'loans.status as loan_status'
                 );
 
@@ -90,21 +91,15 @@ class ReminderController extends Controller
 
             $schedules = $schedQuery->get();
 
-            // Find maximum schedule ID for each loan to identify final maturity period
-            $maxScheduleIds = DB::table('loan_interest_schedule')
-                ->select('loan_id', DB::raw('MAX(id) as max_id'))
-                ->groupBy('loan_id')
-                ->pluck('max_id', 'loan_id')
-                ->toArray();
-
             foreach ($schedules as $s) {
                 $dueDateFormatted = date('Y-m-d', strtotime($s->due_date));
-                $isMaturitySchedule = isset($maxScheduleIds[$s->loan_id]) && ($maxScheduleIds[$s->loan_id] == $s->id);
-
-                $interestDue = max(0, $s->interest_amount - ($s->paid_amount ?? 0));
+                
+                // Only consider this schedule a maturity schedule IF the loan explicitly has a maturity_date set AND its due_date matches the maturity_date
+                $isMaturitySchedule = false;
                 $principalMaturityDue = 0;
 
-                if ($isMaturitySchedule) {
+                if (!empty($s->maturity_date) && date('Y-m-d', strtotime($s->maturity_date)) === $dueDateFormatted) {
+                    $isMaturitySchedule = true;
                     $repayments = DB::table('loan_principal_records')
                         ->where('loan_id', $s->loan_id)
                         ->where('record_type', 'repayment')
@@ -118,6 +113,7 @@ class ReminderController extends Controller
                     $principalMaturityDue = $outstandingPrincipal;
                 }
 
+                $interestDue = max(0, $s->interest_amount - ($s->paid_amount ?? 0));
                 $totalAmountDue = $interestDue + $principalMaturityDue;
                 $title = ($isMaturitySchedule && $principalMaturityDue > 0)
                     ? "Loan Maturity & Interest: {$s->lender_name}"
@@ -137,14 +133,21 @@ class ReminderController extends Controller
 
             // Also check active loans for Principal Maturity Due Date if not already covered by pending schedules
             if (Schema::hasTable('loans')) {
-                $activeLoans = DB::table('loans')->where('status', 'active')->whereNotNull('maturity_date')->get();
-                foreach ($activeLoans as $al) {
-                    $hasPendingSched = DB::table('loan_interest_schedule')
-                        ->where('loan_id', $al->id)
-                        ->whereIn('status', ['pending', 'partially_paid', 'overdue'])
-                        ->exists();
+                $activeLoans = DB::table('loans')
+                    ->where('status', 'active')
+                    ->whereNotNull('maturity_date')
+                    ->where('maturity_date', '!=', '')
+                    ->get();
 
-                    if (!$hasPendingSched) {
+                foreach ($activeLoans as $al) {
+                    $matDateFormatted = date('Y-m-d', strtotime($al->maturity_date));
+                    
+                    // Check if this loan's maturity date was already attached to an interest schedule reminder on that date
+                    $alreadyCovered = $allReminders->contains(function ($r) use ($al, $matDateFormatted) {
+                        return $r->type === 'loan' && $r->link === "/loans/{$al->id}" && $r->due_date === $matDateFormatted && str_contains($r->title, 'Maturity');
+                    });
+
+                    if (!$alreadyCovered) {
                         $repayments = DB::table('loan_principal_records')
                             ->where('loan_id', $al->id)
                             ->where('record_type', 'repayment')
@@ -160,7 +163,7 @@ class ReminderController extends Controller
                                 'id' => 'loan_mat_' . $al->id,
                                 'title' => "Loan Principal Repayment: {$al->lender_name}",
                                 'type' => 'loan',
-                                'due_date' => date('Y-m-d', strtotime($al->maturity_date)),
+                                'due_date' => $matDateFormatted,
                                 'amount_formatted' => $al->currency . ' ' . number_format($outstandingPrincipal, 2),
                                 'status' => 'pending',
                                 'is_system' => true,
@@ -226,8 +229,12 @@ class ReminderController extends Controller
             }
         }
 
-        // 5. Custom Reminders
-        $custQuery = DB::table('reminders');
+        // 5. Custom Reminders (excluding auto-synced system loan records)
+        $custQuery = DB::table('reminders')->where(function($q) {
+            $q->whereNull('reference_type')
+              ->orWhere('reference_type', '!=', 'Loan')
+              ->orWhereNull('reference_id');
+        });
         if ($statusFilter && $statusFilter !== 'all') {
             $custQuery->where('status', $statusFilter);
         }
