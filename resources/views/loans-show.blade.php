@@ -57,6 +57,7 @@
             </a>
         </div>
         <div style="display:flex; align-items:center; gap:1rem; flex-wrap:wrap;">
+            <span class="badge" style="background:rgba(139,92,246,0.15); color:var(--primary); font-size:1rem; font-weight:800; padding:0.35rem 0.8rem; border-radius:6px;">{{ $loan->loan_code ?: ('LN-' . str_pad($loan->id, 4, '0', STR_PAD_LEFT)) }}</span>
             <h1 style="margin:0; font-size:1.75rem; font-weight:800; color:var(--text-heading);">Loan: {{ $loan->lender_name }}</h1>
             @if($loan->status === 'active')
                 <span class="badge" style="background:var(--primary-light); color:var(--primary); font-weight:600; padding:0.35rem 0.8rem; font-size:0.85rem;">Active Loan</span>
@@ -606,6 +607,12 @@
             @csrf
             @method('PUT')
             <div class="modal-body">
+                <div class="form-row" style="margin-bottom:1.25rem;">
+                    <div class="form-col">
+                        <label class="form-label" style="font-weight:700;">Loan Reference Code</label>
+                        <input type="text" name="loan_code" id="edit_loan_code" class="form-control" value="{{ $loan->loan_code ?: ('LN-' . str_pad($loan->id, 4, '0', STR_PAD_LEFT)) }}" placeholder="E.g. LN-0016">
+                    </div>
+                </div>
                 <div class="form-row">
                     <div class="form-col">
                         <label class="form-label" style="font-weight:700;">Select Party / Lender</label>
@@ -646,7 +653,7 @@
 
                 <div class="form-group" style="margin-top:1.25rem;">
                     <label class="form-label" style="font-weight:700;">Purpose / Description & Terms</label>
-                    <textarea name="purpose" id="show_edit_purpose" class="form-control" rows="3" placeholder="E.g. Capital investment / Equipment purchase / terms...">{{ $loan->purpose }}</textarea>
+                    <x-rich-editor name="purpose" id="show_edit_purpose" :value="$loan->purpose" placeholder="E.g. Capital investment / terms (type /loan or /employee)..." />
                 </div>
 
                 <div class="form-row" style="margin-top:1.25rem;">
@@ -1039,20 +1046,5 @@ function toggleEditInterestFields(method) {
     document.getElementById('edit_field_due_day').style.display = hasFrequency ? 'block' : 'none';
     calculateNetDisbursed('edit');
 }
-
-let showEditPurposeEditor = null;
-document.addEventListener('DOMContentLoaded', function() {
-    const editEl = document.querySelector('#show_edit_purpose');
-    if (editEl && typeof ClassicEditor !== 'undefined') {
-        ClassicEditor
-            .create(editEl, {
-                toolbar: ['heading', '|', 'bold', 'italic', 'underline', 'bulletedList', 'numberedList', 'blockQuote', '|', 'undo', 'redo']
-            })
-            .then(editor => {
-                showEditPurposeEditor = editor;
-            })
-            .catch(err => console.error(err));
-    }
-});
 </script>
 @endsection

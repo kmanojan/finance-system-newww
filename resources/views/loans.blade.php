@@ -380,6 +380,9 @@
                 </div>
                 <div>
                     <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+                        <span class="badge" style="background:rgba(139,92,246,0.15); color:var(--primary); font-size:0.75rem; font-weight:700; padding:0.15rem 0.5rem; border-radius:4px;">
+                            {{ $loan->loan_code ?: ('LN-' . str_pad($loan->id, 4, '0', STR_PAD_LEFT)) }}
+                        </span>
                         <a href="/loans/{{ $loan->id }}" onclick="event.stopPropagation();" style="font-weight:700; color:var(--text-heading); font-size:0.95rem; text-decoration:none;" class="hover-underline">
                             {{ $loan->lender_name }}
                         </a>
@@ -651,6 +654,12 @@
             @csrf
             @method('PUT')
             <div class="modal-body">
+                <div class="form-row" style="margin-bottom:1.25rem;">
+                    <div class="form-col">
+                        <label class="form-label" style="font-weight:700;">Loan Reference Code</label>
+                        <input type="text" name="loan_code" id="edit_loan_code" class="form-control" placeholder="E.g. LN-0016">
+                    </div>
+                </div>
                 <div class="form-row">
                     <div class="form-col">
                         <label class="form-label" style="font-weight:700;">Select Party / Lender</label>
@@ -691,7 +700,7 @@
 
                 <div class="form-group" style="margin-top:1.25rem;">
                     <label class="form-label" style="font-weight:700;">Purpose / Description & Terms</label>
-                    <textarea name="purpose" id="edit_purpose" class="form-control" rows="3" placeholder="E.g. Capital investment / Equipment purchase / terms..."></textarea>
+                    <x-rich-editor name="purpose" id="edit_purpose" placeholder="E.g. Capital investment / terms (type /loan or /employee)..." />
                 </div>
 
                 <div class="form-row" style="margin-top:1.25rem;">
@@ -824,6 +833,12 @@
         <form action="/loans" method="POST" enctype="multipart/form-data">
             @csrf
             <div class="modal-body">
+                <div class="form-row" style="margin-bottom:1.25rem;">
+                    <div class="form-col">
+                        <label class="form-label" style="font-weight:700;">Loan Reference Code</label>
+                        <input type="text" name="loan_code" id="create_loan_code" class="form-control" placeholder="Auto-generated (e.g. LN-0017) or custom">
+                    </div>
+                </div>
                 <div class="form-row">
                     <div class="form-col">
                         <label class="form-label" style="font-weight:700;">Select Party / Lender</label>
@@ -859,7 +874,7 @@
 
                 <div class="form-group" style="margin-top:1.25rem;">
                     <label class="form-label" style="font-weight:700;">Purpose / Description & Terms</label>
-                    <textarea name="purpose" id="create_purpose" class="form-control" rows="3" placeholder="E.g. Capital investment / Equipment purchase / terms..."></textarea>
+                    <x-rich-editor name="purpose" id="create_purpose" placeholder="E.g. Capital investment / terms (type /loan or /employee)..." />
                 </div>
 
                 <div class="form-row" style="margin-top:1.25rem;">
@@ -1170,32 +1185,6 @@ document.addEventListener('DOMContentLoaded', function() {
             el.addEventListener('blur', () => calculateNetDisbursed('create'));
         }
     });
-
-    // Initialize CKEditor on Create Modal Purpose
-    const createEl = document.querySelector('#create_purpose');
-    if (createEl && typeof ClassicEditor !== 'undefined') {
-        ClassicEditor
-            .create(createEl, {
-                toolbar: ['heading', '|', 'bold', 'italic', 'underline', 'bulletedList', 'numberedList', 'blockQuote', '|', 'undo', 'redo']
-            })
-            .then(editor => {
-                createPurposeEditor = editor;
-            })
-            .catch(err => console.error(err));
-    }
-
-    // Initialize CKEditor on Edit Modal Purpose
-    const editEl = document.querySelector('#edit_purpose');
-    if (editEl && typeof ClassicEditor !== 'undefined') {
-        ClassicEditor
-            .create(editEl, {
-                toolbar: ['heading', '|', 'bold', 'italic', 'underline', 'bulletedList', 'numberedList', 'blockQuote', '|', 'undo', 'redo']
-            })
-            .then(editor => {
-                editPurposeEditor = editor;
-            })
-            .catch(err => console.error(err));
-    }
 });
 
 function openEditLoanModal(loan) {
@@ -1203,6 +1192,9 @@ function openEditLoanModal(loan) {
     
     const partyEl = document.getElementById('edit_party_id');
     if (partyEl) partyEl.value = loan.party_id || '';
+    
+    const codeEl = document.getElementById('edit_loan_code');
+    if (codeEl) codeEl.value = loan.loan_code || ('LN-' + String(loan.id).padStart(4, '0'));
     
     document.getElementById('edit_lender_name').value = loan.lender_name || '';
     setAmountInputValue('edit_principal_amount', loan.principal_amount);
@@ -1213,11 +1205,7 @@ function openEditLoanModal(loan) {
     document.getElementById('edit_claimed_date').value = loan.claimed_date || loan.start_date || '';
     document.getElementById('edit_term_months').value = loan.term_months || 1;
     
-    if (editPurposeEditor) {
-        editPurposeEditor.setData(loan.purpose || '');
-    } else {
-        document.getElementById('edit_purpose').value = loan.purpose || '';
-    }
+    setRichEditorData('edit_purpose', loan.purpose || '');
     
     const method = loan.interest_method || 'fixed_amount';
     document.getElementById('edit_interest_method').value = method;

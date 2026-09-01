@@ -41,6 +41,7 @@ class LoanController extends Controller
             $search = '%' . $request->input('search') . '%';
             $query->where(function($q) use ($search) {
                 $q->where('lender_name', 'LIKE', $search)
+                  ->orWhere('loan_code', 'LIKE', $search)
                   ->orWhere('purpose', 'LIKE', $search);
             });
         }
@@ -410,12 +411,25 @@ class LoanController extends Controller
             $data['due_day'] = Carbon::parse($data['claimed_date'])->day;
         }
 
+        if (empty($data['loan_code'])) {
+            $lastLoan = DB::table('loans')->orderBy('id', 'desc')->first();
+            $nextId = ($lastLoan ? $lastLoan->id : 0) + 1;
+            $data['loan_code'] = 'LN-' . str_pad($nextId, 4, '0', STR_PAD_LEFT);
+        }
+
         if(empty($data['status'])) $data['status'] = 'pending';
 
         $loanId = DB::table('loans')->insertGetId($data);
 
+        // Ensure loan_code is set
+        $currentCode = DB::table('loans')->where('id', $loanId)->value('loan_code');
+        if (empty($currentCode)) {
+            DB::table('loans')->where('id', $loanId)->update(['loan_code' => 'LN-' . str_pad($loanId, 4, '0', STR_PAD_LEFT)]);
+        }
+
         \App\Services\ActivityLogService::logCreate('Loan', $loanId, [
             'lender_name' => $data['lender_name'] ?? null,
+            'loan_code' => $data['loan_code'] ?? null,
             'principal_amount' => $data['principal_amount'] ?? null,
             'purpose' => $data['purpose'] ?? null,
         ]);
@@ -1437,6 +1451,7 @@ class LoanController extends Controller
 
             $facilities[] = [
                 'id' => $loan->id,
+                'loan_code' => $loan->loan_code ?: ('LN-' . str_pad($loan->id, 4, '0', STR_PAD_LEFT)),
                 'lender_name' => $loan->lender_name,
                 'status' => $loan->status,
                 'principal_amount' => (float)$loan->principal_amount,

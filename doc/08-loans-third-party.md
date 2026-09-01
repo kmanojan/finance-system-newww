@@ -5,8 +5,8 @@ Full lifecycle: claim money → schedule interest → collect reminders every pe
 ---
 
 ## 7.1 Loans — List screen
-**Columns:** Lender, Principal, Currency, Interest Method (Rate / Fixed Amount), Outstanding Principal, Interest Paid to Date, Interest Outstanding, Next Due Date, Status (Active/Settled/Waived/Defaulted), Actions (View / Edit / Delete)
-**Filters:** Date range (claimed date), Status, Lender, Tag
+**Columns:** Loan Reference Code (`LN-XXXX`), Lender, Principal, Currency, Interest Method (Rate / Fixed Amount), Outstanding Principal, Interest Paid to Date, Interest Outstanding, Next Due Date, Status (Active/Settled/Waived/Defaulted), Actions (View / Edit / Delete)
+**Filters:** Date range (claimed date), Status, Lender / Loan Code / Purpose search, Tag
 **Summary cards at top:** Total Borrowed (all active loans), Total Interest Paid (period), Total Outstanding Principal, Loans Due This Week
 
 ---
@@ -14,8 +14,9 @@ Full lifecycle: claim money → schedule interest → collect reminders every pe
 ## 7.2 Create / Edit Loan — fields
 
 **Basic details**
+- **Loan Reference Code** (`loan_code`, e.g. `LN-0016` — auto-generated sequential sequence or custom reference)
 - Lender Name / Contact *(required — free text; optionally link to a master Client/Partner if the lender happens to be one)*
-- Purpose / Reason *(required)*
+- Purpose / Reason & Terms *(rich HTML editor `<x-rich-editor />` with `/loan`, `/party`, and `/employee` slash commands and new-tab links)*
 - Principal Amount *(required)*
 - Currency *(dropdown, required)*
 - Claimed Date *(required — determines base date for periodic schedules)*

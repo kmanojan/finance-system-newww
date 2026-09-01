@@ -1,0 +1,1 @@
+<x-rich-editor {{ $attributes }} />

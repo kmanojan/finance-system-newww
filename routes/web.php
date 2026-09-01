@@ -52,6 +52,73 @@ Route::get('/sw.js', function () {
     ]);
 });
 
+// Rich Editor Mentions API (Loans, Parties & Employees)
+Route::get('/api/rich-editor/mentions', function () {
+    $loans = collect();
+    if (Schema::hasTable('loans')) {
+        $loans = DB::table('loans')
+            ->leftJoin('parties', 'loans.party_id', '=', 'parties.id')
+            ->select(
+                'loans.id', 
+                'loans.loan_code', 
+                'loans.lender_name', 
+                'loans.party_id',
+                'parties.name as party_name',
+                'loans.principal_amount', 
+                'loans.currency', 
+                'loans.status',
+                'loans.purpose'
+            )
+            ->orderBy('loans.id', 'desc')
+            ->get()
+            ->map(function ($l) {
+                return [
+                    'id' => $l->id,
+                    'loan_code' => $l->loan_code ?: ('LN-' . str_pad($l->id, 4, '0', STR_PAD_LEFT)),
+                    'lender_name' => $l->lender_name,
+                    'party_name' => $l->party_name,
+                    'party_id' => $l->party_id,
+                    'principal_amount' => (float)$l->principal_amount,
+                    'currency' => $l->currency ?: 'LKR',
+                    'status' => $l->status,
+                    'purpose' => $l->purpose ? trim(strip_tags($l->purpose)) : '',
+                ];
+            });
+    }
+
+    $parties = collect();
+    if (Schema::hasTable('parties')) {
+        $parties = DB::table('parties')
+            ->select('id', 'name', 'contact_person', 'phone', 'email', 'currency', 'party_types')
+            ->orderBy('name', 'asc')
+            ->get();
+    }
+
+    $employees = collect();
+    if (Schema::hasTable('employees')) {
+        $employees = DB::table('employees')
+            ->select('id', 'full_name', 'first_name', 'last_name', 'employee_code', 'job_position')
+            ->orderBy('first_name', 'asc')
+            ->get()
+            ->map(function ($e) {
+                $name = trim(($e->first_name ?? '') . ' ' . ($e->last_name ?? ''));
+                if (empty($name)) $name = $e->full_name ?? 'Employee #' . $e->id;
+                return [
+                    'id' => $e->id,
+                    'name' => $name,
+                    'code' => $e->employee_code,
+                    'job_position' => $e->job_position,
+                ];
+            });
+    }
+
+    return response()->json([
+        'loans' => $loans,
+        'parties' => $parties,
+        'employees' => $employees,
+    ]);
+});
+
 // Dynamic Upload File Serving (Vercel Serverless Compatible)
 Route::get('/uploads/{path}', function ($path) {
     $tmpFile = '/tmp/uploads/' . $path;

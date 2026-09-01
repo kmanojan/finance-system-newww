@@ -300,7 +300,7 @@ function renderFacilitiesTable(key, facilities) {
                 <td style="padding:0.8rem 1rem;">
                     <a href="/loans/${loan.id}" target="_blank" rel="noopener noreferrer" style="color:var(--primary); font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:0.35rem; font-size:0.9rem;">
                         <ion-icon name="document-text-outline"></ion-icon>
-                        Facility #${loan.id} - ${escapeHtml(loan.lender_name)}
+                        ${loan.loan_code || ('LN-' + String(loan.id).padStart(4, '0'))} - ${escapeHtml(loan.lender_name)}
                     </a>
                     ${loan.purpose ? `<div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.2rem;">${escapeHtml(loan.purpose)}</div>` : ''}
                 </td>

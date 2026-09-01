@@ -1624,5 +1624,45 @@ ion-icon {
     }
 }
 
+/* Global Mention Chip Styling */
+.mention-chip {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    padding: 2px 8px !important;
+    border-radius: 6px !important;
+    font-size: 0.85em !important;
+    font-weight: 600 !important;
+    line-height: 1.4 !important;
+    vertical-align: middle !important;
+    text-decoration: none !important;
+    cursor: pointer !important;
+    transition: all 0.15s ease !important;
+}
 
+.mention-chip.mention-loan {
+    background: rgba(139, 92, 246, 0.14) !important;
+    color: #8b5cf6 !important;
+    border: 1px solid rgba(139, 92, 246, 0.35) !important;
+}
 
+.mention-chip.mention-loan:hover {
+    background: rgba(139, 92, 246, 0.25) !important;
+    border-color: #8b5cf6 !important;
+    color: #7c3aed !important;
+    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3) !important;
+    text-decoration: underline !important;
+}
+
+.mention-chip.mention-employee {
+    background: rgba(16, 185, 129, 0.14) !important;
+    color: #10b981 !important;
+    border: 1px solid rgba(16, 185, 129, 0.35) !important;
+}
+
+.mention-chip.mention-employee:hover {
+    background: rgba(16, 185, 129, 0.25) !important;
+    border-color: #10b981 !important;
+    color: #059669 !important;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3) !important;
+}
