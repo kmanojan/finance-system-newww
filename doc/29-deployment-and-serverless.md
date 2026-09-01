@@ -138,12 +138,60 @@ For serverless scaling:
 
 ---
 
-## 5. Deployment Commands
+## 5. Deployment Commands & Workflow
+
+### 5.1 Vercel Deployment Workflow (Zero-Command Deployments)
+
+When deploying to **Vercel Serverless**, you **do NOT need to run `php artisan optimize` or `php artisan config:cache`**:
+
+1. **Why `optimize` / `config:cache` is skipped on Vercel**:
+   - Vercel functions execute in isolated, stateless containers where the application root is **read-only** (except `/tmp`).
+   - Vercel injects environment variables dynamically into `$_ENV` and `$_SERVER` at runtime. Running `config:cache` during build can freeze stale environment variables or cause runtime path resolution issues.
+   - Blade templates are automatically compiled and stored in `/tmp/storage/framework/views`.
+
+2. **Automatic Schema Migrations**:
+   - [`AppServiceProvider.php`](../app/Providers/AppServiceProvider.php) contains an automatic migration check that detects missing columns (such as `loan_code`, `maturity_date`, `deleted_at`) and triggers `migrate --force` automatically on the first request after deployment.
+
+3. **Standard Deployment**:
+   ```bash
+   git add .
+   git commit -m "Deploy new features"
+   git push origin main
+   ```
+   Vercel CI/CD automatically detects the push, compiles assets via `npm run build`, and publishes the serverless deployment.
+
+---
+
+## 6. Traditional VPS / Dedicated Server Deployments (Comparison)
+
+If deploying to a traditional server (Ubuntu / Forge / EC2 / Docker with PHP-FPM and Nginx):
 
 ```bash
-# Push directly to GitHub to trigger Vercel CI/CD
-git push origin main
+# 1. Put app into maintenance mode
+php artisan down
 
-# Or deploy manually via Vercel CLI
-vercel --prod
+# 2. Pull latest code & dependencies
+git pull origin main
+composer install --no-dev --optimize-autoloader
+
+# 3. Run database migrations
+php artisan migrate --force
+
+# 4. Clear stale caches and rebuild optimization files
+php artisan optimize:clear
+php artisan optimize
+
+# 5. Bring app back online
+php artisan up
 ```
+
+### Command Reference:
+
+| Command | Vercel Serverless | Traditional VPS | Description |
+| :--- | :---: | :---: | :--- |
+| `git push origin main` | **Required** | Optional | Triggers automated deployment. |
+| `php artisan migrate --force` | Auto-handled (or run locally) | **Required** | Applies pending database schema migrations. |
+| `php artisan optimize` | **Do NOT run** | **Recommended** | Caches configuration, routes, and compiled classes. |
+| `php artisan optimize:clear` | Auto-handled in `/tmp` | **Recommended** | Clears all caches before rebuilding. |
+| `php artisan view:clear` | Auto-handled in `/tmp` | As needed | Clears compiled Blade templates. |
+
