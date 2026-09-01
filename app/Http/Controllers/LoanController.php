@@ -39,10 +39,13 @@ class LoanController extends Controller
         }
         if ($request->filled('search')) {
             $search = '%' . $request->input('search') . '%';
-            $query->where(function($q) use ($search) {
+            $hasLoanCode = Schema::hasColumn('loans', 'loan_code');
+            $query->where(function($q) use ($search, $hasLoanCode) {
                 $q->where('lender_name', 'LIKE', $search)
-                  ->orWhere('loan_code', 'LIKE', $search)
                   ->orWhere('purpose', 'LIKE', $search);
+                if ($hasLoanCode) {
+                    $q->orWhere('loan_code', 'LIKE', $search);
+                }
             });
         }
 

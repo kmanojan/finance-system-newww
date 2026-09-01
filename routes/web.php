@@ -56,25 +56,30 @@ Route::get('/sw.js', function () {
 $mentionsHandler = function () {
     $loans = collect();
     if (Schema::hasTable('loans')) {
+        $hasLoanCode = Schema::hasColumn('loans', 'loan_code');
+        $selects = [
+            'loans.id', 
+            'loans.lender_name', 
+            'loans.party_id',
+            'parties.name as party_name',
+            'loans.principal_amount', 
+            'loans.currency', 
+            'loans.status',
+            'loans.purpose'
+        ];
+        if ($hasLoanCode) {
+            $selects[] = 'loans.loan_code';
+        }
+
         $loans = DB::table('loans')
             ->leftJoin('parties', 'loans.party_id', '=', 'parties.id')
-            ->select(
-                'loans.id', 
-                'loans.loan_code', 
-                'loans.lender_name', 
-                'loans.party_id',
-                'parties.name as party_name',
-                'loans.principal_amount', 
-                'loans.currency', 
-                'loans.status',
-                'loans.purpose'
-            )
+            ->select($selects)
             ->orderBy('loans.id', 'desc')
             ->get()
             ->map(function ($l) {
                 return [
                     'id' => $l->id,
-                    'loan_code' => $l->loan_code ?: ('LN-' . str_pad($l->id, 4, '0', STR_PAD_LEFT)),
+                    'loan_code' => ($l->loan_code ?? null) ?: ('LN-' . str_pad($l->id, 4, '0', STR_PAD_LEFT)),
                     'lender_name' => $l->lender_name,
                     'party_name' => $l->party_name,
                     'party_id' => $l->party_id,
