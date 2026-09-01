@@ -236,16 +236,28 @@ if (typeof window.__loadMentionsData === 'undefined') {
     window.__mentionsData = { loans: [], parties: [], employees: [] };
     window.__loadMentionsData = function() {
         if (window.__mentionsDataLoaded) return Promise.resolve(window.__mentionsData);
-        return fetch('/api/rich-editor/mentions')
-            .then(res => res.json())
+        return fetch('/rich-editor/mentions')
+            .then(res => {
+                if (!res.ok) throw new Error('Status ' + res.status);
+                return res.json();
+            })
             .then(data => {
                 window.__mentionsData = data;
                 window.__mentionsDataLoaded = true;
                 return data;
             })
-            .catch(err => {
-                console.warn('Mentions data load failed, fallback to local', err);
-                return window.__mentionsData;
+            .catch(() => {
+                return fetch('/api/rich-editor/mentions')
+                    .then(res => res.json())
+                    .then(data => {
+                        window.__mentionsData = data;
+                        window.__mentionsDataLoaded = true;
+                        return data;
+                    })
+                    .catch(err => {
+                        console.warn('Mentions data load failed', err);
+                        return window.__mentionsData;
+                    });
             });
     };
     // Pre-load on background

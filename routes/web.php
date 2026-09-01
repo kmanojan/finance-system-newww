@@ -53,7 +53,7 @@ Route::get('/sw.js', function () {
 });
 
 // Rich Editor Mentions API (Loans, Parties & Employees)
-Route::get('/api/rich-editor/mentions', function () {
+$mentionsHandler = function () {
     $loans = collect();
     if (Schema::hasTable('loans')) {
         $loans = DB::table('loans')
@@ -117,7 +117,10 @@ Route::get('/api/rich-editor/mentions', function () {
         'parties' => $parties,
         'employees' => $employees,
     ]);
-});
+};
+
+Route::get('/rich-editor/mentions', $mentionsHandler);
+Route::get('/api/rich-editor/mentions', $mentionsHandler);
 
 // Dynamic Upload File Serving (Vercel Serverless Compatible)
 Route::get('/uploads/{path}', function ($path) {
