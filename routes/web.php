@@ -53,9 +53,13 @@ Route::get('/sw.js', function () {
 });
 
 // Rich Editor Mentions API (Loans, Parties & Employees)
-$mentionsHandler = function () {
+$mentionsHandler = function (Illuminate\Http\Request $request) {
+    $q = trim($request->input('q', ''));
+    $type = $request->input('type', 'all');
+    $limit = min(50, max(1, (int)$request->input('limit', 10)));
+
     $loans = collect();
-    if (Schema::hasTable('loans')) {
+    if (($type === 'all' || $type === 'loan') && Schema::hasTable('loans')) {
         $hasLoanCode = Schema::hasColumn('loans', 'loan_code');
         $selects = [
             'loans.id', 
@@ -71,10 +75,29 @@ $mentionsHandler = function () {
             $selects[] = 'loans.loan_code';
         }
 
-        $loans = DB::table('loans')
-            ->leftJoin('parties', 'loans.party_id', '=', 'parties.id')
+        $loanQuery = DB::table('loans')
+            ->leftJoin('parties', 'loans.party_id', '=', 'parties.id');
+
+        if (!empty($q)) {
+            $search = '%' . $q . '%';
+            $loanQuery->where(function ($sub) use ($search, $hasLoanCode, $q) {
+                $sub->where('loans.lender_name', 'LIKE', $search)
+                    ->orWhere('loans.purpose', 'LIKE', $search)
+                    ->orWhere('parties.name', 'LIKE', $search);
+                if ($hasLoanCode) {
+                    $sub->orWhere('loans.loan_code', 'LIKE', $search);
+                }
+                if (is_numeric($q)) {
+                    $sub->orWhere('loans.id', '=', (int)$q)
+                        ->orWhere('loans.principal_amount', 'LIKE', $search);
+                }
+            });
+        }
+
+        $loans = $loanQuery
             ->select($selects)
             ->orderBy('loans.id', 'desc')
+            ->limit($limit)
             ->get()
             ->map(function ($l) {
                 return [
@@ -92,18 +115,43 @@ $mentionsHandler = function () {
     }
 
     $parties = collect();
-    if (Schema::hasTable('parties')) {
-        $parties = DB::table('parties')
+    if (($type === 'all' || $type === 'party') && Schema::hasTable('parties')) {
+        $partyQuery = DB::table('parties');
+        if (!empty($q)) {
+            $search = '%' . $q . '%';
+            $partyQuery->where(function ($sub) use ($search) {
+                $sub->where('name', 'LIKE', $search)
+                    ->orWhere('contact_person', 'LIKE', $search)
+                    ->orWhere('phone', 'LIKE', $search)
+                    ->orWhere('email', 'LIKE', $search);
+            });
+        }
+
+        $parties = $partyQuery
             ->select('id', 'name', 'contact_person', 'phone', 'email', 'currency', 'party_types')
             ->orderBy('name', 'asc')
+            ->limit($limit)
             ->get();
     }
 
     $employees = collect();
-    if (Schema::hasTable('employees')) {
-        $employees = DB::table('employees')
+    if (($type === 'all' || $type === 'employee') && Schema::hasTable('employees')) {
+        $empQuery = DB::table('employees');
+        if (!empty($q)) {
+            $search = '%' . $q . '%';
+            $empQuery->where(function ($sub) use ($search) {
+                $sub->where('first_name', 'LIKE', $search)
+                    ->orWhere('last_name', 'LIKE', $search)
+                    ->orWhere('full_name', 'LIKE', $search)
+                    ->orWhere('employee_code', 'LIKE', $search)
+                    ->orWhere('job_position', 'LIKE', $search);
+            });
+        }
+
+        $employees = $empQuery
             ->select('id', 'full_name', 'first_name', 'last_name', 'employee_code', 'job_position')
             ->orderBy('first_name', 'asc')
+            ->limit($limit)
             ->get()
             ->map(function ($e) {
                 $name = trim(($e->first_name ?? '') . ' ' . ($e->last_name ?? ''));

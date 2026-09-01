@@ -167,6 +167,12 @@
     color: var(--text-muted, #94a3b8);
     font-size: 0.8rem;
 }
+.slash-menu-loading {
+    padding: 1rem;
+    text-align: center;
+    color: var(--primary, #8b5cf6);
+    font-size: 0.8rem;
+}
 
 /* Mention Chips Styling */
 .mention-chip {
@@ -231,37 +237,20 @@ if (typeof window.__richEditors === 'undefined') {
     window.__richEditors = {};
 }
 
-// Global mentions data cache & fetcher
-if (typeof window.__loadMentionsData === 'undefined') {
-    window.__mentionsData = { loans: [], parties: [], employees: [] };
-    window.__loadMentionsData = function() {
-        if (window.__mentionsDataLoaded) return Promise.resolve(window.__mentionsData);
-        return fetch('/rich-editor/mentions')
+// Dynamic Paginated Server Fetcher with 10 records limit
+if (typeof window.__fetchMentionsServer === 'undefined') {
+    window.__fetchMentionsServer = function(type, query, limit = 10) {
+        const url = `/rich-editor/mentions?type=${encodeURIComponent(type || 'all')}&q=${encodeURIComponent(query || '')}&limit=${limit}`;
+        return fetch(url)
             .then(res => {
-                if (!res.ok) throw new Error('Status ' + res.status);
+                if (!res.ok) return fetch(`/api/rich-editor/mentions?type=${encodeURIComponent(type || 'all')}&q=${encodeURIComponent(query || '')}&limit=${limit}`).then(r => r.json());
                 return res.json();
             })
-            .then(data => {
-                window.__mentionsData = data;
-                window.__mentionsDataLoaded = true;
-                return data;
-            })
-            .catch(() => {
-                return fetch('/api/rich-editor/mentions')
-                    .then(res => res.json())
-                    .then(data => {
-                        window.__mentionsData = data;
-                        window.__mentionsDataLoaded = true;
-                        return data;
-                    })
-                    .catch(err => {
-                        console.warn('Mentions data load failed', err);
-                        return window.__mentionsData;
-                    });
+            .catch(err => {
+                console.warn('Mentions fetch failed:', err);
+                return { loans: [], parties: [], employees: [] };
             });
     };
-    // Pre-load on background
-    window.__loadMentionsData();
 }
 
 function initRichEditor(editorId, config) {
@@ -318,12 +307,14 @@ function setupSlashCommands(editor, editorId) {
     let currentItems = [];
     let currentCommand = null; // 'root', 'loan', 'party', 'employee', 'all'
     let lastSlashLength = 1;
+    let searchDebounceTimer = null;
 
     function closeMenu() {
         menu.style.display = 'none';
         isMenuOpen = false;
         selectedIndex = 0;
         currentCommand = null;
+        if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
     }
 
     function openMenu(x, y) {
@@ -337,6 +328,13 @@ function setupSlashCommands(editor, editorId) {
         }
         menu.style.top = Math.max(10, top) + 'px';
         menu.style.left = Math.max(10, left) + 'px';
+    }
+
+    function renderLoading(headerTitle) {
+        if (titleEl && headerTitle) {
+            titleEl.innerHTML = `<ion-icon name="flash-outline" style="vertical-align: middle;"></ion-icon> ${headerTitle}`;
+        }
+        list.innerHTML = `<div class="slash-menu-loading"><ion-icon name="sync-outline" class="spin" style="vertical-align:middle;"></ion-icon> Loading up to 10 records...</div>`;
     }
 
     function renderItems(items, headerTitle) {
@@ -495,7 +493,7 @@ function setupSlashCommands(editor, editorId) {
                 type: 'command',
                 action: 'loan',
                 title: '/loan',
-                subtitle: 'Search & link a Loan by Code, Lender, Amount, Description',
+                subtitle: 'Search & link a Loan (10 results by Code, Lender, Amount, Purpose)',
                 icon: 'card-outline',
                 iconColor: '#8b5cf6',
                 bgColor: 'rgba(139, 92, 246, 0.15)'
@@ -504,7 +502,7 @@ function setupSlashCommands(editor, editorId) {
                 type: 'command',
                 action: 'party',
                 title: '/party',
-                subtitle: 'Mention a Party (Client / Vendor / Partner / Lender)',
+                subtitle: 'Mention a Party (10 results for Client / Vendor / Partner)',
                 icon: 'business-outline',
                 iconColor: '#3b82f6',
                 bgColor: 'rgba(59, 130, 246, 0.15)'
@@ -513,100 +511,70 @@ function setupSlashCommands(editor, editorId) {
                 type: 'command',
                 action: 'employee',
                 title: '/employee',
-                subtitle: 'Mention an Employee / Team Member',
+                subtitle: 'Mention an Employee / Team Member (10 results)',
                 icon: 'people-outline',
                 iconColor: '#10b981',
                 bgColor: 'rgba(16, 185, 129, 0.15)'
             }
         ];
 
-        // If query has substantive text, also perform multi-entity search
         if (q.length > 0) {
-            window.__loadMentionsData().then(data => {
-                const matchingLoans = filterLoans(data.loans || [], q);
-                const matchingParties = filterParties(data.parties || [], q);
-                const matchingEmps = filterEmployees(data.employees || [], q);
+            renderLoading('Searching...');
+            if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+            searchDebounceTimer = setTimeout(() => {
+                window.__fetchMentionsServer('all', q, 10).then(data => {
+                    const loans = (data.loans || []).map(l => ({ ...l, type: 'loan' }));
+                    const parties = (data.parties || []).map(p => ({ ...p, type: 'party' }));
+                    const emps = (data.employees || []).map(e => ({ ...e, type: 'employee' }));
 
-                const combined = [
-                    ...commands.filter(c => c.title.toLowerCase().includes(q) || c.subtitle.toLowerCase().includes(q)),
-                    ...matchingLoans.slice(0, 3),
-                    ...matchingParties.slice(0, 3),
-                    ...matchingEmps.slice(0, 3)
-                ];
-                renderItems(combined, 'Search Results');
-            });
+                    const combined = [
+                        ...commands.filter(c => c.title.toLowerCase().includes(q) || c.subtitle.toLowerCase().includes(q)),
+                        ...loans.slice(0, 4),
+                        ...parties.slice(0, 3),
+                        ...emps.slice(0, 3)
+                    ];
+                    renderItems(combined, 'Search Results (10 Max)');
+                });
+            }, 180);
         } else {
             renderItems(commands, 'Slash Commands');
         }
     }
 
-    function filterLoans(loans, query) {
-        const q = query.toLowerCase().replace(/[,kKmMsS]/g, '').trim();
-        const rawQ = query.toLowerCase().trim();
-        return loans.map(l => ({ ...l, type: 'loan' })).filter(l => {
-            const code = (l.loan_code || 'LN-' + l.id).toLowerCase();
-            const idStr = String(l.id);
-            const lender = (l.lender_name || '').toLowerCase();
-            const party = (l.party_name || '').toLowerCase();
-            const purpose = (l.purpose || '').toLowerCase();
-            const amountStr = String(l.principal_amount || '');
-            const amountFormatted = Number(l.principal_amount || 0).toLocaleString().toLowerCase();
-            const status = (l.status || '').toLowerCase();
-
-            return code.includes(rawQ) ||
-                   idStr === rawQ ||
-                   lender.includes(rawQ) ||
-                   party.includes(rawQ) ||
-                   purpose.includes(rawQ) ||
-                   status.includes(rawQ) ||
-                   amountStr.includes(q) ||
-                   amountFormatted.includes(rawQ);
-        });
-    }
-
-    function filterParties(parties, query) {
-        const q = query.toLowerCase().trim();
-        return parties.map(p => ({ ...p, type: 'party' })).filter(p => {
-            const name = (p.name || '').toLowerCase();
-            const contact = (p.contact_person || '').toLowerCase();
-            const phone = (p.phone || '').toLowerCase();
-            const types = (p.party_types || '').toLowerCase();
-            return name.includes(q) || contact.includes(q) || phone.includes(q) || types.includes(q);
-        });
-    }
-
-    function filterEmployees(employees, query) {
-        const q = query.toLowerCase().trim();
-        return employees.map(e => ({ ...e, type: 'employee' })).filter(e => {
-            const name = (e.name || '').toLowerCase();
-            const code = (e.code || '').toLowerCase();
-            const job = (e.job_position || '').toLowerCase();
-            return name.includes(q) || code.includes(q) || job.includes(q);
-        });
-    }
-
     function renderLoanList(query) {
         currentCommand = 'loan';
-        window.__loadMentionsData().then(data => {
-            const filtered = filterLoans(data.loans || [], query);
-            renderItems(filtered, 'Loans (/loan)');
-        });
+        renderLoading('Loading Loans (10 Max)...');
+        if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+        searchDebounceTimer = setTimeout(() => {
+            window.__fetchMentionsServer('loan', query, 10).then(data => {
+                const loans = (data.loans || []).map(l => ({ ...l, type: 'loan' }));
+                renderItems(loans, 'Loans (/loan - 10 Results)');
+            });
+        }, 150);
     }
 
     function renderPartyList(query) {
         currentCommand = 'party';
-        window.__loadMentionsData().then(data => {
-            const filtered = filterParties(data.parties || [], query);
-            renderItems(filtered, 'Parties (/party)');
-        });
+        renderLoading('Loading Parties (10 Max)...');
+        if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+        searchDebounceTimer = setTimeout(() => {
+            window.__fetchMentionsServer('party', query, 10).then(data => {
+                const parties = (data.parties || []).map(p => ({ ...p, type: 'party' }));
+                renderItems(parties, 'Parties (/party - 10 Results)');
+            });
+        }, 150);
     }
 
     function renderEmployeeList(query) {
         currentCommand = 'employee';
-        window.__loadMentionsData().then(data => {
-            const filtered = filterEmployees(data.employees || [], query);
-            renderItems(filtered, 'Employees (/employee)');
-        });
+        renderLoading('Loading Employees (10 Max)...');
+        if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+        searchDebounceTimer = setTimeout(() => {
+            window.__fetchMentionsServer('employee', query, 10).then(data => {
+                const employees = (data.employees || []).map(e => ({ ...e, type: 'employee' }));
+                renderItems(employees, 'Employees (/employee - 10 Results)');
+            });
+        }, 150);
     }
 
     // Keydown for Menu Navigation
