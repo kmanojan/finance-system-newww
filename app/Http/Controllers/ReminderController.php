@@ -136,7 +136,6 @@ class ReminderController extends Controller
                 $activeLoans = DB::table('loans')
                     ->where('status', 'active')
                     ->whereNotNull('maturity_date')
-                    ->where('maturity_date', '!=', '')
                     ->get();
 
                 foreach ($activeLoans as $al) {
