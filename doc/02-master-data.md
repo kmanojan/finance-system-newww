@@ -85,31 +85,22 @@ When an invoice is generated, store a **frozen copy** of the template (header/fo
 **Delete:** soft-delete only; blocked if transactions reference it — must deactivate instead.
 **Extra action:** "View Ledger" — opens the bank account's transaction history (from §2) filtered to this account, with running balance.
 
-## 1.7 Clients
-**List columns:** Name, Contact Person, Phone, Email, Tags, Active Projects count, Status, Actions (View / Edit / Delete)
-**Create / Edit fields:**
-- Name / Company Name *(required)*
-- Contact Person
-- Email, Phone
-- Address
-- Tax ID
-- Tags (multi-select, from tag manager)
-- Notes (free text)
-- Status (Active/Inactive)
-**Delete:** soft-delete; blocked if linked to any project — must deactivate instead.
-**View (detail page):** shows all linked projects, all invoices, total invoiced/paid/outstanding — this is the same data exposed via the client share link (§8).
-
-## 1.8 Partners
-**List columns:** Name, Relationship Type, Share %, Linked Projects count, Status, Actions (View / Edit / Delete)
-**Create / Edit fields:**
-- Name *(required)*
-- Relationship Type (e.g., Revenue Share, Referral, Co-founder)
-- Default Share % (can be overridden per-project)
-- Contact Person, Email, Phone
-- Tags
-- Status (Active/Inactive)
-**Delete:** soft-delete; blocked if linked to any project.
-**View (detail page):** lists every linked project with per-project share % and totals — same data exposed via the partner share link (§8).
+## 1.7 Parties (Clients, Vendors, Partners, Lenders)
+Unified party master directory (`/master/parties`):
+- **List columns:** Name, Type Badges (Client / Vendor / Partner / Lender / Employee), Contact Person, Phone, Email, Currency, Active Projects / Invoices / Facilities count, Status, Actions (View / Edit / Delete).
+- **Search & Pagination:** Full text search by name, contact, email, or phone; paginated at 15 parties per page with custom footer navigation (`Showing X to Y of Z parties`).
+- **Create / Edit fields:**
+  - Name / Business Name *(required)*
+  - Party Types *(multi-select: Client, Vendor, Partner, Lender, Employee)*
+  - Contact Person, Email, Phone, Secondary Phone
+  - Tax / VAT Number, Address
+  - Default Currency
+  - Opening Balance & Opening Balance Date
+  - Partner Share % (if Partner type)
+  - Notes & Custom Tags
+  - Status (Active/Inactive)
+- **Delete:** Soft-delete; blocked if active transactions, invoices, or loan facilities reference the party.
+- **View (Detail & Facility Reports):** Comprehensive multi-tab statement tracking all linked projects, invoices, payments, loan facilities, and net exposure. Also accessible via `/loans/party-report` with lazy-loaded facility accordions.
 
 ## 1.9 Tags (Tag Manager)
 **List columns:** Name, Color, Usage Count (how many records use it), Actions (Edit / Delete)
