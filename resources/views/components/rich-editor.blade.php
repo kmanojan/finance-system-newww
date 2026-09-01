@@ -237,18 +237,18 @@ if (typeof window.__richEditors === 'undefined') {
     window.__richEditors = {};
 }
 
-// Dynamic Paginated Server Fetcher with 10 records limit
+// On-demand fetcher: ONLY called after a label is selected
 if (typeof window.__fetchMentionsServer === 'undefined') {
     window.__fetchMentionsServer = function(type, query, limit = 10) {
-        const url = `/rich-editor/mentions?type=${encodeURIComponent(type || 'all')}&q=${encodeURIComponent(query || '')}&limit=${limit}`;
+        const url = `/rich-editor/mentions?type=${encodeURIComponent(type)}&q=${encodeURIComponent(query || '')}&limit=${limit}`;
         return fetch(url)
             .then(res => {
-                if (!res.ok) return fetch(`/api/rich-editor/mentions?type=${encodeURIComponent(type || 'all')}&q=${encodeURIComponent(query || '')}&limit=${limit}`).then(r => r.json());
+                if (!res.ok) return fetch(`/api/rich-editor/mentions?type=${encodeURIComponent(type)}&q=${encodeURIComponent(query || '')}&limit=${limit}`).then(r => r.json());
                 return res.json();
             })
             .catch(err => {
-                console.warn('Mentions fetch failed:', err);
-                return { loans: [], parties: [], employees: [] };
+                console.warn('CKeditorController mentions fetch error:', err);
+                return { items: [], loans: [], parties: [], employees: [] };
             });
     };
 }
@@ -257,7 +257,6 @@ function initRichEditor(editorId, config) {
     const el = document.getElementById(editorId);
     if (!el || typeof ClassicEditor === 'undefined') return;
 
-    // Destroy existing instance if any
     if (window.__richEditors[editorId]) {
         try { window.__richEditors[editorId].destroy(); } catch(e) {}
     }
@@ -275,7 +274,6 @@ function initRichEditor(editorId, config) {
         .then(editor => {
             window.__richEditors[editorId] = editor;
             
-            // Sync with textarea on changes and form submits
             editor.model.document.on('change:data', () => {
                 el.value = editor.getData();
             });
@@ -305,7 +303,7 @@ function setupSlashCommands(editor, editorId) {
     let isMenuOpen = false;
     let selectedIndex = 0;
     let currentItems = [];
-    let currentCommand = null; // 'root', 'loan', 'party', 'employee', 'all'
+    let activeCategory = null; // null (root suggestions), 'loan', 'party', 'employee'
     let lastSlashLength = 1;
     let searchDebounceTimer = null;
 
@@ -313,7 +311,7 @@ function setupSlashCommands(editor, editorId) {
         menu.style.display = 'none';
         isMenuOpen = false;
         selectedIndex = 0;
-        currentCommand = null;
+        activeCategory = null;
         if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
     }
 
@@ -334,7 +332,7 @@ function setupSlashCommands(editor, editorId) {
         if (titleEl && headerTitle) {
             titleEl.innerHTML = `<ion-icon name="flash-outline" style="vertical-align: middle;"></ion-icon> ${headerTitle}`;
         }
-        list.innerHTML = `<div class="slash-menu-loading"><ion-icon name="sync-outline" class="spin" style="vertical-align:middle;"></ion-icon> Loading up to 10 records...</div>`;
+        list.innerHTML = `<div class="slash-menu-loading"><ion-icon name="sync-outline" class="spin" style="vertical-align:middle;"></ion-icon> Loading 10 records...</div>`;
     }
 
     function renderItems(items, headerTitle) {
@@ -440,21 +438,20 @@ function setupSlashCommands(editor, editorId) {
     }
 
     function selectItem(item) {
+        // When clicking/pressing Enter on a command label, trigger fetch for that label
         if (item.type === 'command') {
+            activeCategory = item.action;
             if (item.action === 'loan') {
-                currentCommand = 'loan';
-                renderLoanList('');
+                fetchAndRenderCategory('loan', '');
             } else if (item.action === 'party') {
-                currentCommand = 'party';
-                renderPartyList('');
+                fetchAndRenderCategory('party', '');
             } else if (item.action === 'employee') {
-                currentCommand = 'employee';
-                renderEmployeeList('');
+                fetchAndRenderCategory('employee', '');
             }
             return;
         }
 
-        // Insert into editor
+        // Insert final selected item chip into CKEditor
         let htmlToInsert = '';
         if (item.type === 'loan') {
             const code = item.loan_code || ('LN-' + item.id);
@@ -485,15 +482,16 @@ function setupSlashCommands(editor, editorId) {
         closeMenu();
     }
 
-    function renderRootCommands(query) {
-        currentCommand = 'root';
-        const q = (query || '').toLowerCase().trim();
+    // Step 1: Show static suggestions when user enters / (zero network requests)
+    function showRootCommandSuggestions(filterText) {
+        activeCategory = null;
+        const q = (filterText || '').toLowerCase().trim();
         const commands = [
             {
                 type: 'command',
                 action: 'loan',
                 title: '/loan',
-                subtitle: 'Search & link a Loan (10 results by Code, Lender, Amount, Purpose)',
+                subtitle: 'Select & link a Loan Facility (fetches 10 records on select)',
                 icon: 'card-outline',
                 iconColor: '#8b5cf6',
                 bgColor: 'rgba(139, 92, 246, 0.15)'
@@ -502,7 +500,7 @@ function setupSlashCommands(editor, editorId) {
                 type: 'command',
                 action: 'party',
                 title: '/party',
-                subtitle: 'Mention a Party (10 results for Client / Vendor / Partner)',
+                subtitle: 'Select & mention a Party (fetches 10 records on select)',
                 icon: 'business-outline',
                 iconColor: '#3b82f6',
                 bgColor: 'rgba(59, 130, 246, 0.15)'
@@ -511,70 +509,42 @@ function setupSlashCommands(editor, editorId) {
                 type: 'command',
                 action: 'employee',
                 title: '/employee',
-                subtitle: 'Mention an Employee / Team Member (10 results)',
+                subtitle: 'Select & mention an Employee (fetches 10 records on select)',
                 icon: 'people-outline',
                 iconColor: '#10b981',
                 bgColor: 'rgba(16, 185, 129, 0.15)'
             }
         ];
 
-        if (q.length > 0) {
-            renderLoading('Searching...');
-            if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
-            searchDebounceTimer = setTimeout(() => {
-                window.__fetchMentionsServer('all', q, 10).then(data => {
-                    const loans = (data.loans || []).map(l => ({ ...l, type: 'loan' }));
-                    const parties = (data.parties || []).map(p => ({ ...p, type: 'party' }));
-                    const emps = (data.employees || []).map(e => ({ ...e, type: 'employee' }));
-
-                    const combined = [
-                        ...commands.filter(c => c.title.toLowerCase().includes(q) || c.subtitle.toLowerCase().includes(q)),
-                        ...loans.slice(0, 4),
-                        ...parties.slice(0, 3),
-                        ...emps.slice(0, 3)
-                    ];
-                    renderItems(combined, 'Search Results (10 Max)');
-                });
-            }, 180);
-        } else {
-            renderItems(commands, 'Slash Commands');
-        }
+        const filtered = commands.filter(c => c.title.toLowerCase().includes(q) || c.action.includes(q));
+        renderItems(filtered, 'Commands (Select to fetch data)');
     }
 
-    function renderLoanList(query) {
-        currentCommand = 'loan';
-        renderLoading('Loading Loans (10 Max)...');
-        if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
-        searchDebounceTimer = setTimeout(() => {
-            window.__fetchMentionsServer('loan', query, 10).then(data => {
-                const loans = (data.loans || []).map(l => ({ ...l, type: 'loan' }));
-                renderItems(loans, 'Loans (/loan - 10 Results)');
-            });
-        }, 150);
-    }
+    // Step 2: On-demand server fetch for selected category
+    function fetchAndRenderCategory(category, query) {
+        activeCategory = category;
+        const titles = {
+            loan: 'Loans (Top 10)',
+            party: 'Parties (Top 10)',
+            employee: 'Employees (Top 10)'
+        };
 
-    function renderPartyList(query) {
-        currentCommand = 'party';
-        renderLoading('Loading Parties (10 Max)...');
-        if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
-        searchDebounceTimer = setTimeout(() => {
-            window.__fetchMentionsServer('party', query, 10).then(data => {
-                const parties = (data.parties || []).map(p => ({ ...p, type: 'party' }));
-                renderItems(parties, 'Parties (/party - 10 Results)');
-            });
-        }, 150);
-    }
+        renderLoading(titles[category] || 'Loading...');
 
-    function renderEmployeeList(query) {
-        currentCommand = 'employee';
-        renderLoading('Loading Employees (10 Max)...');
         if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
         searchDebounceTimer = setTimeout(() => {
-            window.__fetchMentionsServer('employee', query, 10).then(data => {
-                const employees = (data.employees || []).map(e => ({ ...e, type: 'employee' }));
-                renderItems(employees, 'Employees (/employee - 10 Results)');
+            window.__fetchMentionsServer(category, query, 10).then(data => {
+                let items = [];
+                if (category === 'loan') {
+                    items = (data.loans || data.items || []).map(l => ({ ...l, type: 'loan' }));
+                } else if (category === 'party') {
+                    items = (data.parties || data.items || []).map(p => ({ ...p, type: 'party' }));
+                } else if (category === 'employee') {
+                    items = (data.employees || data.items || []).map(e => ({ ...e, type: 'employee' }));
+                }
+                renderItems(items, titles[category]);
             });
-        }, 150);
+        }, query ? 150 : 0);
     }
 
     // Keydown for Menu Navigation
@@ -627,10 +597,10 @@ function setupSlashCommands(editor, editorId) {
             return;
         }
 
-        const slashQuery = fullText.substring(lastSlashIndex); // e.g. "/loan 2000000" or "/party"
+        const slashQuery = fullText.substring(lastSlashIndex); // e.g. "/" or "/loan" or "/loan abi"
         lastSlashLength = slashQuery.length;
 
-        // Position Menu
+        // Position popup at caret
         try {
             const domSelection = window.getSelection();
             if (domSelection && domSelection.rangeCount > 0) {
@@ -644,19 +614,21 @@ function setupSlashCommands(editor, editorId) {
             openMenu(20, 40);
         }
 
-        // Parse query & route to appropriate feed
         const trimmed = slashQuery.toLowerCase();
+
+        // If user explicitly typed /loan or /party or /employee, trigger on-demand fetch with query
         if (trimmed.startsWith('/loan')) {
-            const sub = trimmed.replace('/loan', '').trim();
-            renderLoanList(sub);
-        } else if (trimmed.startsWith('/party') || trimmed.startsWith('/client') || trimmed.startsWith('/vendor')) {
-            const sub = trimmed.replace(/\/party|\/client|\/vendor/, '').trim();
-            renderPartyList(sub);
-        } else if (trimmed.startsWith('/employee') || trimmed.startsWith('/emp') || trimmed.startsWith('/staff')) {
-            const sub = trimmed.replace(/\/employee|\/emp|\/staff/, '').trim();
-            renderEmployeeList(sub);
+            const subQuery = trimmed.replace('/loan', '').trim();
+            fetchAndRenderCategory('loan', subQuery);
+        } else if (trimmed.startsWith('/party')) {
+            const subQuery = trimmed.replace('/party', '').trim();
+            fetchAndRenderCategory('party', subQuery);
+        } else if (trimmed.startsWith('/employee') || trimmed.startsWith('/emp')) {
+            const subQuery = trimmed.replace(/\/employee|\/emp/, '').trim();
+            fetchAndRenderCategory('employee', subQuery);
         } else {
-            renderRootCommands(trimmed.replace('/', ''));
+            // Just "/" or partial filter of command labels (e.g. "/l" -> "/loan")
+            showRootCommandSuggestions(trimmed.replace('/', ''));
         }
     });
 
