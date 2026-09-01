@@ -129,4 +129,45 @@ class LoanDynamicScheduleTest extends TestCase
         $response->assertSee('Install Finance App');
         $response->assertSee('Install App Now');
     }
+
+    public function test_loan_can_be_created_and_updated_with_empty_maturity_date(): void
+    {
+        $admin = User::factory()->create([
+            'email' => 'admin_open_loan@example.com',
+            'role' => 'admin',
+            'is_active' => true,
+        ]);
+
+        // Create loan with empty maturity_date
+        $this->actingAs($admin)->post('/loans', [
+            'lender_name' => 'Open Term Bank',
+            'principal_amount' => 75000,
+            'currency' => 'LKR',
+            'claimed_date' => '2026-09-01',
+            'term_months' => 6,
+            'maturity_date' => '',
+            'interest_method' => 'no_interest',
+            'status' => 'pending',
+        ]);
+
+        $loan = DB::table('loans')->where('lender_name', 'Open Term Bank')->first();
+        $this->assertNotNull($loan);
+        $this->assertNull($loan->maturity_date);
+
+        // Update loan and ensure maturity_date remains null
+        $this->actingAs($admin)->put("/loans/{$loan->id}", [
+            'lender_name' => 'Open Term Bank Updated',
+            'principal_amount' => 80000,
+            'currency' => 'LKR',
+            'claimed_date' => '2026-09-01',
+            'term_months' => 12,
+            'maturity_date' => '',
+            'interest_method' => 'no_interest',
+            'status' => 'pending',
+        ]);
+
+        $updatedLoan = DB::table('loans')->where('id', $loan->id)->first();
+        $this->assertEquals('Open Term Bank Updated', $updatedLoan->lender_name);
+        $this->assertNull($updatedLoan->maturity_date);
+    }
 }

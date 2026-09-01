@@ -179,14 +179,11 @@
             </div>
             <div class="sidebar-bottom" style="display:flex; flex-direction:column; align-items:center; gap: 1rem;">
                 @auth
-                    <x-sidebar.quick-add-cost />
+                    <x-sidebar.quick-add-transaction />
                 @endauth
                 <button id="themeToggleBtn" style="background:none; border:none; color:var(--text-light); font-size:1.4rem; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:color 0.2s;" title="Toggle Theme">
                     <ion-icon name="moon-outline"></ion-icon>
                 </button>
-                <a href="/profile?tab=app" style="text-decoration: none; color:var(--text-light); font-size:1.3rem; display:flex; align-items:center; justify-content:center; transition:color 0.2s;" title="Install App (PWA)" onmouseover="this.style.color='var(--primary)'" onmouseout="this.style.color='var(--text-light)'">
-                    <ion-icon name="phone-portrait-outline"></ion-icon>
-                </a>
                 <a href="/profile" style="text-decoration: none;">
                     <div class="user-avatar" title="{{ Auth::user()->name ?? 'Profile & Settings' }}">
                         <span>{{ Auth::check() ? strtoupper(substr(Auth::user()->name, 0, 1)) : 'A' }}</span>

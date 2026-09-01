@@ -113,7 +113,7 @@ class TransactionController extends Controller
         $data['updated_at'] = now();
         // default missing fields
         if(empty($data['currency'])) $data['currency'] = DB::table('companies')->value('base_currency') ?? 'LKR';
-        if(empty($data['department_id'])) $data['department_id'] = DB::table('departments')->value('id') ?? 1;
+        if(empty($data['department_id'])) $data['department_id'] = DB::table('departments')->value('id') ?: null;
 
         if ($request->filled('budget_item_id')) {
             $itemId = $request->budget_item_id;
@@ -157,6 +157,14 @@ class TransactionController extends Controller
             'amount' => $data['amount'] ?? null,
             'description' => $data['description'] ?? null,
         ]);
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Transaction created successfully!',
+                'transaction_id' => $transactionId
+            ]);
+        }
 
         return back()->with('success', 'Transaction created successfully!');
     }

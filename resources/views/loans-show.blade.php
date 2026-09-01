@@ -242,7 +242,7 @@
                 <div style="display:flex; justify-content:space-between; border-bottom:1px dashed var(--border); padding-bottom:0.5rem;">
                     <span class="text-muted">Full Principal Due Date:</span>
                     <strong style="color:var(--text-heading);">
-                        {{ $loan->maturity_date ?? 'N/A' }}
+                        {{ $loan->maturity_date ?: 'Not Specified (Open Term)' }}
                         @if(!empty($loan->maturity_date ?? null))
                             <span class="badge" style="background:var(--primary-light); color:var(--primary); font-size:0.7rem; margin-left:0.25rem;">
                                 Reminder: {{ $loan->reminder_days ?? 3 }}d
@@ -717,14 +717,15 @@
                 <!-- Loan Maturity / Full Principal Due Date & Reminders -->
                 <div class="form-row" style="margin-top:1.25rem;">
                     <div class="form-col">
-                        <label class="form-label" style="font-weight:600;">Loan Full Principal Due Date *</label>
-                        <input type="date" name="maturity_date" id="edit_maturity_date" class="form-control" value="{{ ($loan->maturity_date ?? null) ?: date('Y-m-d', strtotime('+'.($loan->term_months ?: 1).' months', strtotime($loan->claimed_date ?: date('Y-m-d')))) }}" required>
+                        <label class="form-label" style="font-weight:600;">Loan Full Principal Due Date (Optional)</label>
+                        <input type="date" name="maturity_date" id="edit_maturity_date" class="form-control" value="{{ $loan->maturity_date }}">
                         <div style="display:flex; gap:0.3rem; margin-top:0.35rem; flex-wrap:wrap;">
                             <button type="button" class="btn btn-outline" style="font-size:0.72rem; padding:0.15rem 0.45rem;" onclick="setMaturityMonths('edit', 1)">+1 Mo</button>
                             <button type="button" class="btn btn-outline" style="font-size:0.72rem; padding:0.15rem 0.45rem;" onclick="setMaturityMonths('edit', 2)">+2 Mo</button>
                             <button type="button" class="btn btn-outline" style="font-size:0.72rem; padding:0.15rem 0.45rem;" onclick="setMaturityMonths('edit', 3)">+3 Mo</button>
                             <button type="button" class="btn btn-outline" style="font-size:0.72rem; padding:0.15rem 0.45rem;" onclick="setMaturityMonths('edit', 6)">+6 Mo</button>
                             <button type="button" class="btn btn-outline" style="font-size:0.72rem; padding:0.15rem 0.45rem;" onclick="setMaturityMonths('edit', 12)">+1 Yr</button>
+                            <button type="button" class="btn btn-outline" style="font-size:0.72rem; padding:0.15rem 0.45rem; color:var(--text-muted);" onclick="document.getElementById('edit_maturity_date').value=''">Clear</button>
                         </div>
                     </div>
                     <div class="form-col">

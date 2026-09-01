@@ -398,9 +398,8 @@ class LoanController extends Controller
             if ($diffMonths > 0 && empty($request->input('term_months'))) {
                 $data['term_months'] = $diffMonths;
             }
-        } elseif (empty($data['maturity_date']) && !empty($data['claimed_date'])) {
-            $term = !empty($data['term_months']) ? (int)$data['term_months'] : 1;
-            $data['maturity_date'] = Carbon::parse($data['claimed_date'])->addMonths($term)->format('Y-m-d');
+        } else {
+            $data['maturity_date'] = null;
         }
 
         if (empty($data['reminder_days'])) {
@@ -508,9 +507,8 @@ class LoanController extends Controller
             if ($diffMonths > 0 && empty($request->input('term_months'))) {
                 $data['term_months'] = $diffMonths;
             }
-        } elseif (empty($data['maturity_date']) && !empty($data['claimed_date'])) {
-            $term = !empty($data['term_months']) ? (int)$data['term_months'] : 1;
-            $data['maturity_date'] = Carbon::parse($data['claimed_date'])->addMonths($term)->format('Y-m-d');
+        } else {
+            $data['maturity_date'] = null;
         }
 
         if (empty($data['reminder_days'])) {
@@ -802,7 +800,15 @@ class LoanController extends Controller
     public function syncLoanMaturityReminder($loanId)
     {
         $loan = DB::table('loans')->where('id', $loanId)->first();
-        if (!$loan || empty($loan->maturity_date)) return;
+        if (!$loan || empty($loan->maturity_date)) {
+            if (Schema::hasTable('reminders')) {
+                DB::table('reminders')
+                    ->where('type', 'loan')
+                    ->where('reference_id', $loanId)
+                    ->delete();
+            }
+            return;
+        }
         if (!Schema::hasTable('reminders')) return;
 
         $remTitle = "Loan Principal Repayment Due: {$loan->lender_name} ({$loan->currency} " . number_format($loan->principal_amount, 2) . ")";

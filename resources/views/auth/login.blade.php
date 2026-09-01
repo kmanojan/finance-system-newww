@@ -244,7 +244,7 @@
                 <label class="form-label" for="email">Email Address</label>
                 <div class="input-group">
                     <ion-icon name="mail-outline" class="input-icon"></ion-icon>
-                    <input id="email" type="email" name="email" class="form-control-icon" value="{{ old('email', 'test@example.com') }}" required autofocus placeholder="name@company.com">
+                    <input id="email" type="email" name="email" class="form-control-icon" value="{{ old('email') }}" required autofocus placeholder="name@company.com">
                 </div>
                 @error('email')
                     <span class="error-message">{{ $message }}</span>
@@ -255,7 +255,7 @@
                 <label class="form-label" for="password">Password</label>
                 <div class="input-group">
                     <ion-icon name="lock-closed-outline" class="input-icon"></ion-icon>
-                    <input id="password" type="password" name="password" class="form-control-icon" value="password" required placeholder="••••••••" style="padding-right: 2.75rem;">
+                    <input id="password" type="password" name="password" class="form-control-icon" value="" required placeholder="••••••••" style="padding-right: 2.75rem;">
                     <button type="button" class="password-toggle-btn" id="togglePasswordBtn" title="Show password" aria-label="Toggle password visibility">
                         <ion-icon name="eye-outline" id="togglePasswordIcon"></ion-icon>
                     </button>

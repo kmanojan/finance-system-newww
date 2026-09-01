@@ -762,14 +762,15 @@
                 <!-- Loan Maturity / Full Principal Due Date & Reminders -->
                 <div class="form-row" style="margin-top:1.25rem;">
                     <div class="form-col">
-                        <label class="form-label" style="font-weight:600;">Loan Full Principal Due Date *</label>
-                        <input type="date" name="maturity_date" id="edit_maturity_date" class="form-control" onchange="autoSetTermFromMaturity('edit')" required>
+                        <label class="form-label" style="font-weight:600;">Loan Full Principal Due Date (Optional)</label>
+                        <input type="date" name="maturity_date" id="edit_maturity_date" class="form-control" onchange="autoSetTermFromMaturity('edit')">
                         <div style="display:flex; gap:0.3rem; margin-top:0.35rem; flex-wrap:wrap;">
                             <button type="button" class="btn btn-outline" style="font-size:0.72rem; padding:0.15rem 0.45rem;" onclick="setMaturityMonths('edit', 1)">+1 Mo</button>
                             <button type="button" class="btn btn-outline" style="font-size:0.72rem; padding:0.15rem 0.45rem;" onclick="setMaturityMonths('edit', 2)">+2 Mo</button>
                             <button type="button" class="btn btn-outline" style="font-size:0.72rem; padding:0.15rem 0.45rem;" onclick="setMaturityMonths('edit', 3)">+3 Mo</button>
                             <button type="button" class="btn btn-outline" style="font-size:0.72rem; padding:0.15rem 0.45rem;" onclick="setMaturityMonths('edit', 6)">+6 Mo</button>
                             <button type="button" class="btn btn-outline" style="font-size:0.72rem; padding:0.15rem 0.45rem;" onclick="setMaturityMonths('edit', 12)">+1 Yr</button>
+                            <button type="button" class="btn btn-outline" style="font-size:0.72rem; padding:0.15rem 0.45rem; color:var(--text-muted);" onclick="document.getElementById('edit_maturity_date').value=''">Clear</button>
                         </div>
                     </div>
                     <div class="form-col">
@@ -848,11 +849,11 @@
                 <div class="form-row" style="margin-top:1.25rem;">
                     <div class="form-col">
                         <label class="form-label">Claimed / Start Date *</label>
-                        <input type="date" name="claimed_date" id="create_claimed_date" class="form-control" value="{{ date('Y-m-d') }}" onchange="autoSetMaturity('create')" required>
+                        <input type="date" name="claimed_date" id="create_claimed_date" class="form-control" value="{{ date('Y-m-d') }}" required>
                     </div>
                     <div class="form-col">
                         <label class="form-label">Term (Months) *</label>
-                        <input type="number" name="term_months" id="create_term_months" class="form-control" value="1" min="1" onchange="autoSetMaturity('create')" required>
+                        <input type="number" name="term_months" id="create_term_months" class="form-control" value="1" min="1" required>
                     </div>
                 </div>
 
@@ -929,14 +930,15 @@
                 <!-- Loan Maturity / Full Principal Due Date & Reminders -->
                 <div class="form-row" style="margin-top:1.25rem;">
                     <div class="form-col">
-                        <label class="form-label" style="font-weight:600;">Loan Full Principal Due Date *</label>
-                        <input type="date" name="maturity_date" id="create_maturity_date" class="form-control" onchange="autoSetTermFromMaturity('create')" required>
+                        <label class="form-label" style="font-weight:600;">Loan Full Principal Due Date (Optional)</label>
+                        <input type="date" name="maturity_date" id="create_maturity_date" class="form-control" onchange="autoSetTermFromMaturity('create')">
                         <div style="display:flex; gap:0.3rem; margin-top:0.35rem; flex-wrap:wrap;">
                             <button type="button" class="btn btn-outline" style="font-size:0.72rem; padding:0.15rem 0.45rem;" onclick="setMaturityMonths('create', 1)">+1 Mo</button>
                             <button type="button" class="btn btn-outline" style="font-size:0.72rem; padding:0.15rem 0.45rem;" onclick="setMaturityMonths('create', 2)">+2 Mo</button>
                             <button type="button" class="btn btn-outline" style="font-size:0.72rem; padding:0.15rem 0.45rem;" onclick="setMaturityMonths('create', 3)">+3 Mo</button>
                             <button type="button" class="btn btn-outline" style="font-size:0.72rem; padding:0.15rem 0.45rem;" onclick="setMaturityMonths('create', 6)">+6 Mo</button>
                             <button type="button" class="btn btn-outline" style="font-size:0.72rem; padding:0.15rem 0.45rem;" onclick="setMaturityMonths('create', 12)">+1 Yr</button>
+                            <button type="button" class="btn btn-outline" style="font-size:0.72rem; padding:0.15rem 0.45rem; color:var(--text-muted);" onclick="document.getElementById('create_maturity_date').value=''">Clear</button>
                         </div>
                     </div>
                     <div class="form-col">
@@ -1160,8 +1162,6 @@ let createPurposeEditor = null;
 let editPurposeEditor = null;
 
 document.addEventListener('DOMContentLoaded', function() {
-    autoSetMaturity('create');
-    
     // Live update Net Cash Received on create form changes
     ['create_principal_amount', 'create_interest_amount', 'create_total_interest', 'create_upfront_interest_amount'].forEach(id => {
         const el = document.getElementById(id);
