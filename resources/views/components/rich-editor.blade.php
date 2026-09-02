@@ -26,12 +26,45 @@
 
     <!-- Slash Command Menu Dropdown -->
     <div id="slash_menu_{{ $editorId }}" class="slash-menu-popup" style="display: none;">
+        <!-- Header -->
         <div class="slash-menu-header">
             <span class="slash-menu-title" id="slash_title_{{ $editorId }}">
                 <ion-icon name="flash-outline" style="vertical-align: middle;"></ion-icon> Slash Commands
             </span>
             <span class="slash-menu-hint">↑↓ navigate &bull; ↵ select &bull; Esc close</span>
         </div>
+
+        <!-- Prominent Always-Visible Search Bar -->
+        <div id="slash_search_wrap_{{ $editorId }}" class="slash-search-bar" style="display: block !important;">
+            <div class="slash-search-inner">
+                <ion-icon name="search-outline" class="slash-search-icon"></ion-icon>
+                <input 
+                    type="text" 
+                    id="slash_search_input_{{ $editorId }}" 
+                    class="slash-search-input" 
+                    placeholder="Search by name, code, amount, purpose..." 
+                    autocomplete="off"
+                />
+            </div>
+        </div>
+
+        <!-- Category Filter Tabs -->
+        <div class="slash-tabs-bar" id="slash_tabs_{{ $editorId }}">
+            <button type="button" class="slash-tab-pill active" data-category="all">
+                <ion-icon name="grid-outline"></ion-icon> All
+            </button>
+            <button type="button" class="slash-tab-pill" data-category="loan">
+                <ion-icon name="card-outline"></ion-icon> /loan
+            </button>
+            <button type="button" class="slash-tab-pill" data-category="party">
+                <ion-icon name="business-outline"></ion-icon> /party
+            </button>
+            <button type="button" class="slash-tab-pill" data-category="employee">
+                <ion-icon name="people-outline"></ion-icon> /employee
+            </button>
+        </div>
+
+        <!-- Results List -->
         <div class="slash-menu-list" id="slash_list_{{ $editorId }}">
             <!-- Dynamic Items Injected Here -->
         </div>
@@ -42,9 +75,9 @@
 /* CKEditor Custom Theme & Wrapper */
 #wrap_{{ $editorId }} .ck.ck-editor__main > .ck-editor__editable {
     min-height: {{ $height }};
-    background: var(--bg-page, #1a1d27) !important;
-    color: var(--text-main, #cbd5e1) !important;
-    border-color: var(--border, rgba(255,255,255,0.12)) !important;
+    background: #1a1d27 !important;
+    color: #cbd5e1 !important;
+    border-color: rgba(255,255,255,0.12) !important;
     border-bottom-left-radius: 8px !important;
     border-bottom-right-radius: 8px !important;
     font-family: inherit !important;
@@ -53,125 +86,202 @@
     padding: 0.75rem 1rem;
 }
 #wrap_{{ $editorId }} .ck.ck-editor__main > .ck-editor__editable:focus {
-    border-color: var(--primary, #8b5cf6) !important;
+    border-color: #8b5cf6 !important;
     box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2) !important;
 }
 #wrap_{{ $editorId }} .ck.ck-toolbar {
-    background: var(--bg-card, #202431) !important;
-    border-color: var(--border, rgba(255,255,255,0.12)) !important;
+    background: #202431 !important;
+    border-color: rgba(255,255,255,0.12) !important;
     border-top-left-radius: 8px !important;
     border-top-right-radius: 8px !important;
 }
 #wrap_{{ $editorId }} .ck.ck-toolbar .ck-button {
-    color: var(--text-main, #cbd5e1) !important;
+    color: #cbd5e1 !important;
 }
 #wrap_{{ $editorId }} .ck.ck-toolbar .ck-button:hover,
 #wrap_{{ $editorId }} .ck.ck-toolbar .ck-button.ck-on {
     background: rgba(139, 92, 246, 0.2) !important;
-    color: var(--primary, #8b5cf6) !important;
+    color: #8b5cf6 !important;
 }
 #wrap_{{ $editorId }} .ck.ck-dropdown__panel {
-    background: var(--bg-card, #202431) !important;
-    border-color: var(--border, rgba(255,255,255,0.15)) !important;
+    background: #202431 !important;
+    border-color: rgba(255,255,255,0.15) !important;
 }
 
 /* Slash Command Menu Popover */
 .slash-menu-popup {
-    position: absolute;
-    z-index: 999999;
-    background: var(--bg-card, #202431);
-    border: 1px solid var(--border, rgba(255, 255, 255, 0.18));
-    border-radius: 10px;
-    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.5);
-    width: 380px;
-    max-width: 92vw;
-    max-height: 320px;
-    overflow-y: auto;
-    font-family: inherit;
-    backdrop-filter: blur(8px);
+    position: absolute !important;
+    z-index: 9999999 !important;
+    background: #202431 !important;
+    border: 1px solid rgba(255, 255, 255, 0.22) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.7) !important;
+    width: 420px !important;
+    max-width: 94vw !important;
+    max-height: 400px !important;
+    font-family: inherit !important;
+    backdrop-filter: blur(12px) !important;
+    overflow: hidden !important;
+    flex-direction: column !important;
 }
 .slash-menu-header {
-    padding: 8px 12px;
-    background: var(--bg-page, #1a1d27);
-    border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.1));
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 0.75rem;
+    padding: 10px 14px !important;
+    background: #141721 !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    font-size: 0.75rem !important;
 }
 .slash-menu-title {
-    font-weight: 700;
-    color: var(--primary, #8b5cf6);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    font-weight: 700 !important;
+    color: #8b5cf6 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
 }
 .slash-menu-hint {
-    color: var(--text-muted, #94a3b8);
-    font-size: 0.7rem;
+    color: #94a3b8 !important;
+    font-size: 0.7rem !important;
 }
+
+/* Search Bar (Always Visible) */
+.slash-search-bar {
+    padding: 8px 12px !important;
+    background: #1a1d27 !important;
+    border-bottom: 1px solid rgba(255,255,255,0.1) !important;
+    display: block !important;
+}
+.slash-search-inner {
+    position: relative !important;
+    display: flex !important;
+    align-items: center !important;
+}
+.slash-search-icon {
+    position: absolute !important;
+    left: 10px !important;
+    color: #8b5cf6 !important;
+    font-size: 1.1rem !important;
+    pointer-events: none !important;
+}
+.slash-search-input {
+    width: 100% !important;
+    background: #0f111a !important;
+    border: 1px solid rgba(139, 92, 246, 0.4) !important;
+    color: #ffffff !important;
+    border-radius: 8px !important;
+    padding: 8px 12px 8px 36px !important;
+    font-size: 0.88rem !important;
+    outline: none !important;
+    box-sizing: border-box !important;
+    transition: all 0.15s ease !important;
+}
+.slash-search-input:focus {
+    border-color: #8b5cf6 !important;
+    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.3) !important;
+}
+.slash-search-input::placeholder {
+    color: #64748b !important;
+}
+
+/* Tabs Bar */
+.slash-tabs-bar {
+    display: flex !important;
+    gap: 6px !important;
+    padding: 6px 12px !important;
+    background: rgba(0,0,0,0.25) !important;
+    border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+}
+.slash-tab-pill {
+    background: rgba(255,255,255,0.06) !important;
+    border: 1px solid rgba(255,255,255,0.1) !important;
+    color: #94a3b8 !important;
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    padding: 4px 10px !important;
+    border-radius: 6px !important;
+    cursor: pointer !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    transition: all 0.15s ease !important;
+}
+.slash-tab-pill:hover {
+    background: rgba(255,255,255,0.12) !important;
+    color: #ffffff !important;
+}
+.slash-tab-pill.active {
+    background: #8b5cf6 !important;
+    border-color: #8b5cf6 !important;
+    color: #ffffff !important;
+}
+
+/* List Items */
 .slash-menu-list {
-    padding: 6px;
+    padding: 8px !important;
+    overflow-y: auto !important;
+    max-height: 240px !important;
+    flex: 1 !important;
 }
 .slash-menu-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 8px 10px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.84rem;
-    color: var(--text-main, #cbd5e1);
-    transition: all 0.15s ease;
-    border-left: 3px solid transparent;
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    padding: 8px 10px !important;
+    border-radius: 6px !important;
+    cursor: pointer !important;
+    font-size: 0.84rem !important;
+    color: #cbd5e1 !important;
+    transition: all 0.15s ease !important;
+    border-left: 3px solid transparent !important;
 }
 .slash-menu-item:hover, .slash-menu-item.active {
-    background: rgba(139, 92, 246, 0.15);
-    color: #ffffff;
-    border-left-color: var(--primary, #8b5cf6);
+    background: rgba(139, 92, 246, 0.18) !important;
+    color: #ffffff !important;
+    border-left-color: #8b5cf6 !important;
 }
 .slash-menu-item-icon {
-    width: 32px;
-    height: 32px;
-    border-radius: 6px;
-    background: rgba(255, 255, 255, 0.06);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.1rem;
-    flex-shrink: 0;
+    width: 34px !important;
+    height: 34px !important;
+    border-radius: 6px !important;
+    background: rgba(255, 255, 255, 0.06) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 1.15rem !important;
+    flex-shrink: 0 !important;
 }
 .slash-menu-item-content {
-    flex: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    flex: 1 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
 }
 .slash-menu-item-title {
-    font-weight: 600;
-    color: var(--text-heading, #f8fafc);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 6px;
+    font-weight: 600 !important;
+    color: #f8fafc !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    gap: 6px !important;
 }
 .slash-menu-item-sub {
-    font-size: 0.74rem;
-    color: var(--text-muted, #94a3b8);
-    margin-top: 2px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    font-size: 0.74rem !important;
+    color: #94a3b8 !important;
+    margin-top: 2px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
 }
 .slash-menu-empty {
-    padding: 1rem;
-    text-align: center;
-    color: var(--text-muted, #94a3b8);
-    font-size: 0.8rem;
+    padding: 1.5rem 1rem !important;
+    text-align: center !important;
+    color: #94a3b8 !important;
+    font-size: 0.82rem !important;
 }
 .slash-menu-loading {
-    padding: 1rem;
-    text-align: center;
-    color: var(--primary, #8b5cf6);
-    font-size: 0.8rem;
+    padding: 1.5rem 1rem !important;
+    text-align: center !important;
+    color: #8b5cf6 !important;
+    font-size: 0.82rem !important;
 }
 
 /* Mention Chips Styling */
@@ -237,7 +347,7 @@ if (typeof window.__richEditors === 'undefined') {
     window.__richEditors = {};
 }
 
-// On-demand fetcher: ONLY called after a label is selected
+// On-demand fetcher
 if (typeof window.__fetchMentionsServer === 'undefined') {
     window.__fetchMentionsServer = function(type, query, limit = 10) {
         const url = `/rich-editor/mentions?type=${encodeURIComponent(type)}&q=${encodeURIComponent(query || '')}&limit=${limit}`;
@@ -297,13 +407,15 @@ function setupSlashCommands(editor, editorId) {
     const menu = document.getElementById('slash_menu_' + editorId);
     const list = document.getElementById('slash_list_' + editorId);
     const titleEl = document.getElementById('slash_title_' + editorId);
+    const searchInput = document.getElementById('slash_search_input_' + editorId);
+    const tabsBar = document.getElementById('slash_tabs_' + editorId);
     const wrapper = document.getElementById('wrap_' + editorId);
     if (!menu || !list || !wrapper) return;
 
     let isMenuOpen = false;
     let selectedIndex = 0;
     let currentItems = [];
-    let activeCategory = null; // null (root suggestions), 'loan', 'party', 'employee'
+    let activeCategory = 'all'; // 'all', 'loan', 'party', 'employee'
     let lastSlashLength = 1;
     let searchDebounceTimer = null;
 
@@ -311,28 +423,42 @@ function setupSlashCommands(editor, editorId) {
         menu.style.display = 'none';
         isMenuOpen = false;
         selectedIndex = 0;
-        activeCategory = null;
+        activeCategory = 'all';
+        if (searchInput) searchInput.value = '';
         if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
     }
 
     function openMenu(x, y) {
-        menu.style.display = 'block';
+        menu.style.display = 'flex';
         isMenuOpen = true;
         const rect = wrapper.getBoundingClientRect();
         let top = (y - rect.top) + 25;
         let left = (x - rect.left);
-        if (left + 380 > rect.width) {
-            left = Math.max(10, rect.width - 390);
+        if (left + 420 > rect.width) {
+            left = Math.max(10, rect.width - 430);
         }
         menu.style.top = Math.max(10, top) + 'px';
         menu.style.left = Math.max(10, left) + 'px';
+    }
+
+    function updateTabsUI(cat) {
+        activeCategory = cat;
+        if (tabsBar) {
+            tabsBar.querySelectorAll('.slash-tab-pill').forEach(btn => {
+                if (btn.dataset.category === cat) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        }
     }
 
     function renderLoading(headerTitle) {
         if (titleEl && headerTitle) {
             titleEl.innerHTML = `<ion-icon name="flash-outline" style="vertical-align: middle;"></ion-icon> ${headerTitle}`;
         }
-        list.innerHTML = `<div class="slash-menu-loading"><ion-icon name="sync-outline" class="spin" style="vertical-align:middle;"></ion-icon> Loading 10 records...</div>`;
+        list.innerHTML = `<div class="slash-menu-loading"><ion-icon name="sync-outline" class="spin" style="vertical-align:middle;"></ion-icon> Loading records...</div>`;
     }
 
     function renderItems(items, headerTitle) {
@@ -363,9 +489,9 @@ function setupSlashCommands(editor, editorId) {
                     </div>
                 `;
             } else if (item.type === 'loan') {
-                const codeBadge = `<span style="font-size:0.75rem; font-weight:700; color:var(--primary); background:rgba(139,92,246,0.12); padding:1px 6px; border-radius:4px;">${item.loan_code || 'LN-' + item.id}</span>`;
+                const codeBadge = `<span style="font-size:0.75rem; font-weight:700; color:#8b5cf6; background:rgba(139,92,246,0.15); padding:1px 6px; border-radius:4px;">${item.loan_code || 'LN-' + item.id}</span>`;
                 const statusBadge = `<span style="font-size:0.68rem; padding:1px 6px; border-radius:4px; font-weight:600; background:${item.status === 'settled' ? '#dcfce7; color:#15803d' : '#fef3c7; color:#b45309'}">${item.status}</span>`;
-                const descSnippet = item.purpose ? `<span style="color:var(--text-muted); font-size:0.72rem;"> &bull; ${item.purpose.substring(0, 35)}${item.purpose.length > 35 ? '...' : ''}</span>` : '';
+                const descSnippet = item.purpose ? `<span style="color:#94a3b8; font-size:0.72rem;"> &bull; ${item.purpose.substring(0, 35)}${item.purpose.length > 35 ? '...' : ''}</span>` : '';
 
                 itemEl.innerHTML = `
                     <div class="slash-menu-item-icon" style="color:#8b5cf6; background:rgba(139,92,246,0.15);">
@@ -377,7 +503,7 @@ function setupSlashCommands(editor, editorId) {
                             ${statusBadge}
                         </div>
                         <div class="slash-menu-item-sub">
-                            <strong style="color:var(--text-heading);">${item.currency} ${Number(item.principal_amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</strong>
+                            <strong style="color:#f8fafc;">${item.currency} ${Number(item.principal_amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</strong>
                             ${descSnippet}
                         </div>
                     </div>
@@ -403,7 +529,7 @@ function setupSlashCommands(editor, editorId) {
                     <div class="slash-menu-item-content">
                         <div class="slash-menu-item-title">
                             <span>${item.name}</span>
-                            ${item.code ? `<span style="font-size:0.7rem; color:var(--text-muted);">${item.code}</span>` : ''}
+                            ${item.code ? `<span style="font-size:0.7rem; color:#94a3b8;">${item.code}</span>` : ''}
                         </div>
                         <div class="slash-menu-item-sub">${item.job_position || 'Employee'}</div>
                     </div>
@@ -438,15 +564,13 @@ function setupSlashCommands(editor, editorId) {
     }
 
     function selectItem(item) {
-        // When clicking/pressing Enter on a command label, trigger fetch for that label
+        // When clicking a category command option (/loan, /party, /employee)
         if (item.type === 'command') {
-            activeCategory = item.action;
-            if (item.action === 'loan') {
-                fetchAndRenderCategory('loan', '');
-            } else if (item.action === 'party') {
-                fetchAndRenderCategory('party', '');
-            } else if (item.action === 'employee') {
-                fetchAndRenderCategory('employee', '');
+            updateTabsUI(item.action);
+            fetchCategoryData(item.action, '');
+            if (searchInput) {
+                searchInput.value = '';
+                setTimeout(() => searchInput.focus(), 30);
             }
             return;
         }
@@ -477,65 +601,77 @@ function setupSlashCommands(editor, editorId) {
                 const modelFragment = editor.data.toModel(viewFragment);
                 editor.model.insertContent(modelFragment, editor.model.document.selection);
             });
+            editor.editing.view.focus();
         }
 
         closeMenu();
     }
 
-    // Step 1: Show static suggestions when user enters / (zero network requests)
-    function showRootCommandSuggestions(filterText) {
-        activeCategory = null;
-        const q = (filterText || '').toLowerCase().trim();
-        const commands = [
-            {
-                type: 'command',
-                action: 'loan',
-                title: '/loan',
-                subtitle: 'Select & link a Loan Facility (fetches 10 records on select)',
-                icon: 'card-outline',
-                iconColor: '#8b5cf6',
-                bgColor: 'rgba(139, 92, 246, 0.15)'
-            },
-            {
-                type: 'command',
-                action: 'party',
-                title: '/party',
-                subtitle: 'Select & mention a Party (fetches 10 records on select)',
-                icon: 'business-outline',
-                iconColor: '#3b82f6',
-                bgColor: 'rgba(59, 130, 246, 0.15)'
-            },
-            {
-                type: 'command',
-                action: 'employee',
-                title: '/employee',
-                subtitle: 'Select & mention an Employee (fetches 10 records on select)',
-                icon: 'people-outline',
-                iconColor: '#10b981',
-                bgColor: 'rgba(16, 185, 129, 0.15)'
-            }
-        ];
-
-        const filtered = commands.filter(c => c.title.toLowerCase().includes(q) || c.action.includes(q));
-        renderItems(filtered, 'Commands (Select to fetch data)');
-    }
-
-    // Step 2: On-demand server fetch for selected category
-    function fetchAndRenderCategory(category, query) {
-        activeCategory = category;
+    // Show root commands or fetch on demand
+    function fetchCategoryData(category, query) {
+        updateTabsUI(category);
         const titles = {
-            loan: 'Loans (Top 10)',
-            party: 'Parties (Top 10)',
-            employee: 'Employees (Top 10)'
+            all: 'Slash Commands & Search',
+            loan: 'Loans (/loan - 10 Results)',
+            party: 'Parties (/party - 10 Results)',
+            employee: 'Employees (/employee - 10 Results)'
+        };
+        const placeholders = {
+            all: 'Search loans, parties, employees...',
+            loan: 'Search loan by name, code, amount, purpose...',
+            party: 'Search party by name, contact, phone, email...',
+            employee: 'Search employee by name, code, position...'
         };
 
-        renderLoading(titles[category] || 'Loading...');
+        if (searchInput) {
+            searchInput.placeholder = placeholders[category] || 'Type to search...';
+            if (query && searchInput.value !== query) {
+                searchInput.value = query;
+            }
+        }
+
+        // If category is 'all' and no query, show command labels
+        if (category === 'all' && (!query || query.trim() === '')) {
+            const commands = [
+                {
+                    type: 'command',
+                    action: 'loan',
+                    title: '/loan',
+                    subtitle: 'Search & link a Loan (Code, Lender, Amount, Purpose)',
+                    icon: 'card-outline',
+                    iconColor: '#8b5cf6',
+                    bgColor: 'rgba(139, 92, 246, 0.15)'
+                },
+                {
+                    type: 'command',
+                    action: 'party',
+                    title: '/party',
+                    subtitle: 'Search & mention a Party (Client / Vendor / Partner)',
+                    icon: 'business-outline',
+                    iconColor: '#3b82f6',
+                    bgColor: 'rgba(59, 130, 246, 0.15)'
+                },
+                {
+                    type: 'command',
+                    action: 'employee',
+                    title: '/employee',
+                    subtitle: 'Search & mention an Employee / Team Member',
+                    icon: 'people-outline',
+                    iconColor: '#10b981',
+                    bgColor: 'rgba(16, 185, 129, 0.15)'
+                }
+            ];
+            renderItems(commands, 'Slash Commands');
+            return;
+        }
+
+        renderLoading(titles[category] || 'Searching...');
 
         if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
         searchDebounceTimer = setTimeout(() => {
-            window.__fetchMentionsServer(category, query, 10).then(data => {
+            window.__fetchMentionsServer(category === 'all' ? 'loan' : category, query, 10).then(data => {
                 let items = [];
-                if (category === 'loan') {
+                if (category === 'loan' || category === 'all') {
                     items = (data.loans || data.items || []).map(l => ({ ...l, type: 'loan' }));
                 } else if (category === 'party') {
                     items = (data.parties || data.items || []).map(p => ({ ...p, type: 'party' }));
@@ -547,7 +683,48 @@ function setupSlashCommands(editor, editorId) {
         }, query ? 150 : 0);
     }
 
-    // Keydown for Menu Navigation
+    // Tabs Click
+    if (tabsBar) {
+        tabsBar.addEventListener('click', (e) => {
+            const btn = e.target.closest('.slash-tab-pill');
+            if (!btn) return;
+            const cat = btn.dataset.category;
+            const q = searchInput ? searchInput.value : '';
+            fetchCategoryData(cat, q);
+            if (searchInput) searchInput.focus();
+        });
+    }
+
+    // Search Input Realtime Listener
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value;
+            fetchCategoryData(activeCategory, query);
+        });
+
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                selectedIndex = (selectedIndex + 1) % Math.max(1, currentItems.length);
+                updateActiveItem();
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                selectedIndex = (selectedIndex - 1 + currentItems.length) % Math.max(1, currentItems.length);
+                updateActiveItem();
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (currentItems[selectedIndex]) {
+                    selectItem(currentItems[selectedIndex]);
+                }
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                closeMenu();
+                editor.editing.view.focus();
+            }
+        });
+    }
+
+    // Keydown for Menu Navigation in Editor
     editor.editing.view.document.on('keydown', (evt, data) => {
         if (!isMenuOpen) return;
 
@@ -574,7 +751,7 @@ function setupSlashCommands(editor, editorId) {
         }
     }, { priority: 'high' });
 
-    // Monitor typing
+    // Monitor typing in Editor
     editor.model.document.on('change:data', () => {
         const selection = editor.model.document.selection;
         if (!selection.isCollapsed) {
@@ -616,23 +793,23 @@ function setupSlashCommands(editor, editorId) {
 
         const trimmed = slashQuery.toLowerCase();
 
-        // If user explicitly typed /loan or /party or /employee, trigger on-demand fetch with query
+        // If user typed /loan, /party, /employee directly in the editor
         if (trimmed.startsWith('/loan')) {
             const subQuery = trimmed.replace('/loan', '').trim();
-            fetchAndRenderCategory('loan', subQuery);
+            fetchCategoryData('loan', subQuery);
         } else if (trimmed.startsWith('/party')) {
             const subQuery = trimmed.replace('/party', '').trim();
-            fetchAndRenderCategory('party', subQuery);
+            fetchCategoryData('party', subQuery);
         } else if (trimmed.startsWith('/employee') || trimmed.startsWith('/emp')) {
             const subQuery = trimmed.replace(/\/employee|\/emp/, '').trim();
-            fetchAndRenderCategory('employee', subQuery);
+            fetchCategoryData('employee', subQuery);
         } else {
-            // Just "/" or partial filter of command labels (e.g. "/l" -> "/loan")
-            showRootCommandSuggestions(trimmed.replace('/', ''));
+            const query = trimmed.replace('/', '').trim();
+            fetchCategoryData('all', query);
         }
     });
 
-    // Close on blur or click outside
+    // Close on click outside (but NOT when clicking inside the popup menu or search bar)
     document.addEventListener('click', (e) => {
         if (!wrapper.contains(e.target)) {
             closeMenu();
