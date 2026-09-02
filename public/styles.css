@@ -1654,6 +1654,33 @@ ion-icon {
     text-decoration: underline !important;
 }
 
+.mention-chip.mention-transaction {
+    background: rgba(245, 158, 11, 0.14) !important;
+    color: #f59e0b !important;
+    border: 1px solid rgba(245, 158, 11, 0.35) !important;
+}
+
+.mention-chip.mention-transaction:hover {
+    background: rgba(245, 158, 11, 0.25) !important;
+    border-color: #f59e0b !important;
+    color: #d97706 !important;
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3) !important;
+    text-decoration: underline !important;
+}
+
+.mention-chip.mention-party {
+    background: rgba(59, 130, 246, 0.14) !important;
+    color: #3b82f6 !important;
+    border: 1px solid rgba(59, 130, 246, 0.35) !important;
+}
+
+.mention-chip.mention-party:hover {
+    background: rgba(59, 130, 246, 0.25) !important;
+    border-color: #3b82f6 !important;
+    color: #2563eb !important;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3) !important;
+}
+
 .mention-chip.mention-employee {
     background: rgba(16, 185, 129, 0.14) !important;
     color: #10b981 !important;

@@ -2,7 +2,7 @@
     'name',
     'id' => null,
     'value' => '',
-    'placeholder' => 'Type / for commands (/loan, /party, /employee)...',
+    'placeholder' => 'Type / for commands (/loan, /transaction, /party, /employee)...',
     'height' => '130px',
     'required' => false,
     'class' => '',
@@ -42,7 +42,7 @@
                     type="text" 
                     id="slash_search_input_{{ $editorId }}" 
                     class="slash-search-input" 
-                    placeholder="Search by name, code, amount, purpose..." 
+                    placeholder="Search loans, transactions, parties, employees..." 
                     autocomplete="off"
                 />
             </div>
@@ -55,6 +55,9 @@
             </button>
             <button type="button" class="slash-tab-pill" data-category="loan">
                 <ion-icon name="card-outline"></ion-icon> /loan
+            </button>
+            <button type="button" class="slash-tab-pill" data-category="transaction">
+                <ion-icon name="receipt-outline"></ion-icon> /transaction
             </button>
             <button type="button" class="slash-tab-pill" data-category="party">
                 <ion-icon name="business-outline"></ion-icon> /party
@@ -116,9 +119,9 @@
     border: 1px solid rgba(255, 255, 255, 0.22) !important;
     border-radius: 12px !important;
     box-shadow: 0 20px 45px rgba(0, 0, 0, 0.7) !important;
-    width: 420px !important;
+    width: 440px !important;
     max-width: 94vw !important;
-    max-height: 400px !important;
+    max-height: 420px !important;
     font-family: inherit !important;
     backdrop-filter: blur(12px) !important;
     overflow: hidden !important;
@@ -190,6 +193,7 @@
     padding: 6px 12px !important;
     background: rgba(0,0,0,0.25) !important;
     border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+    overflow-x: auto !important;
 }
 .slash-tab-pill {
     background: rgba(255,255,255,0.06) !important;
@@ -203,6 +207,7 @@
     display: inline-flex !important;
     align-items: center !important;
     gap: 4px !important;
+    white-space: nowrap !important;
     transition: all 0.15s ease !important;
 }
 .slash-tab-pill:hover {
@@ -219,7 +224,7 @@
 .slash-menu-list {
     padding: 8px !important;
     overflow-y: auto !important;
-    max-height: 240px !important;
+    max-height: 250px !important;
     flex: 1 !important;
 }
 .slash-menu-item {
@@ -311,6 +316,18 @@
     box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3) !important;
     text-decoration: underline !important;
 }
+.mention-chip.mention-transaction {
+    background: rgba(245, 158, 11, 0.14) !important;
+    color: #f59e0b !important;
+    border: 1px solid rgba(245, 158, 11, 0.35) !important;
+}
+.mention-chip.mention-transaction:hover {
+    background: rgba(245, 158, 11, 0.25) !important;
+    border-color: #f59e0b !important;
+    color: #d97706 !important;
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3) !important;
+    text-decoration: underline !important;
+}
 .mention-chip.mention-party {
     background: rgba(59, 130, 246, 0.14) !important;
     color: #3b82f6 !important;
@@ -358,7 +375,7 @@ if (typeof window.__fetchMentionsServer === 'undefined') {
             })
             .catch(err => {
                 console.warn('CKeditorController mentions fetch error:', err);
-                return { items: [], loans: [], parties: [], employees: [] };
+                return { items: [], loans: [], parties: [], employees: [], transactions: [] };
             });
     };
 }
@@ -379,7 +396,7 @@ function initRichEditor(editorId, config) {
                 'link', 'insertTable', '|', 
                 'undo', 'redo'
             ],
-            placeholder: config.placeholder || 'Type / for commands (/loan, /party, /employee)...'
+            placeholder: config.placeholder || 'Type / for commands (/loan, /transaction, /party, /employee)...'
         })
         .then(editor => {
             window.__richEditors[editorId] = editor;
@@ -415,7 +432,7 @@ function setupSlashCommands(editor, editorId) {
     let isMenuOpen = false;
     let selectedIndex = 0;
     let currentItems = [];
-    let activeCategory = 'all'; // 'all', 'loan', 'party', 'employee'
+    let activeCategory = 'all'; // 'all', 'loan', 'transaction', 'party', 'employee'
     let lastSlashLength = 1;
     let searchDebounceTimer = null;
 
@@ -434,8 +451,8 @@ function setupSlashCommands(editor, editorId) {
         const rect = wrapper.getBoundingClientRect();
         let top = (y - rect.top) + 25;
         let left = (x - rect.left);
-        if (left + 420 > rect.width) {
-            left = Math.max(10, rect.width - 430);
+        if (left + 440 > rect.width) {
+            left = Math.max(10, rect.width - 450);
         }
         menu.style.top = Math.max(10, top) + 'px';
         menu.style.left = Math.max(10, left) + 'px';
@@ -508,6 +525,34 @@ function setupSlashCommands(editor, editorId) {
                         </div>
                     </div>
                 `;
+            } else if (item.type === 'transaction') {
+                const isInc = item.type_name === 'income' || item.type === 'income';
+                const isExp = item.type_name === 'expense' || item.type === 'expense';
+                const typeColor = isInc ? '#10b981' : (isExp ? '#ef4444' : '#3b82f6');
+                const typeBg = isInc ? 'rgba(16,185,129,0.15)' : (isExp ? 'rgba(239,68,68,0.15)' : 'rgba(59,130,246,0.15)');
+                const typeLabel = (item.type || 'TXN').toUpperCase();
+                const refSnippet = item.reference_no ? `<span style="font-size:0.72rem; color:#94a3b8; background:rgba(255,255,255,0.06); padding:1px 5px; border-radius:4px;">${item.reference_no}</span>` : '';
+                const dateSnippet = item.transaction_date ? `<span style="color:#94a3b8; font-size:0.72rem;"> &bull; ${item.transaction_date}</span>` : '';
+
+                itemEl.innerHTML = `
+                    <div class="slash-menu-item-icon" style="color:${typeColor}; background:${typeBg};">
+                        <ion-icon name="receipt-outline"></ion-icon>
+                    </div>
+                    <div class="slash-menu-item-content">
+                        <div class="slash-menu-item-title">
+                            <span>
+                                <span style="font-size:0.7rem; font-weight:700; color:${typeColor}; background:${typeBg}; padding:1px 5px; border-radius:4px; margin-right:4px;">${typeLabel}</span>
+                                ${item.description || 'Transaction #' + item.id}
+                            </span>
+                            ${refSnippet}
+                        </div>
+                        <div class="slash-menu-item-sub">
+                            <strong style="color:${typeColor};">${isInc ? '+' : (isExp ? '-' : '')}${item.currency} ${Number(item.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</strong>
+                            ${item.category_name ? `<span style="color:#94a3b8; font-size:0.72rem;"> &bull; ${item.category_name}</span>` : ''}
+                            ${dateSnippet}
+                        </div>
+                    </div>
+                `;
             } else if (item.type === 'party') {
                 itemEl.innerHTML = `
                     <div class="slash-menu-item-icon" style="color:#3b82f6; background:rgba(59,130,246,0.15);">
@@ -564,7 +609,7 @@ function setupSlashCommands(editor, editorId) {
     }
 
     function selectItem(item) {
-        // When clicking a category command option (/loan, /party, /employee)
+        // When clicking a category command option
         if (item.type === 'command') {
             updateTabsUI(item.action);
             fetchCategoryData(item.action, '');
@@ -580,6 +625,11 @@ function setupSlashCommands(editor, editorId) {
         if (item.type === 'loan') {
             const code = item.loan_code || ('LN-' + item.id);
             htmlToInsert = `<a href="/loans/${item.id}" target="_blank" rel="noopener noreferrer" class="mention-chip mention-loan" style="display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:6px; background:rgba(139,92,246,0.12); color:#8b5cf6; font-weight:600; text-decoration:none; border:1px solid rgba(139,92,246,0.25);" contenteditable="false"><ion-icon name="link-outline"></ion-icon> ${code}: ${item.lender_name} (${item.currency} ${Number(item.principal_amount).toLocaleString(undefined, {minimumFractionDigits: 2})})</a>&nbsp;`;
+        } else if (item.type === 'transaction') {
+            const isInc = item.type === 'income';
+            const sign = isInc ? '+' : (item.type === 'expense' ? '-' : '');
+            const ref = item.reference_no ? ` [${item.reference_no}]` : '';
+            htmlToInsert = `<a href="/transactions" target="_blank" rel="noopener noreferrer" class="mention-chip mention-transaction" style="display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:6px; background:rgba(245,158,11,0.14); color:#f59e0b; font-weight:600; text-decoration:none; border:1px solid rgba(245,158,11,0.35);" contenteditable="false"><ion-icon name="receipt-outline"></ion-icon> TXN-${item.id}${ref}: ${item.type.toUpperCase()} ${sign}${item.currency} ${Number(item.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</a>&nbsp;`;
         } else if (item.type === 'party') {
             htmlToInsert = `<span class="mention-chip mention-party" style="display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:6px; background:rgba(59,130,246,0.12); color:#3b82f6; font-weight:600; border:1px solid rgba(59,130,246,0.25);" contenteditable="false"><ion-icon name="business-outline"></ion-icon> ${item.name}</span>&nbsp;`;
         } else if (item.type === 'employee') {
@@ -613,12 +663,14 @@ function setupSlashCommands(editor, editorId) {
         const titles = {
             all: 'Slash Commands & Search',
             loan: 'Loans (/loan - 10 Results)',
+            transaction: 'Transactions (/transaction - 10 Results)',
             party: 'Parties (/party - 10 Results)',
             employee: 'Employees (/employee - 10 Results)'
         };
         const placeholders = {
-            all: 'Search loans, parties, employees...',
+            all: 'Search loans, transactions, parties, employees...',
             loan: 'Search loan by name, code, amount, purpose...',
+            transaction: 'Search transaction by description, ref no, amount...',
             party: 'Search party by name, contact, phone, email...',
             employee: 'Search employee by name, code, position...'
         };
@@ -641,6 +693,15 @@ function setupSlashCommands(editor, editorId) {
                     icon: 'card-outline',
                     iconColor: '#8b5cf6',
                     bgColor: 'rgba(139, 92, 246, 0.15)'
+                },
+                {
+                    type: 'command',
+                    action: 'transaction',
+                    title: '/transaction',
+                    subtitle: 'Search & link a Transaction (Income, Expense, Ref No)',
+                    icon: 'receipt-outline',
+                    iconColor: '#f59e0b',
+                    bgColor: 'rgba(245, 158, 11, 0.15)'
                 },
                 {
                     type: 'command',
@@ -671,12 +732,20 @@ function setupSlashCommands(editor, editorId) {
         searchDebounceTimer = setTimeout(() => {
             window.__fetchMentionsServer(category === 'all' ? 'loan' : category, query, 10).then(data => {
                 let items = [];
-                if (category === 'loan' || category === 'all') {
+                if (category === 'loan') {
                     items = (data.loans || data.items || []).map(l => ({ ...l, type: 'loan' }));
+                } else if (category === 'transaction') {
+                    items = (data.transactions || data.items || []).map(t => ({ ...t, type: 'transaction' }));
                 } else if (category === 'party') {
                     items = (data.parties || data.items || []).map(p => ({ ...p, type: 'party' }));
                 } else if (category === 'employee') {
                     items = (data.employees || data.items || []).map(e => ({ ...e, type: 'employee' }));
+                } else if (category === 'all') {
+                    const l = (data.loans || []).map(x => ({ ...x, type: 'loan' }));
+                    const tx = (data.transactions || []).map(x => ({ ...x, type: 'transaction' }));
+                    const p = (data.parties || []).map(x => ({ ...x, type: 'party' }));
+                    const em = (data.employees || []).map(x => ({ ...x, type: 'employee' }));
+                    items = [...l, ...tx, ...p, ...em];
                 }
                 renderItems(items, titles[category]);
             });
@@ -774,7 +843,7 @@ function setupSlashCommands(editor, editorId) {
             return;
         }
 
-        const slashQuery = fullText.substring(lastSlashIndex); // e.g. "/" or "/loan" or "/loan abi"
+        const slashQuery = fullText.substring(lastSlashIndex); // e.g. "/" or "/loan" or "/transaction"
         lastSlashLength = slashQuery.length;
 
         // Position popup at caret
@@ -793,10 +862,13 @@ function setupSlashCommands(editor, editorId) {
 
         const trimmed = slashQuery.toLowerCase();
 
-        // If user typed /loan, /party, /employee directly in the editor
+        // Check command triggers
         if (trimmed.startsWith('/loan')) {
             const subQuery = trimmed.replace('/loan', '').trim();
             fetchCategoryData('loan', subQuery);
+        } else if (trimmed.startsWith('/transaction') || trimmed.startsWith('/txn') || trimmed.startsWith('/tx')) {
+            const subQuery = trimmed.replace(/\/transaction|\/txn|\/tx/, '').trim();
+            fetchCategoryData('transaction', subQuery);
         } else if (trimmed.startsWith('/party')) {
             const subQuery = trimmed.replace('/party', '').trim();
             fetchCategoryData('party', subQuery);
@@ -809,7 +881,7 @@ function setupSlashCommands(editor, editorId) {
         }
     });
 
-    // Close on click outside (but NOT when clicking inside the popup menu or search bar)
+    // Close on click outside
     document.addEventListener('click', (e) => {
         if (!wrapper.contains(e.target)) {
             closeMenu();
