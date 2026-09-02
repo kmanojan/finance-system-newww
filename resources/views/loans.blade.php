@@ -399,6 +399,9 @@
                     </div>
                     <div style="font-size:0.78rem; color:var(--text-muted); margin-top:0.15rem;">
                         {{ strip_tags($loan->purpose) ?: 'General Borrowing Facility' }} &bull; Claimed {{ $loan->claimed_date ? date('M d, Y', strtotime($loan->claimed_date)) : 'N/A' }}
+                        @if($loan->status === 'settled' && !empty($loan->settled_date))
+                            &bull; <span style="color:var(--success); font-weight:600;"><ion-icon name="checkmark-done-outline" style="vertical-align:middle;"></ion-icon> Settled {{ date('M d, Y', strtotime($loan->settled_date)) }}</span>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -421,12 +424,19 @@
                     </div>
                 </div>
 
-                <!-- Next Due -->
+                <!-- Next Due / Settled Date -->
                 <div style="text-align:left; min-width:90px;">
-                    <div style="font-size:0.72rem; color:var(--text-muted); text-transform:uppercase; font-weight:600;">Next Due</div>
-                    <div style="font-size:0.82rem; font-weight:600; color: {{ $isOverdue ? 'var(--danger)' : 'var(--text-main)' }};">
-                        {{ $loan->next_due_date !== 'N/A' ? date('M d, Y', strtotime($loan->next_due_date)) : 'N/A' }}
-                    </div>
+                    @if($loan->status === 'settled')
+                        <div style="font-size:0.72rem; color:var(--success); text-transform:uppercase; font-weight:700;">Settled Date</div>
+                        <div style="font-size:0.82rem; font-weight:700; color:var(--success);">
+                            {{ $loan->settled_date ? date('M d, Y', strtotime($loan->settled_date)) : 'Settled' }}
+                        </div>
+                    @else
+                        <div style="font-size:0.72rem; color:var(--text-muted); text-transform:uppercase; font-weight:600;">Next Due</div>
+                        <div style="font-size:0.82rem; font-weight:600; color: {{ $isOverdue ? 'var(--danger)' : 'var(--text-main)' }};">
+                            {{ $loan->next_due_date !== 'N/A' ? date('M d, Y', strtotime($loan->next_due_date)) : 'N/A' }}
+                        </div>
+                    @endif
                 </div>
             </div>
 
@@ -534,6 +544,12 @@
                         <span class="loan-stat-label">Start / Claimed Date</span>
                         <span class="loan-stat-val">{{ $loan->claimed_date ?: ($loan->start_date ?: 'N/A') }}</span>
                     </div>
+                    @if($loan->status === 'settled' && !empty($loan->settled_date))
+                    <div class="loan-stat-row" style="background:rgba(16,185,129,0.08); padding:0.25rem 0.5rem; border-radius:4px;">
+                        <span class="loan-stat-label" style="color:var(--success); font-weight:700;">Settled Date</span>
+                        <span class="loan-stat-val" style="color:var(--success); font-weight:700;">{{ date('M d, Y', strtotime($loan->settled_date)) }}</span>
+                    </div>
+                    @endif
                     <div class="loan-stat-row">
                         <span class="loan-stat-label">Term & Maturity</span>
                         <span class="loan-stat-val">{{ $loan->term_months }} mo @if($loan->maturity_date) &bull; Due {{ $loan->maturity_date }} @endif</span>

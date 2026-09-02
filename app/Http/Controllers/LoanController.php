@@ -147,6 +147,13 @@ class LoanController extends Controller
                 ? max(0, ($loan->principal_amount ?? 0) - (($loan->upfront_interest_amount ?? null) ?: ($loan->interest_amount ?? 0)))
                 : ($loan->principal_amount ?? 0);
 
+            $settledRecord = DB::table('loan_principal_records')
+                ->where('loan_id', $loan->id)
+                ->where('record_type', 'repayment')
+                ->orderBy('record_date', 'desc')
+                ->first();
+            $loan->settled_date = $settledRecord ? $settledRecord->record_date : ($loan->status === 'settled' ? date('Y-m-d', strtotime($loan->updated_at)) : null);
+
             if ($loan->status === 'active' || $loan->status === 'pending') {
                 $totalOutstandingPrincipal += $outstandingPrincipal;
                 $totalOutstandingInterest += $loanPendingInterest;
@@ -753,6 +760,9 @@ class LoanController extends Controller
         $loan->net_disbursed = !empty($loan->is_upfront_interest ?? null) 
             ? max(0, ($loan->principal_amount ?? 0) - (($loan->upfront_interest_amount ?? null) ?: ($loan->interest_amount ?? 0)))
             : ($loan->principal_amount ?? 0);
+
+        $settledRecord = $principalRecords->where('record_type', 'repayment')->first();
+        $loan->settled_date = $settledRecord ? $settledRecord->record_date : ($loan->status === 'settled' ? date('Y-m-d', strtotime($loan->updated_at)) : null);
 
         $attachments = DB::table('attachments')
                         ->where('model_type', 'Loan')

@@ -69,7 +69,12 @@
                 <span class="badge" style="background:#fef3c7; color:#b45309; font-weight:600; padding:0.35rem 0.8rem; font-size:0.85rem;">Pending Activation</span>
             @endif
         </div>
-        <p class="subtitle" style="margin-top:0.3rem;">{{ strip_tags($loan->purpose) ?: 'General Loan Facility' }} | Initial Principal: {{ $loan->currency }} {{ number_format($loan->principal_amount, 2) }}</p>
+        <p class="subtitle" style="margin-top:0.3rem;">
+            {{ strip_tags($loan->purpose) ?: 'General Loan Facility' }} | Initial Principal: {{ $loan->currency }} {{ number_format($loan->principal_amount, 2) }}
+            @if($loan->status === 'settled' && !empty($loan->settled_date))
+                | <strong style="color:var(--success);"><ion-icon name="checkmark-done-outline" style="vertical-align:middle;"></ion-icon> Fully Settled on {{ date('M d, Y', strtotime($loan->settled_date)) }}</strong>
+            @endif
+        </p>
     </div>
     
     <div class="header-actions" style="display: flex; align-items: center; gap: 0.75rem; flex-wrap:wrap;">
@@ -239,6 +244,15 @@
                     <span class="text-muted">Claimed / Start Date:</span>
                     <strong style="color:var(--text-heading);">{{ $loan->claimed_date ?? 'N/A' }}</strong>
                 </div>
+
+                @if($loan->status === 'settled' && !empty($loan->settled_date))
+                    <div style="display:flex; justify-content:space-between; border-bottom:1px dashed var(--border); padding-bottom:0.5rem; background:rgba(16,185,129,0.08); padding:0.5rem; border-radius:6px;">
+                        <span style="font-weight:700; color:var(--success); display:flex; align-items:center; gap:0.3rem;">
+                            <ion-icon name="checkmark-done-circle-outline"></ion-icon> Settlement Date:
+                        </span>
+                        <strong style="color:var(--success); font-size:0.95rem;">{{ date('M d, Y', strtotime($loan->settled_date)) }}</strong>
+                    </div>
+                @endif
 
                 <div style="display:flex; justify-content:space-between; border-bottom:1px dashed var(--border); padding-bottom:0.5rem;">
                     <span class="text-muted">Full Principal Due Date:</span>
