@@ -1,5 +1,6 @@
 @extends('layouts.app')
 @section('title', 'Loans Management')
+@section('meta_description', 'Track, manage, and settle company loan facilities, repayment schedules, interest calculations, and lender obligations.')
 
 @section('secondary-sidebar')
 <aside class="sidebar-secondary" id="sidebarSecondary">

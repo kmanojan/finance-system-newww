@@ -1,5 +1,6 @@
 @extends('layouts.app')
-@section('title', 'Loan Details - ' . $loan->lender_name)
+@section('title', 'Loan Facility: ' . $loan->lender_name . ' (' . ($loan->loan_code ?: 'LN-' . $loan->id) . ')')
+@section('meta_description', 'Detailed overview, repayment schedules, interest breakdowns, and settlement history for loan ' . $loan->lender_name)
 
 @section('secondary-sidebar')
 <aside class="sidebar-secondary" id="sidebarSecondary">

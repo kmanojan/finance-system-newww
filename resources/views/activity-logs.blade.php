@@ -1,5 +1,6 @@
 @extends('layouts.app')
 @section('title', 'Audit & Activity Logs')
+@section('meta_description', 'Audit trails, system security logs, user actions, and change tracking across the Apptimus Finance System.')
 
 @section('secondary-sidebar')
     @include('operations._sidebar')

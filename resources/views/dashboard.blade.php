@@ -1,5 +1,6 @@
 @extends('layouts.app')
 @section('title', 'Finance System Dashboard')
+@section('meta_description', 'Real-time financial dashboard, cash flow, income, expenses, and key company metrics for Apptimus.')
 
 @section('content')
 <style>

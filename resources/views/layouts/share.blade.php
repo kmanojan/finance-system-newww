@@ -4,7 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
-    <title>@yield('title', 'Client Portal')</title>
+    <title>@yield('title', 'Client Portal') - Apptimus</title>
+    <meta name="description" content="@yield('meta_description', 'Apptimus Client & Partner Share Portal')">
+    <meta name="author" content="Apptimus Tech">
+    
+    <!-- Open Graph / Social Meta -->
+    <meta property="og:title" content="@yield('title', 'Client Portal') - Apptimus">
+    <meta property="og:description" content="@yield('meta_description', 'Apptimus Client & Partner Share Portal')">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ url()->current() }}">
+    
+    @yield('meta')
+    @yield('meta_tags')
+
     <meta name="theme-color" content="#4f46e5">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">

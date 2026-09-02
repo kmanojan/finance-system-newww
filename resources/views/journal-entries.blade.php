@@ -1,5 +1,6 @@
 @extends('layouts.app')
-@section('title', 'Journal Entries')
+@section('title', 'Double-Entry Journal Entries')
+@section('meta_description', 'Double-entry bookkeeping journal entries, debit and credit ledger balancing, and account adjustments.')
 
 @section('secondary-sidebar')
 <aside class="sidebar-secondary" id="sidebarSecondary">

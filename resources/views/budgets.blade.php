@@ -1,5 +1,6 @@
 @extends('layouts.app')
-@section('title', 'Budgets')
+@section('title', 'Department & Project Budgets')
+@section('meta_description', 'Track departmental budget allocations, actual vs budget spending, forecasts, and variance analysis.')
 
 @section('secondary-sidebar')
 <aside class="sidebar-secondary" id="sidebarSecondary">

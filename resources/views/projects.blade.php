@@ -1,5 +1,6 @@
 @extends('layouts.app')
-@section('title', 'Projects')
+@section('title', 'Projects & Financial Tracking')
+@section('meta_description', 'Manage client projects, project milestones, direct and indirect cost allocations, and profitability analysis.')
 
 @section('secondary-sidebar')
 <aside class="sidebar-secondary" id="sidebarSecondary">

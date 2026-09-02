@@ -1,5 +1,6 @@
 @extends('layouts.app')
-@section('title', 'Invoices')
+@section('title', 'Client Invoices & Billing')
+@section('meta_description', 'Manage client invoicing, payments, receivables, overdue tracking, and billing workflows.')
 
 @section('secondary-sidebar')
 <aside class="sidebar-secondary" id="sidebarSecondary">

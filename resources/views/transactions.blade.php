@@ -1,5 +1,6 @@
 @extends('layouts.app')
 @section('title', 'Ledger Transactions')
+@section('meta_description', 'Complete financial transaction ledger, audit trail, multi-currency revenue and expense movements.')
 
 @section('secondary-sidebar')
 <aside class="sidebar-secondary" id="sidebarSecondary">

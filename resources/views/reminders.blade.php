@@ -1,5 +1,6 @@
 @extends('layouts.app')
 @section('title', 'Reminders & Alert Engine')
+@section('meta_description', 'Automated alerts for loan maturities, upcoming repayments, unpaid invoices, and financial calendar reminders.')
 
 @section('secondary-sidebar')
     @include('operations._sidebar')

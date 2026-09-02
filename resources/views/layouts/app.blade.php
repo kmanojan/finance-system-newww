@@ -4,6 +4,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    
+    <!-- Page Title & Meta Tags -->
+    <title>@yield('title', 'Finance System') - Apptimus</title>
+    <meta name="description" content="@yield('meta_description', 'Comprehensive multi-entity financial management and tracking system for Apptimus.')">
+    <meta name="keywords" content="@yield('meta_keywords', 'finance, accounting, loans, invoicing, bookkeeping, ledger, apptimus')">
+    <meta name="author" content="@yield('meta_author', 'Apptimus Tech')">
+    
+    <!-- Open Graph / Social Meta -->
+    <meta property="og:title" content="@yield('title', 'Finance System') - Apptimus">
+    <meta property="og:description" content="@yield('meta_description', 'Comprehensive multi-entity financial management and tracking system for Apptimus.')">
+    <meta property="og:type" content="@yield('meta_og_type', 'website')">
+    <meta property="og:url" content="{{ url()->current() }}">
+    <meta property="og:image" content="@yield('meta_og_image', asset('icons/icon-512x512.png'))">
+    
+    <!-- Twitter Meta -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="@yield('title', 'Finance System') - Apptimus">
+    <meta name="twitter:description" content="@yield('meta_description', 'Comprehensive multi-entity financial management and tracking system for Apptimus.')">
+    <meta name="twitter:image" content="@yield('meta_og_image', asset('icons/icon-512x512.png'))">
+    
+    <!-- Custom Page Meta Data Injection -->
+    @yield('meta')
+    @yield('meta_tags')
+
     <meta name="theme-color" content="#8b5cf6">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
