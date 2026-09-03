@@ -70,9 +70,10 @@ The system consists of **52 database tables** organized across 10 functional mod
 - `cost_allocations` — Direct distribution of employee salaries and server costs to projects.
 
 ### 10. Third-Party Loans & Public Sharing
-- `loans` — Third-party loan principal, interest terms, and guarantors.
+- `loans` — Third-party loan principal, interest terms, guarantors, and linked treasury bank account (`bank_account_id`).
 - `loan_interest_schedule` — Monthly interest repayment schedules.
 - `loan_principal_records` — Drawdown and principal repayment transactions.
+- `transactions` — Double-entry revenue inflows and expense disbursements linked to categories, departments, and treasury bank accounts (`bank_account_id`).
 - `reminders` — System-wide notification triggers (tax, loans, invoices, bills).
 - `change_requests` — Project scope modifications and cost impacts.
 - `notes`, `interactions` — Polymorphic communication logs (calls, meetings, emails).

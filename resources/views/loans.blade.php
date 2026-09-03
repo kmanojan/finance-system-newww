@@ -400,6 +400,9 @@
                     </div>
                     <div style="font-size:0.78rem; color:var(--text-muted); margin-top:0.15rem;">
                         {{ strip_tags($loan->purpose) ?: 'General Borrowing Facility' }} &bull; Claimed {{ $loan->claimed_date ? date('M d, Y', strtotime($loan->claimed_date)) : 'N/A' }}
+                        @if(!empty($loan->bank_name))
+                            &bull; <span style="color:var(--primary); font-weight:600;"><ion-icon name="card-outline" style="vertical-align:middle;"></ion-icon> {{ $loan->bank_name }}@if(!empty($loan->account_no)) ({{ $loan->account_no }})@endif</span>
+                        @endif
                         @if($loan->status === 'settled' && !empty($loan->settled_date))
                             &bull; <span style="color:var(--success); font-weight:600;"><ion-icon name="checkmark-done-outline" style="vertical-align:middle;"></ion-icon> Settled {{ date('M d, Y', strtotime($loan->settled_date)) }}</span>
                         @endif
@@ -545,6 +548,12 @@
                         <span class="loan-stat-label">Start / Claimed Date</span>
                         <span class="loan-stat-val">{{ $loan->claimed_date ?: ($loan->start_date ?: 'N/A') }}</span>
                     </div>
+                    @if(!empty($loan->bank_name))
+                    <div class="loan-stat-row" style="background:rgba(139,92,246,0.08); padding:0.25rem 0.5rem; border-radius:4px;">
+                        <span class="loan-stat-label" style="color:var(--primary); font-weight:700;"><ion-icon name="card-outline" style="vertical-align:middle;"></ion-icon> Bank Account</span>
+                        <span class="loan-stat-val" style="color:var(--primary); font-weight:700;">{{ $loan->bank_name }} @if(!empty($loan->account_no)) ({{ $loan->account_no }}) @endif</span>
+                    </div>
+                    @endif
                     @if($loan->status === 'settled' && !empty($loan->settled_date))
                     <div class="loan-stat-row" style="background:rgba(16,185,129,0.08); padding:0.25rem 0.5rem; border-radius:4px;">
                         <span class="loan-stat-label" style="color:var(--success); font-weight:700;">Settled Date</span>
@@ -722,6 +731,13 @@
 
                 <div class="form-row" style="margin-top:1.25rem;">
                     <div class="form-col">
+                        <label class="form-label" style="font-weight:700;"><ion-icon name="card-outline" style="vertical-align:middle;"></ion-icon> Disbursement / Settlement Bank Account</label>
+                        <x-bank-account-selector name="bank_account_id" id="edit_bank_account_id" :bankAccounts="$bankAccounts" placeholder="Select Bank Account..." />
+                    </div>
+                </div>
+
+                <div class="form-row" style="margin-top:1.25rem;">
+                    <div class="form-col">
                         <label class="form-label">Interest Calculation Method</label>
                         <select name="interest_method" id="edit_interest_method" class="form-control" onchange="toggleEditInterestFields(this.value)" required>
                             <option value="fixed_amount">Fixed Amount per Period</option>
@@ -892,6 +908,13 @@
                 <div class="form-group" style="margin-top:1.25rem;">
                     <label class="form-label" style="font-weight:700;">Purpose / Description & Terms</label>
                     <x-rich-editor name="purpose" id="create_purpose" placeholder="E.g. Capital investment / terms (type /loan or /employee)..." />
+                </div>
+
+                <div class="form-row" style="margin-top:1.25rem;">
+                    <div class="form-col">
+                        <label class="form-label" style="font-weight:700;"><ion-icon name="card-outline" style="vertical-align:middle;"></ion-icon> Disbursement / Settlement Bank Account</label>
+                        <x-bank-account-selector name="bank_account_id" id="create_bank_account_id" :bankAccounts="$bankAccounts" placeholder="Select Bank Account (Disbursement / Settlement)..." />
+                    </div>
                 </div>
 
                 <div class="form-row" style="margin-top:1.25rem;">
@@ -1223,6 +1246,8 @@ function openEditLoanModal(loan) {
     document.getElementById('edit_term_months').value = loan.term_months || 1;
     
     setRichEditorData('edit_purpose', loan.purpose || '');
+
+    setBankAccountSelectorValue('edit_bank_account_id', loan.bank_account_id || '');
     
     const method = loan.interest_method || 'fixed_amount';
     document.getElementById('edit_interest_method').value = method;

@@ -169,6 +169,15 @@ class LoanController extends Controller
             } else {
                 $loan->next_due_date = 'N/A';
             }
+            // Attach linked bank account details
+            if (!empty($loan->bank_account_id)) {
+                $bank = DB::table('bank_accounts')->where('id', $loan->bank_account_id)->first();
+                $loan->bank_name = $bank ? $bank->bank_name : null;
+                $loan->account_no = $bank ? $bank->account_no : null;
+            } else {
+                $loan->bank_name = null;
+                $loan->account_no = null;
+            }
         }
         
         $totalWantToPaid = $totalOutstandingPrincipal + $totalOutstandingInterest;
@@ -178,6 +187,14 @@ class LoanController extends Controller
         $settledLoansCount = $loans->where('status', 'settled')->count();
         
         $parties = DB::table('parties')->orderBy('name')->get();
+
+        // Load Bank Accounts with live balances
+        $bankAccounts = DB::table('bank_accounts')->get();
+        foreach ($bankAccounts as $acc) {
+            $inflow = DB::table('transactions')->where('bank_account_id', $acc->id)->where('type', 'income')->sum('amount');
+            $outflow = DB::table('transactions')->where('bank_account_id', $acc->id)->where('type', 'expense')->sum('amount');
+            $acc->current_balance = ($acc->opening_balance ?? 0) + $inflow - $outflow;
+        }
 
         // Paginate loans collection
         $currentPage = Paginator::resolveCurrentPage() ?: 1;
@@ -191,6 +208,7 @@ class LoanController extends Controller
         return view('loans', compact(
             'loans', 
             'parties',
+            'bankAccounts',
             'totalBorrowed', 
             'totalPrincipalRepaid', 
             'totalInterestPaid',
@@ -413,6 +431,12 @@ class LoanController extends Controller
             $data['maturity_date'] = null;
         }
 
+        if ($request->filled('bank_account_id')) {
+            $data['bank_account_id'] = (int)$request->input('bank_account_id');
+        } else {
+            $data['bank_account_id'] = null;
+        }
+
         if (empty($data['reminder_days'])) {
             $data['reminder_days'] = 3;
         }
@@ -535,6 +559,12 @@ class LoanController extends Controller
             $data['maturity_date'] = null;
         }
 
+        if ($request->filled('bank_account_id')) {
+            $data['bank_account_id'] = (int)$request->input('bank_account_id');
+        } else {
+            $data['bank_account_id'] = null;
+        }
+
         if (empty($data['reminder_days'])) {
             $data['reminder_days'] = 3;
         }
@@ -545,6 +575,7 @@ class LoanController extends Controller
 
         $oldPrincipal = $loan->principal_amount;
         $oldClaimedDate = $loan->claimed_date;
+        $oldBankAccountId = $loan->bank_account_id ?? null;
 
         DB::table('loans')->where('id', $id)->update($data);
 
@@ -627,11 +658,12 @@ class LoanController extends Controller
             }
         }
 
-        // Sync initial disbursement transaction if active and amounts changed
-        if ($loan->status === 'active' && ($oldPrincipal != $updatedLoan['principal_amount'] || $oldClaimedDate != $updatedLoan['claimed_date'])) {
+        // Sync initial disbursement transaction if active and amounts or bank account changed
+        if ($loan->status === 'active') {
             DB::table('transactions')
                 ->where('reference_no', "LOAN-ACT-{$id}")
                 ->update([
+                    'bank_account_id' => $updatedLoan['bank_account_id'] ?? null,
                     'amount' => $updatedLoan['principal_amount'],
                     'currency' => $updatedLoan['currency'],
                     'transaction_date' => $updatedLoan['claimed_date'] ?: now()->format('Y-m-d'),
@@ -770,8 +802,17 @@ class LoanController extends Controller
                         ->get();
                         
         $parties = DB::table('parties')->orderBy('name')->get();
+
+        // Load Bank Accounts with live balances
+        $bankAccounts = DB::table('bank_accounts')->get();
+        foreach ($bankAccounts as $acc) {
+            $inflow = DB::table('transactions')->where('bank_account_id', $acc->id)->where('type', 'income')->sum('amount');
+            $outflow = DB::table('transactions')->where('bank_account_id', $acc->id)->where('type', 'expense')->sum('amount');
+            $acc->current_balance = ($acc->opening_balance ?? 0) + $inflow - $outflow;
+        }
+        $linkedBankAccount = !empty($loan->bank_account_id) ? $bankAccounts->firstWhere('id', $loan->bank_account_id) : null;
                         
-        return view('loans-show', compact('loan', 'schedules', 'principalRecords', 'attachments', 'parties'));
+        return view('loans-show', compact('loan', 'schedules', 'principalRecords', 'attachments', 'parties', 'bankAccounts', 'linkedBankAccount'));
     }
 
     public function activate($id)
@@ -807,6 +848,7 @@ class LoanController extends Controller
                 'type' => 'income',
                 'category_id' => $catId,
                 'department_id' => $this->getDepartmentId(),
+                'bank_account_id' => $loan->bank_account_id ?? null,
                 'amount' => $disbursedAmount,
                 'currency' => $loan->currency,
                 'transaction_date' => $loan->claimed_date ?: now()->format('Y-m-d'),
@@ -819,7 +861,7 @@ class LoanController extends Controller
 
             $this->syncLoanMaturityReminder($id);
 
-            return back()->with('success', 'Loan activated, interest schedule generated, and disbursement posted to ledger!');
+            return back()->with('success', 'Loan activated, interest schedule generated, and disbursement posted to bank account ledger!');
         }
         return back()->with('error', 'Loan cannot be activated.');
     }
@@ -899,6 +941,7 @@ class LoanController extends Controller
         
         $schedule = DB::table('loan_interest_schedule')->where('id', $scheduleId)->first();
         $loan = DB::table('loans')->where('id', $id)->first();
+        $bankAccountId = $request->input('bank_account_id') ?: ($loan->bank_account_id ?? null);
         
         $newPaidTotal = ($schedule->paid_amount ?? 0) + $paidAmount;
         $status = 'partially_paid';
@@ -919,6 +962,7 @@ class LoanController extends Controller
                 'type' => 'expense',
                 'category_id' => $catId,
                 'department_id' => $this->getDepartmentId(),
+                'bank_account_id' => $bankAccountId,
                 'amount' => $paidAmount,
                 'currency' => $loan->currency,
                 'transaction_date' => $paidDate,
@@ -983,6 +1027,7 @@ class LoanController extends Controller
         $amount = floatval($request->input('amount'));
         $recordDate = $request->input('record_date') ?: now()->format('Y-m-d');
         $pmMode = is_array($request->input('pm_mode')) ? current($request->input('pm_mode')) : ($request->input('pm_mode') ?: 'Normal');
+        $bankAccountId = $request->input('bank_account_id') ?: ($loan->bank_account_id ?? null);
 
         DB::table('loan_principal_records')->insert([
             'loan_id' => $id,
@@ -1004,13 +1049,13 @@ class LoanController extends Controller
         ], 'Recorded Loan Repayment');
 
         // Auto-post Expense Transaction for Principal Repayment
-
         if ($amount > 0) {
             $catId = $this->getCategoryId('Loan Principal Repayment', 'expense');
             DB::table('transactions')->insert([
                 'type' => 'expense',
                 'category_id' => $catId,
                 'department_id' => $this->getDepartmentId(),
+                'bank_account_id' => $bankAccountId,
                 'amount' => $amount,
                 'currency' => $loan->currency,
                 'transaction_date' => $recordDate,
@@ -1030,6 +1075,7 @@ class LoanController extends Controller
         $loan = DB::table('loans')->where('id', $id)->first();
         $amount = floatval($request->input('amount'));
         $recordDate = $request->input('record_date') ?: now()->format('Y-m-d');
+        $bankAccountId = $request->input('bank_account_id') ?: ($loan->bank_account_id ?? null);
 
         DB::table('loan_principal_records')->insert([
             'loan_id' => $id,
@@ -1049,6 +1095,7 @@ class LoanController extends Controller
                 'type' => 'income',
                 'category_id' => $catId,
                 'department_id' => $this->getDepartmentId(),
+                'bank_account_id' => $bankAccountId,
                 'amount' => $amount,
                 'currency' => $loan->currency,
                 'transaction_date' => $recordDate,
@@ -1074,6 +1121,7 @@ class LoanController extends Controller
         $paymentMethod = is_array($request->input('payment_method')) ? current($request->input('payment_method')) : ($request->input('payment_method') ?: 'Normal');
         $referenceNo = $request->input('reference_no') ?: "LOAN-SETTLE-{$loan->id}";
         $notes = $request->input('notes') ?: 'Full Principal Settlement';
+        $bankAccountId = $request->input('bank_account_id') ?: ($loan->bank_account_id ?? null);
         
         if ($outstanding > 0) {
             DB::table('loan_principal_records')->insert([
@@ -1093,6 +1141,7 @@ class LoanController extends Controller
                 'type' => 'expense',
                 'category_id' => $catId,
                 'department_id' => $this->getDepartmentId(),
+                'bank_account_id' => $bankAccountId,
                 'amount' => $outstanding,
                 'currency' => $loan->currency,
                 'transaction_date' => $settlementDate,
@@ -1126,6 +1175,7 @@ class LoanController extends Controller
                     'type' => 'expense',
                     'category_id' => $intCatId,
                     'department_id' => $this->getDepartmentId(),
+                    'bank_account_id' => $bankAccountId,
                     'amount' => $unpaidInt,
                     'currency' => $loan->currency,
                     'transaction_date' => $settlementDate,

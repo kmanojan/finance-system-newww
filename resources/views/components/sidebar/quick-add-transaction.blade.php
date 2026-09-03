@@ -1,6 +1,7 @@
 @php
     $sidebarCategories = \Illuminate\Support\Facades\DB::table('categories')->orderBy('name')->get();
     $sidebarDepartments = \Illuminate\Support\Facades\DB::table('departments')->orderBy('name')->get();
+    $sidebarBankAccounts = \Illuminate\Support\Facades\DB::table('bank_accounts')->get();
     $sidebarBaseCurrency = \Illuminate\Support\Facades\DB::table('companies')->value('base_currency') ?? 'LKR';
     $firstExpenseCat = $sidebarCategories->where('type', 'expense')->first()?->id ?? ($sidebarCategories->first()?->id ?? '');
 @endphp
@@ -25,6 +26,7 @@
             const rawAmount = document.querySelector('#quick_tx_amount')?.parentElement?.querySelector('.amount-hidden')?.value;
             const catId = document.querySelector('#quick_category_selector .category-id-hidden')?.value;
             const deptId = document.querySelector('#quick_dept_selector input[name=\'department_id\']')?.value || null;
+            const bankId = document.querySelector('#quick_bank_selector .bank-account-id-hidden')?.value || null;
             const pmVal = document.querySelector('#quick_pm_selector')?.value || 'Normal';
 
             if (!rawAmount || parseFloat(rawAmount) <= 0) {
@@ -55,6 +57,7 @@
                     amount: parseFloat(rawAmount),
                     currency: this.currency,
                     category_id: catId,
+                    bank_account_id: bankId,
                     transaction_date: this.transaction_date,
                     payment_method: pmVal,
                     description: this.description,
@@ -254,6 +257,17 @@
         <div>
             <label class="form-label" style="font-size: 0.78rem; font-weight: 700;">Description *</label>
             <input type="text" x-model="description" class="form-control" placeholder="e.g. Office supplies / Client payment" style="font-size: 0.85rem; border-radius: 8px;" required>
+        </div>
+
+        <!-- Bank Account Component -->
+        <div>
+            <label class="form-label" style="font-size: 0.78rem; font-weight: 700;">Bank Account (Optional)</label>
+            <x-bank-account-selector 
+                name="bank_account_id" 
+                id="quick_bank_selector" 
+                :bankAccounts="$sidebarBankAccounts" 
+                placeholder="Select Bank Account..."
+            />
         </div>
 
         <!-- Department Component -->

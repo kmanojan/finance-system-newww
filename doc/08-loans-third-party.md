@@ -22,6 +22,10 @@ Full lifecycle: claim money → schedule interest → collect reminders every pe
 - Claimed Date *(required — determines base date for periodic schedules)*
 - Full Principal Due Date *(optional — if unspecified/open-ended, remains empty/null)*
 - Term *(e.g., "2 months" — or "Open-ended / until settled")*
+- **Disbursement / Settlement Bank Account** (`bank_account_id` via `<x-bank-account-selector />`):
+  - Links the loan to a treasury bank account.
+  - Upon loan activation / disbursement, credits the bank account balance with an inflow Income transaction (`LOAN-ACT-{id}`).
+  - When recording interest payments (`LOAN-INT-{id}-{scheduleId}`), principal repayments (`LOAN-PRIN-{id}`), or full settlements (`LOAN-SETTLE-{id}`), the respective Expense transaction debits the selected bank account in real time.
 - Tags
 - Attachments (multi-file — loan agreement scan, ID copy, cheque photos)
 - Guarantor / Witness (optional free text)

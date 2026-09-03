@@ -96,7 +96,7 @@ class AppServiceProvider extends ServiceProvider
 
             // Auto-run pending migrations in production / serverless environment if new columns are missing
             if (
-                (Schema::hasTable('loans') && (!Schema::hasColumn('loans', 'maturity_date') || !Schema::hasColumn('loans', 'loan_code'))) ||
+                (Schema::hasTable('loans') && (!Schema::hasColumn('loans', 'maturity_date') || !Schema::hasColumn('loans', 'loan_code') || !Schema::hasColumn('loans', 'bank_account_id'))) ||
                 (Schema::hasTable('users') && !Schema::hasColumn('users', 'deleted_at'))
             ) {
                 \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);

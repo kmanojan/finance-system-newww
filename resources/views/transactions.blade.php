@@ -201,7 +201,7 @@
         <input type="hidden" name="type" value="{{ $currType }}">
 
         <!-- Category Dropdown -->
-        <div style="flex:1; min-width:160px; max-width:220px;">
+        <div style="flex:1; min-width:150px; max-width:200px;">
             <label style="font-size:0.75rem; font-weight:700; color:var(--text-muted); margin-bottom:0.35rem; display:block; text-transform:uppercase; letter-spacing:0.5px;">Category</label>
             <select name="category_id" class="form-control" style="font-size:0.82rem; padding:0.4rem 0.65rem; height:40px; border-radius:8px;">
                 <option value="">All Categories</option>
@@ -213,8 +213,21 @@
             </select>
         </div>
 
+        <!-- Bank Account Filter -->
+        <div style="flex:1; min-width:160px; max-width:220px;">
+            <label style="font-size:0.75rem; font-weight:700; color:var(--text-muted); margin-bottom:0.35rem; display:block; text-transform:uppercase; letter-spacing:0.5px;">Bank Account</label>
+            <select name="bank_account_id" class="form-control" style="font-size:0.82rem; padding:0.4rem 0.65rem; height:40px; border-radius:8px;">
+                <option value="">All Bank Accounts</option>
+                @foreach($bankAccounts as $b)
+                    <option value="{{ $b->id }}" {{ request('bank_account_id') == $b->id ? 'selected' : '' }}>
+                        {{ $b->bank_name }} @if(!empty($b->account_no)) ({{ $b->account_no }}) @endif
+                    </option>
+                @endforeach
+            </select>
+        </div>
+
         <!-- Payment Mode -->
-        <div style="flex:1; min-width:140px; max-width:180px;">
+        <div style="flex:1; min-width:130px; max-width:160px;">
             <label style="font-size:0.75rem; font-weight:700; color:var(--text-muted); margin-bottom:0.35rem; display:block; text-transform:uppercase; letter-spacing:0.5px;">Payment Mode</label>
             <select name="payment_method" class="form-control" style="font-size:0.82rem; padding:0.4rem 0.65rem; height:40px; border-radius:8px;">
                 <option value="">All Modes</option>
@@ -298,6 +311,11 @@
                         @if(!empty($tx->category_name))
                             <span class="badge" style="background:var(--primary-light); color:var(--primary); font-size:0.72rem; padding:0.15rem 0.5rem; border-radius:4px; font-weight:600;">
                                 {{ $tx->category_name }}
+                            </span>
+                        @endif
+                        @if(!empty($tx->bank_name))
+                            <span class="badge" style="background:rgba(139,92,246,0.12); color:#8b5cf6; font-size:0.72rem; padding:0.15rem 0.5rem; border-radius:4px; font-weight:600; display:inline-flex; align-items:center; gap:0.25rem;">
+                                <ion-icon name="card-outline"></ion-icon> {{ $tx->bank_name }} @if(!empty($tx->bank_account_no)) ({{ $tx->bank_account_no }}) @endif
                             </span>
                         @endif
                         @if(!empty($tx->department_name))
@@ -425,6 +443,13 @@
 
                 <div class="form-row" style="margin-top: 1.25rem;">
                     <div class="form-col">
+                        <label class="form-label" style="font-weight:700;"><ion-icon name="card-outline" style="vertical-align:middle;"></ion-icon> Bank Account</label>
+                        <x-bank-account-selector name="bank_account_id" id="create_tx_bank_account_id" :bankAccounts="$bankAccounts" placeholder="Select Bank Account..." />
+                    </div>
+                </div>
+
+                <div class="form-row" style="margin-top: 1.25rem;">
+                    <div class="form-col">
                         <label class="form-label" style="font-weight:700;">Amount *</label>
                         <x-amount-input name="amount" required="true" />
                     </div>
@@ -513,6 +538,13 @@
 
                 <div class="form-row" style="margin-top: 1.25rem;">
                     <div class="form-col">
+                        <label class="form-label" style="font-weight:700;"><ion-icon name="card-outline" style="vertical-align:middle;"></ion-icon> Bank Account</label>
+                        <x-bank-account-selector name="bank_account_id" id="edit_tx_bank_account_id" :bankAccounts="$bankAccounts" placeholder="Select Bank Account..." />
+                    </div>
+                </div>
+
+                <div class="form-row" style="margin-top: 1.25rem;">
+                    <div class="form-col">
                         <label class="form-label" style="font-weight:700;">Amount *</label>
                         <x-amount-input name="amount" id="edit_amount" required="true" />
                     </div>
@@ -544,6 +576,8 @@ function openEditTxModal(tx) {
     if (deptEl && tx.department_id) {
         deptEl.value = tx.department_id;
     }
+
+    setBankAccountSelectorValue('edit_tx_bank_account_id', tx.bank_account_id || '');
     
     setAmountInputValue('edit_amount', tx.amount);
     openModal('editTxModal');

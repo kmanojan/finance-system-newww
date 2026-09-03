@@ -13,10 +13,13 @@ class TransactionController extends Controller
         $query = DB::table('transactions')
             ->leftJoin('categories', 'transactions.category_id', '=', 'categories.id')
             ->leftJoin('departments', 'transactions.department_id', '=', 'departments.id')
+            ->leftJoin('bank_accounts', 'transactions.bank_account_id', '=', 'bank_accounts.id')
             ->select(
                 'transactions.*',
                 'categories.name as category_name',
-                'departments.name as department_name'
+                'departments.name as department_name',
+                'bank_accounts.bank_name as bank_name',
+                'bank_accounts.account_no as bank_account_no'
             )
             ->orderBy('transactions.transaction_date', 'desc')
             ->orderBy('transactions.id', 'desc');
@@ -52,6 +55,10 @@ class TransactionController extends Controller
             $query->where('transactions.department_id', '=', $request->department_id);
         }
 
+        if ($request->filled('bank_account_id')) {
+            $query->where('transactions.bank_account_id', '=', $request->bank_account_id);
+        }
+
         if ($request->filled('payment_method')) {
             $query->where('transactions.payment_method', '=', $request->payment_method);
         }
@@ -61,7 +68,9 @@ class TransactionController extends Controller
             $query->where(function($q) use ($search) {
                 $q->where('transactions.description', 'LIKE', $search)
                   ->orWhere('transactions.reference_no', 'LIKE', $search)
-                  ->orWhere('categories.name', 'LIKE', $search);
+                  ->orWhere('categories.name', 'LIKE', $search)
+                  ->orWhere('bank_accounts.bank_name', 'LIKE', $search)
+                  ->orWhere('bank_accounts.account_no', 'LIKE', $search);
             });
         }
 
@@ -89,6 +98,14 @@ class TransactionController extends Controller
         $tags = DB::table('tags')->get();
         $parties = DB::table('parties')->orderBy('name')->get();
 
+        // Load bank accounts with live balances
+        $bankAccounts = DB::table('bank_accounts')->get();
+        foreach ($bankAccounts as $acc) {
+            $inflow = DB::table('transactions')->where('bank_account_id', $acc->id)->where('type', 'income')->sum('amount');
+            $outflow = DB::table('transactions')->where('bank_account_id', $acc->id)->where('type', 'expense')->sum('amount');
+            $acc->current_balance = ($acc->opening_balance ?? 0) + $inflow - $outflow;
+        }
+
         return view('transactions', compact(
             'transactions', 
             'categories', 
@@ -97,6 +114,7 @@ class TransactionController extends Controller
             'budgetItems', 
             'tags', 
             'parties',
+            'bankAccounts',
             'totalIncome',
             'totalExpense',
             'netCashFlow',
@@ -114,6 +132,12 @@ class TransactionController extends Controller
         // default missing fields
         if(empty($data['currency'])) $data['currency'] = DB::table('companies')->value('base_currency') ?? 'LKR';
         if(empty($data['department_id'])) $data['department_id'] = DB::table('departments')->value('id') ?: null;
+
+        if ($request->filled('bank_account_id')) {
+            $data['bank_account_id'] = (int)$request->input('bank_account_id');
+        } else {
+            $data['bank_account_id'] = null;
+        }
 
         if ($request->filled('budget_item_id')) {
             $itemId = $request->budget_item_id;
@@ -156,6 +180,7 @@ class TransactionController extends Controller
             'type' => $data['type'] ?? null,
             'amount' => $data['amount'] ?? null,
             'description' => $data['description'] ?? null,
+            'bank_account_id' => $data['bank_account_id'] ?? null,
         ]);
 
         if ($request->wantsJson() || $request->ajax()) {
@@ -168,12 +193,19 @@ class TransactionController extends Controller
 
         return back()->with('success', 'Transaction created successfully!');
     }
+
     public function update(Request $request, $id)
     {
         $oldTx = DB::table('transactions')->where('id', $id)->first();
-        $data = $request->only(['amount', 'description', 'category_id', 'type', 'payment_method', 'transaction_date', 'reference_no', 'department_id']);
+        $data = $request->only(['amount', 'description', 'category_id', 'type', 'payment_method', 'transaction_date', 'reference_no', 'department_id', 'bank_account_id']);
         $data['updated_at'] = now();
         
+        if ($request->filled('bank_account_id')) {
+            $data['bank_account_id'] = (int)$request->input('bank_account_id');
+        } else {
+            $data['bank_account_id'] = null;
+        }
+
         DB::table('transactions')->where('id', $id)->update($data);
 
         \App\Services\ActivityLogService::logUpdate('Transaction', $id, $oldTx, $data);
@@ -191,4 +223,3 @@ class TransactionController extends Controller
         return back()->with('success', 'Transaction deleted successfully!');
     }
 }
-

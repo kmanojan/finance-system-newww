@@ -12,7 +12,8 @@
 - Date *(required, defaults to today)*
 - Department *(dropdown, required)*
 - Category *(dropdown, filtered by Type — required)*
-- Payment Source *(dropdown: specific Bank Account, or "Petty Cash" — required)*
+- Bank Account *(dropdown via `<x-bank-account-selector />` — links transaction to treasury bank account, showing live account balances)*
+- Payment Mode *(dropdown: `Normal`, `Bank Transfer`, `Petty Cash`, `Credit Card`)*
 - Amount *(required)*
 - Currency *(dropdown, required — defaults to source account's currency)*
 - Description *(required)*
@@ -30,6 +31,7 @@ A globally accessible quick-entry widget is pinned to the primary sidebar bottom
 - **Component-Driven Form Controls:**
   - **Amount:** Formatted with thousand separators via `<x-amount-input />`.
   - **Category:** Searchable, type-filtered dropdown via `<x-category-selector />`.
+  - **Bank Account:** Account picker via `<x-bank-account-selector />` with live balance preview.
   - **Payment Mode:** Selection (`Normal`, `Bank Transfer`, `Petty Cash`, `Credit Card`, `Cash`) via `<x-payment-mode-selector />`.
   - **Department:** Organizational hierarchy selector via `<x-department-selector />`.
 - **AJAX Submission:** Posts to `POST /transactions` with JSON response handling, live validation, and toast confirmation without full page reload.

@@ -246,6 +246,25 @@
                     <strong style="color:var(--text-heading);">{{ $loan->claimed_date ?? 'N/A' }}</strong>
                 </div>
 
+                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px dashed var(--border); padding-bottom:0.5rem; background:rgba(139,92,246,0.06); padding:0.5rem; border-radius:6px;">
+                    <span style="font-weight:600; color:var(--primary); display:flex; align-items:center; gap:0.3rem;">
+                        <ion-icon name="card-outline"></ion-icon> Linked Bank Account:
+                    </span>
+                    <div style="text-align:right;">
+                        @if($linkedBankAccount)
+                            <strong style="color:var(--text-heading); font-size:0.88rem; display:block;">{{ $linkedBankAccount->bank_name }}</strong>
+                            @if(!empty($linkedBankAccount->account_no))
+                                <span style="font-size:0.75rem; color:var(--text-muted);">Acc: {{ $linkedBankAccount->account_no }}</span>
+                            @endif
+                            <span class="badge" style="background:rgba(16,185,129,0.15); color:#10b981; font-size:0.7rem; font-weight:700; padding:1px 5px; border-radius:4px; margin-left:0.2rem;">
+                                Bal: {{ $linkedBankAccount->currency ?: 'LKR' }} {{ number_format($linkedBankAccount->current_balance ?? 0, 2) }}
+                            </span>
+                        @else
+                            <span style="color:var(--text-muted); font-size:0.82rem; font-style:italic;">Unassigned / Cash in Hand</span>
+                        @endif
+                    </div>
+                </div>
+
                 @if($loan->status === 'settled' && !empty($loan->settled_date))
                     <div style="display:flex; justify-content:space-between; border-bottom:1px dashed var(--border); padding-bottom:0.5rem; background:rgba(16,185,129,0.08); padding:0.5rem; border-radius:6px;">
                         <span style="font-weight:700; color:var(--success); display:flex; align-items:center; gap:0.3rem;">
@@ -544,6 +563,11 @@
                 </div>
 
                 <div class="form-group" style="margin-top:1.25rem;">
+                    <label class="form-label" style="font-weight:700;"><ion-icon name="card-outline" style="vertical-align:middle;"></ion-icon> Deduct from Bank Account</label>
+                    <x-bank-account-selector name="bank_account_id" id="settle_bank_account_id" :bankAccounts="$bankAccounts" :selected="$loan->bank_account_id" placeholder="Select Bank Account..." />
+                </div>
+
+                <div class="form-group" style="margin-top:1.25rem;">
                     <label class="form-label">Notes</label>
                     <input type="text" name="notes" class="form-control" value="Full Principal Settlement" placeholder="E.g. Final principal clearance">
                 </div>
@@ -669,6 +693,13 @@
                 <div class="form-group" style="margin-top:1.25rem;">
                     <label class="form-label" style="font-weight:700;">Purpose / Description & Terms</label>
                     <x-rich-editor name="purpose" id="show_edit_purpose" :value="$loan->purpose" placeholder="E.g. Capital investment / terms (type /loan or /employee)..." />
+                </div>
+
+                <div class="form-row" style="margin-top:1.25rem;">
+                    <div class="form-col">
+                        <label class="form-label" style="font-weight:700;"><ion-icon name="card-outline" style="vertical-align:middle;"></ion-icon> Disbursement / Settlement Bank Account</label>
+                        <x-bank-account-selector name="bank_account_id" id="show_edit_bank_account_id" :bankAccounts="$bankAccounts" :selected="$loan->bank_account_id" placeholder="Select Bank Account..." />
+                    </div>
                 </div>
 
                 <div class="form-row" style="margin-top:1.25rem;">
@@ -809,6 +840,10 @@
                     <label class="form-label">Date Paid</label>
                     <input type="date" name="paid_date" id="settle_paid_date" class="form-control" value="{{ date('Y-m-d') }}" required>
                 </div>
+                <div class="form-group" style="margin-top:1rem;">
+                    <label class="form-label"><ion-icon name="card-outline" style="vertical-align:middle;"></ion-icon> Deduct from Bank Account</label>
+                    <x-bank-account-selector name="bank_account_id" id="settle_interest_bank_account_id" :bankAccounts="$bankAccounts" :selected="$loan->bank_account_id" placeholder="Select Bank Account..." />
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline" onclick="closeModal('settleModal')">Cancel</button>
@@ -864,6 +899,10 @@
                     <label class="form-label">Date</label>
                     <input type="date" name="record_date" class="form-control" value="{{ date('Y-m-d') }}" required>
                 </div>
+                <div class="form-group" style="margin-top:1rem;">
+                    <label class="form-label"><ion-icon name="card-outline" style="vertical-align:middle;"></ion-icon> Deduct from Bank Account</label>
+                    <x-bank-account-selector name="bank_account_id" id="repay_bank_account_id" :bankAccounts="$bankAccounts" :selected="$loan->bank_account_id" placeholder="Select Bank Account..." />
+                </div>
                 <div style="margin-top: 1rem;">
                     <x-payment-modes />
                 </div>
@@ -897,6 +936,10 @@
                 <div class="form-group" style="margin-top:1rem;">
                     <label class="form-label">Date</label>
                     <input type="date" name="record_date" class="form-control" value="{{ date('Y-m-d') }}" required>
+                </div>
+                <div class="form-group" style="margin-top:1rem;">
+                    <label class="form-label"><ion-icon name="card-outline" style="vertical-align:middle;"></ion-icon> Deposit into Bank Account</label>
+                    <x-bank-account-selector name="bank_account_id" id="draw_bank_account_id" :bankAccounts="$bankAccounts" :selected="$loan->bank_account_id" placeholder="Select Bank Account..." />
                 </div>
                 <div class="form-group" style="margin-top:1rem;">
                     <label class="form-label">Notes</label>
