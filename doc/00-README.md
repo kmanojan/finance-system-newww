@@ -38,6 +38,7 @@ This specification is organized on a per-module basis for direct reference durin
 | [`27-users-master.md`](27-users-master.md) | User Management Master (Add, Create, Edit, Delete, Status Change) |
 | [`28-pwa-session-security.md`](28-pwa-session-security.md) | PWA, Long-lived Sessions, Password Controls & Reusable Components |
 | [`29-deployment-and-serverless.md`](29-deployment-and-serverless.md) | Vercel Serverless Functions + Supabase PostgreSQL deployment guide |
+| [`30-salary_components_and_payroll.md`](30-salary_components_and_payroll.md) | Salary Components Master, EPF/ETF/APIT, Allowances & Employee Detailing |
 
 ---
 

@@ -139,6 +139,11 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/accounts', [\App\Http\Controllers\AccountController::class, 'index'])->name('masters.accounts.index');
         Route::post('/accounts', [\App\Http\Controllers\AccountController::class, 'store'])->name('masters.accounts.store');
 
+        Route::get('/salary-components', [\App\Http\Controllers\SalaryComponentController::class, 'index'])->name('masters.salary_components.index');
+        Route::post('/salary-components', [\App\Http\Controllers\SalaryComponentController::class, 'store'])->name('masters.salary_components.store');
+        Route::put('/salary-components/{id}', [\App\Http\Controllers\SalaryComponentController::class, 'update'])->name('masters.salary_components.update');
+        Route::delete('/salary-components/{id}', [\App\Http\Controllers\SalaryComponentController::class, 'destroy'])->name('masters.salary_components.destroy');
+
         Route::get('/users', [UserController::class, 'index'])->name('masters.users.index');
         Route::post('/users', [UserController::class, 'store'])->name('masters.users.store');
         Route::put('/users/{id}', [UserController::class, 'update'])->name('masters.users.update');
@@ -180,7 +185,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/projects/{id}', [ProjectController::class, 'show']);
     Route::put('/projects/{id}', [ProjectController::class, 'update']);
 
-    Route::get('/employees', [\App\Http\Controllers\EmployeeController::class, 'webIndex']);
+    Route::get('/employees', [\App\Http\Controllers\EmployeeController::class, 'webIndex'])->name('employees.index');
+    Route::get('/employees/{id}', [\App\Http\Controllers\EmployeeController::class, 'show'])->name('employees.show');
+    Route::post('/employees/{id}/salary', [\App\Http\Controllers\EmployeeController::class, 'updateSalary'])->name('employees.update_salary');
+    Route::get('/employees/{id}/salary-preview', [\App\Http\Controllers\EmployeeController::class, 'salaryPreview'])->name('employees.salary_preview');
 
     // Profile
     Route::get('/profile', [ProfileController::class, 'index']);

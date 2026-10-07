@@ -514,7 +514,7 @@ ion-icon {
     opacity: 0;
     transition: opacity 0.2s ease;
 }
-.modal-backdrop.show { display: flex; opacity: 1; }
+.modal-backdrop.show, .modal-backdrop.active { display: flex; opacity: 1; }
 .modal-card {
     background-color: var(--bg-card);
     width: 100%;
@@ -525,7 +525,7 @@ ion-icon {
     transform: translateY(20px);
     transition: transform 0.3s ease;
 }
-.modal-backdrop.show .modal-card { transform: translateY(0); }
+.modal-backdrop.show .modal-card, .modal-backdrop.active .modal-card { transform: translateY(0); }
 .modal-header {
     display: flex;
     justify-content: space-between;

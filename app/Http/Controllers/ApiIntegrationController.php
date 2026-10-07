@@ -10,13 +10,24 @@ class ApiIntegrationController extends Controller
 {
     public function store(Request $request)
     {
+        $existing = null;
+        if ($request->filled('id')) {
+            $existing = ApiIntegration::find($request->id);
+        } elseif ($request->filled('name')) {
+            $existing = ApiIntegration::where('name', $request->name)->first();
+        }
+
         $validated = $request->validate([
             'name'          => 'required|string',
             'url'           => 'required|url',
             'method'        => 'required|in:GET,POST',
-            'bearer_token'  => 'required|string',
+            'bearer_token'  => $existing ? 'nullable|string' : 'required|string',
             'response_path' => 'nullable|string',
         ]);
+
+        if (empty($validated['bearer_token']) && $existing) {
+            $validated['bearer_token'] = $existing->bearer_token;
+        }
 
         $integration = ApiIntegration::updateOrCreate(
             ['name' => $validated['name']],

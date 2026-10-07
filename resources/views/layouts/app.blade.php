@@ -273,18 +273,27 @@
         // Modal Helpers
         function openModal(id) {
             const el = document.getElementById(id);
-            if (el) el.classList.add('active');
+            if (el) {
+                el.classList.add('active');
+                el.classList.add('show');
+            }
         }
         function closeModal(id) {
             const el = document.getElementById(id);
-            if (el) el.classList.remove('active');
+            if (el) {
+                el.classList.remove('active');
+                el.classList.remove('show');
+            }
         }
 
         // Close active modal on Escape key press
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
-                const activeModals = document.querySelectorAll('.modal-backdrop.active');
-                activeModals.forEach(m => m.classList.remove('active'));
+                const activeModals = document.querySelectorAll('.modal-backdrop.active, .modal-backdrop.show');
+                activeModals.forEach(m => {
+                    m.classList.remove('active');
+                    m.classList.remove('show');
+                });
             }
         });
 
@@ -292,6 +301,7 @@
         document.addEventListener('click', function(e) {
             if (e.target.classList && e.target.classList.contains('modal-backdrop')) {
                 e.target.classList.remove('active');
+                e.target.classList.remove('show');
             }
         });
 
