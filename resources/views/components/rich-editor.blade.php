@@ -22,7 +22,7 @@
         style="min-height: {{ $height }}; display: none;"
         placeholder="{{ $placeholder }}"
         @if($required) required @endif
-    >{!! $initialValue !!}</textarea>
+    >{{ $initialValue }}</textarea>
 
     <!-- Slash Command Menu Dropdown -->
     <div id="slash_menu_{{ $editorId }}" class="slash-menu-popup" style="display: none;">
@@ -78,9 +78,9 @@
 /* CKEditor Custom Theme & Wrapper */
 #wrap_{{ $editorId }} .ck.ck-editor__main > .ck-editor__editable {
     min-height: {{ $height }};
-    background: #1a1d27 !important;
-    color: #cbd5e1 !important;
-    border-color: rgba(255,255,255,0.12) !important;
+    background: var(--bg-card) !important;
+    color: var(--text-main) !important;
+    border-color: var(--nav-hover) !important;
     border-bottom-left-radius: 8px !important;
     border-bottom-right-radius: 8px !important;
     font-family: inherit !important;
@@ -89,48 +89,48 @@
     padding: 0.75rem 1rem;
 }
 #wrap_{{ $editorId }} .ck.ck-editor__main > .ck-editor__editable:focus {
-    border-color: #8b5cf6 !important;
-    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2) !important;
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 0 2px var(--primary-light) !important;
 }
 #wrap_{{ $editorId }} .ck.ck-toolbar {
-    background: #202431 !important;
-    border-color: rgba(255,255,255,0.12) !important;
+    background: var(--bg-card) !important;
+    border-color: var(--nav-hover) !important;
     border-top-left-radius: 8px !important;
     border-top-right-radius: 8px !important;
 }
 #wrap_{{ $editorId }} .ck.ck-toolbar .ck-button {
-    color: #cbd5e1 !important;
+    color: var(--text-main) !important;
 }
 #wrap_{{ $editorId }} .ck.ck-toolbar .ck-button:hover,
 #wrap_{{ $editorId }} .ck.ck-toolbar .ck-button.ck-on {
-    background: rgba(139, 92, 246, 0.2) !important;
-    color: #8b5cf6 !important;
+    background: var(--primary-light) !important;
+    color: var(--primary) !important;
 }
 #wrap_{{ $editorId }} .ck.ck-dropdown__panel {
-    background: #202431 !important;
-    border-color: rgba(255,255,255,0.15) !important;
+    background: var(--bg-card) !important;
+    border-color: var(--border) !important;
 }
 
 /* Slash Command Menu Popover */
 .slash-menu-popup {
     position: absolute !important;
     z-index: 9999999 !important;
-    background: #202431 !important;
-    border: 1px solid rgba(255, 255, 255, 0.22) !important;
+    background: var(--bg-card) !important;
+    border: 1px solid var(--border) !important;
     border-radius: 12px !important;
-    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.7) !important;
+    box-shadow: 0 12px 32px #0002 !important;
     width: 440px !important;
-    max-width: 94vw !important;
+    max-width: min(94vw, 100%) !important;
     max-height: 420px !important;
     font-family: inherit !important;
-    backdrop-filter: blur(12px) !important;
+    backdrop-filter: none !important;
     overflow: hidden !important;
     flex-direction: column !important;
 }
 .slash-menu-header {
     padding: 10px 14px !important;
-    background: #141721 !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    background: var(--bg-page) !important;
+    border-bottom: 1px solid var(--border-light) !important;
     display: flex !important;
     justify-content: space-between !important;
     align-items: center !important;
@@ -138,20 +138,20 @@
 }
 .slash-menu-title {
     font-weight: 700 !important;
-    color: #8b5cf6 !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.5px !important;
+    color: var(--primary) !important;
+    text-transform: none !important;
+    letter-spacing: normal !important;
 }
 .slash-menu-hint {
-    color: #94a3b8 !important;
+    color: var(--text-muted) !important;
     font-size:0.75rem !important;
 }
 
 /* Search Bar (Always Visible) */
 .slash-search-bar {
     padding: 8px 12px !important;
-    background: #1a1d27 !important;
-    border-bottom: 1px solid rgba(255,255,255,0.1) !important;
+    background: var(--bg-card) !important;
+    border-bottom: 1px solid var(--border-light) !important;
     display: block !important;
 }
 .slash-search-inner {
@@ -162,15 +162,15 @@
 .slash-search-icon {
     position: absolute !important;
     left: 10px !important;
-    color: #8b5cf6 !important;
+    color: var(--primary) !important;
     font-size: 1.1rem !important;
     pointer-events: none !important;
 }
 .slash-search-input {
     width: 100% !important;
-    background: #0f111a !important;
-    border: 1px solid rgba(139, 92, 246, 0.4) !important;
-    color: #ffffff !important;
+    background: var(--bg-page) !important;
+    border: 1px solid var(--control-border) !important;
+    color: var(--text-heading) !important;
     border-radius: 8px !important;
     padding: 8px 12px 8px 36px !important;
     font-size: 0.88rem !important;
@@ -179,11 +179,11 @@
     transition: all 0.15s ease !important;
 }
 .slash-search-input:focus {
-    border-color: #8b5cf6 !important;
+    border-color: var(--primary) !important;
     box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.3) !important;
 }
 .slash-search-input::placeholder {
-    color: #64748b !important;
+    color: var(--text-light) !important;
 }
 
 /* Tabs Bar */
@@ -191,14 +191,14 @@
     display: flex !important;
     gap: 6px !important;
     padding: 6px 12px !important;
-    background: rgba(0,0,0,0.25) !important;
-    border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+    background: var(--bg-page) !important;
+    border-bottom: 1px solid var(--border-light) !important;
     overflow-x: auto !important;
 }
 .slash-tab-pill {
-    background: rgba(255,255,255,0.06) !important;
-    border: 1px solid rgba(255,255,255,0.1) !important;
-    color: #94a3b8 !important;
+    background: var(--bg-page) !important;
+    border: 1px solid var(--border-light) !important;
+    color: var(--text-muted) !important;
     font-size: 0.75rem !important;
     font-weight: 600 !important;
     padding: 4px 10px !important;
@@ -211,13 +211,13 @@
     transition: all 0.15s ease !important;
 }
 .slash-tab-pill:hover {
-    background: rgba(255,255,255,0.12) !important;
-    color: #ffffff !important;
+    background: var(--nav-hover) !important;
+    color: var(--text-heading) !important;
 }
 .slash-tab-pill.active {
-    background: #8b5cf6 !important;
-    border-color: #8b5cf6 !important;
-    color: #ffffff !important;
+    background: var(--action) !important;
+    border-color: var(--action) !important;
+    color: var(--action-ink) !important;
 }
 
 /* List Items */
@@ -235,20 +235,20 @@
     border-radius: 6px !important;
     cursor: pointer !important;
     font-size: 0.84rem !important;
-    color: #cbd5e1 !important;
+    color: var(--text-main) !important;
     transition: all 0.15s ease !important;
     border-left: 3px solid transparent !important;
 }
 .slash-menu-item:hover, .slash-menu-item.active {
-    background: rgba(139, 92, 246, 0.18) !important;
-    color: #ffffff !important;
-    border-left-color: #8b5cf6 !important;
+    background: var(--primary-light) !important;
+    color: var(--text-heading) !important;
+    border-left-color: var(--primary) !important;
 }
 .slash-menu-item-icon {
     width: 34px !important;
     height: 34px !important;
     border-radius: 6px !important;
-    background: rgba(255, 255, 255, 0.06) !important;
+    background: var(--bg-page) !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
@@ -262,7 +262,7 @@
 }
 .slash-menu-item-title {
     font-weight: 600 !important;
-    color: #f8fafc !important;
+    color: var(--text-heading) !important;
     display: flex !important;
     justify-content: space-between !important;
     align-items: center !important;
@@ -270,7 +270,7 @@
 }
 .slash-menu-item-sub {
     font-size: 0.74rem !important;
-    color: #94a3b8 !important;
+    color: var(--text-muted) !important;
     margin-top: 2px !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
@@ -279,13 +279,13 @@
 .slash-menu-empty {
     padding: 1.5rem 1rem !important;
     text-align: center !important;
-    color: #94a3b8 !important;
+    color: var(--text-muted) !important;
     font-size: 0.82rem !important;
 }
 .slash-menu-loading {
     padding: 1.5rem 1rem !important;
     text-align: center !important;
-    color: #8b5cf6 !important;
+    color: var(--primary) !important;
     font-size: 0.82rem !important;
 }
 
@@ -305,49 +305,49 @@
     transition: all 0.15s ease !important;
 }
 .mention-chip.mention-loan {
-    background: rgba(139, 92, 246, 0.14) !important;
-    color: #8b5cf6 !important;
-    border: 1px solid rgba(139, 92, 246, 0.35) !important;
+    background: var(--primary-light) !important;
+    color: var(--primary) !important;
+    border: 1px solid var(--border) !important;
 }
 .mention-chip.mention-loan:hover {
     background: rgba(139, 92, 246, 0.25) !important;
-    border-color: #8b5cf6 !important;
-    color: #7c3aed !important;
+    border-color: var(--primary) !important;
+    color: var(--primary-hover) !important;
     box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3) !important;
     text-decoration: underline !important;
 }
 .mention-chip.mention-transaction {
     background: rgba(245, 158, 11, 0.14) !important;
-    color: #f59e0b !important;
+    color: var(--warning) !important;
     border: 1px solid rgba(245, 158, 11, 0.35) !important;
 }
 .mention-chip.mention-transaction:hover {
     background: rgba(245, 158, 11, 0.25) !important;
-    border-color: #f59e0b !important;
-    color: #d97706 !important;
+    border-color: var(--warning) !important;
+    color: var(--warning) !important;
     box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3) !important;
     text-decoration: underline !important;
 }
 .mention-chip.mention-party {
     background: rgba(59, 130, 246, 0.14) !important;
-    color: #3b82f6 !important;
+    color: var(--primary) !important;
     border: 1px solid rgba(59, 130, 246, 0.35) !important;
 }
 .mention-chip.mention-party:hover {
     background: rgba(59, 130, 246, 0.25) !important;
-    border-color: #3b82f6 !important;
-    color: #2563eb !important;
+    border-color: var(--primary) !important;
+    color: var(--primary-hover) !important;
     box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3) !important;
 }
 .mention-chip.mention-employee {
     background: rgba(16, 185, 129, 0.14) !important;
-    color: #10b981 !important;
+    color: var(--success) !important;
     border: 1px solid rgba(16, 185, 129, 0.35) !important;
 }
 .mention-chip.mention-employee:hover {
     background: rgba(16, 185, 129, 0.25) !important;
-    border-color: #10b981 !important;
-    color: #059669 !important;
+    border-color: var(--success) !important;
+    color: var(--success) !important;
     box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3) !important;
 }
 </style>
@@ -454,11 +454,10 @@ function setupSlashCommands(editor, editorId) {
         const rect = wrapper.getBoundingClientRect();
         let top = (y - rect.top) + 25;
         let left = (x - rect.left);
-        if (left + 440 > rect.width) {
-            left = Math.max(10, rect.width - 450);
-        }
+        const menuWidth = Math.min(440, window.innerWidth * 0.94, rect.width);
+        left = Math.max(0, Math.min(left, rect.width - menuWidth));
         menu.style.top = Math.max(10, top) + 'px';
-        menu.style.left = Math.max(10, left) + 'px';
+        menu.style.left = left + 'px';
     }
 
     function updateTabsUI(cat) {
@@ -509,12 +508,12 @@ function setupSlashCommands(editor, editorId) {
                     </div>
                 `;
             } else if (item.type === 'loan') {
-                const codeBadge = `<span style="font-size:0.75rem; font-weight:700; color:#8b5cf6; background:rgba(139,92,246,0.15); padding:1px 6px; border-radius:4px;">${escapeMention(item.loan_code || 'LN-' + item.id)}</span>`;
+                const codeBadge = `<span style="font-size:0.75rem; font-weight:700; color:var(--primary); background:rgba(139,92,246,0.15); padding:1px 6px; border-radius:4px;">${escapeMention(item.loan_code || 'LN-' + item.id)}</span>`;
                 const statusBadge = `<span style="font-size:0.68rem; padding:1px 6px; border-radius:4px; font-weight:600; background:${item.status === 'settled' ? '#dcfce7; color:#15803d' : '#fef3c7; color:#b45309'}">${escapeMention(item.status)}</span>`;
-                const descSnippet = item.purpose ? `<span style="color:#94a3b8; font-size:0.72rem;"> &bull; ${escapeMention(item.purpose.substring(0, 100))}${item.purpose.length > 100 ? '…' : ''}</span>` : '';
+                const descSnippet = item.purpose ? `<span style="color:var(--text-muted); font-size:0.72rem;"> &bull; ${escapeMention(item.purpose.substring(0, 100))}${item.purpose.length > 100 ? '…' : ''}</span>` : '';
 
                 itemEl.innerHTML = `
-                    <div class="slash-menu-item-icon" style="color:#8b5cf6; background:rgba(139,92,246,0.15);">
+                    <div class="slash-menu-item-icon" style="color:var(--primary); background:rgba(139,92,246,0.15);">
                         <ion-icon name="card-outline"></ion-icon>
                     </div>
                     <div class="slash-menu-item-content">
@@ -523,7 +522,7 @@ function setupSlashCommands(editor, editorId) {
                             ${statusBadge}
                         </div>
                         <div class="slash-menu-item-sub">
-                            <strong style="color:#f8fafc;">${escapeMention(item.currency)} ${Number(item.principal_amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</strong>
+                            <strong style="color:var(--text-heading);">${escapeMention(item.currency)} ${Number(item.principal_amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</strong>
                             ${descSnippet}
                         </div>
                         ${item.party_name && item.lender_name && item.party_name !== item.lender_name ? `<div class="slash-menu-item-sub">Lender: ${escapeMention(item.lender_name)}</div>` : ''}
@@ -532,11 +531,11 @@ function setupSlashCommands(editor, editorId) {
             } else if (item.type === 'transaction') {
                 const isInc = item.type_name === 'income' || item.type === 'income';
                 const isExp = item.type_name === 'expense' || item.type === 'expense';
-                const typeColor = isInc ? '#10b981' : (isExp ? '#ef4444' : '#3b82f6');
+                const typeColor = isInc ? 'var(--success)' : (isExp ? 'var(--danger)' : 'var(--primary)');
                 const typeBg = isInc ? 'rgba(16,185,129,0.15)' : (isExp ? 'rgba(239,68,68,0.15)' : 'rgba(59,130,246,0.15)');
                 const typeLabel = (item.type || 'TXN').toUpperCase();
-                const refSnippet = item.reference_no ? `<span style="font-size:0.72rem; color:#94a3b8; background:rgba(255,255,255,0.06); padding:1px 5px; border-radius:4px;">${item.reference_no}</span>` : '';
-                const dateSnippet = item.transaction_date ? `<span style="color:#94a3b8; font-size:0.72rem;"> &bull; ${item.transaction_date}</span>` : '';
+                const refSnippet = item.reference_no ? `<span style="font-size:0.72rem; color:var(--text-muted); background:var(--bg-page); padding:1px 5px; border-radius:4px;">${item.reference_no}</span>` : '';
+                const dateSnippet = item.transaction_date ? `<span style="color:var(--text-muted); font-size:0.72rem;"> &bull; ${item.transaction_date}</span>` : '';
 
                 itemEl.innerHTML = `
                     <div class="slash-menu-item-icon" style="color:${typeColor}; background:${typeBg};">
@@ -552,33 +551,33 @@ function setupSlashCommands(editor, editorId) {
                         </div>
                         <div class="slash-menu-item-sub">
                             <strong style="color:${typeColor};">${isInc ? '+' : (isExp ? '-' : '')}${item.currency} ${Number(item.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</strong>
-                            ${item.category_name ? `<span style="color:#94a3b8; font-size:0.72rem;"> &bull; ${item.category_name}</span>` : ''}
+                            ${item.category_name ? `<span style="color:var(--text-muted); font-size:0.72rem;"> &bull; ${item.category_name}</span>` : ''}
                             ${dateSnippet}
                         </div>
                     </div>
                 `;
             } else if (item.type === 'party') {
                 itemEl.innerHTML = `
-                    <div class="slash-menu-item-icon" style="color:#3b82f6; background:rgba(59,130,246,0.15);">
+                    <div class="slash-menu-item-icon" style="color:var(--primary); background:rgba(59,130,246,0.15);">
                         <ion-icon name="business-outline"></ion-icon>
                     </div>
                     <div class="slash-menu-item-content">
                         <div class="slash-menu-item-title">
                             <span>${item.name}</span>
-                            ${item.party_types ? `<span style="font-size:0.68rem; color:#3b82f6; background:rgba(59,130,246,0.1); padding:1px 5px; border-radius:4px;">${item.party_types}</span>` : ''}
+                            ${item.party_types ? `<span style="font-size:0.68rem; color:var(--primary); background:rgba(59,130,246,0.1); padding:1px 5px; border-radius:4px;">${item.party_types}</span>` : ''}
                         </div>
                         <div class="slash-menu-item-sub">${item.contact_person || item.phone || item.email || 'Master Party'}</div>
                     </div>
                 `;
             } else if (item.type === 'employee') {
                 itemEl.innerHTML = `
-                    <div class="slash-menu-item-icon" style="color:#10b981; background:rgba(16,185,129,0.15);">
+                    <div class="slash-menu-item-icon" style="color:var(--success); background:rgba(16,185,129,0.15);">
                         <ion-icon name="person-outline"></ion-icon>
                     </div>
                     <div class="slash-menu-item-content">
                         <div class="slash-menu-item-title">
                             <span>${item.name}</span>
-                            ${item.code ? `<span style="font-size:0.75rem; color:#94a3b8;">${item.code}</span>` : ''}
+                            ${item.code ? `<span style="font-size:0.75rem; color:var(--text-muted);">${item.code}</span>` : ''}
                         </div>
                         <div class="slash-menu-item-sub">${item.job_position || 'Employee'}</div>
                     </div>
@@ -628,16 +627,16 @@ function setupSlashCommands(editor, editorId) {
         let htmlToInsert = '';
         if (item.type === 'loan') {
             const code = item.loan_code || ('LN-' + item.id);
-            htmlToInsert = `<a href="/loans/${item.id}" target="_blank" rel="noopener noreferrer" class="mention-chip mention-loan" style="display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:6px; background:rgba(139,92,246,0.12); color:#8b5cf6; font-weight:600; text-decoration:none; border:1px solid rgba(139,92,246,0.25);" contenteditable="false"><ion-icon name="link-outline"></ion-icon> ${escapeMention(code)}: ${escapeMention(item.party_name || item.lender_name)} (${escapeMention(item.currency)} ${Number(item.principal_amount).toLocaleString(undefined, {minimumFractionDigits: 2})})</a>&nbsp;`;
+            htmlToInsert = `<a href="/loans/${item.id}" target="_blank" rel="noopener noreferrer" class="mention-chip mention-loan" style="display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:6px; background:rgba(139,92,246,0.12); color:var(--primary); font-weight:600; text-decoration:none; border:1px solid rgba(139,92,246,0.25);" contenteditable="false"><ion-icon name="link-outline"></ion-icon> ${escapeMention(code)}: ${escapeMention(item.party_name || item.lender_name)} (${escapeMention(item.currency)} ${Number(item.principal_amount).toLocaleString(undefined, {minimumFractionDigits: 2})})</a>&nbsp;`;
         } else if (item.type === 'transaction') {
             const isInc = item.type === 'income';
             const sign = isInc ? '+' : (item.type === 'expense' ? '-' : '');
             const ref = item.reference_no ? ` [${item.reference_no}]` : '';
-            htmlToInsert = `<a href="/transactions" target="_blank" rel="noopener noreferrer" class="mention-chip mention-transaction" style="display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:6px; background:rgba(245,158,11,0.14); color:#f59e0b; font-weight:600; text-decoration:none; border:1px solid rgba(245,158,11,0.35);" contenteditable="false"><ion-icon name="receipt-outline"></ion-icon> TXN-${item.id}${ref}: ${item.type.toUpperCase()} ${sign}${item.currency} ${Number(item.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</a>&nbsp;`;
+            htmlToInsert = `<a href="/transactions" target="_blank" rel="noopener noreferrer" class="mention-chip mention-transaction" style="display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:6px; background:rgba(245,158,11,0.14); color:var(--warning); font-weight:600; text-decoration:none; border:1px solid rgba(245,158,11,0.35);" contenteditable="false"><ion-icon name="receipt-outline"></ion-icon> TXN-${item.id}${ref}: ${item.type.toUpperCase()} ${sign}${item.currency} ${Number(item.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</a>&nbsp;`;
         } else if (item.type === 'party') {
-            htmlToInsert = `<span class="mention-chip mention-party" style="display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:6px; background:rgba(59,130,246,0.12); color:#3b82f6; font-weight:600; border:1px solid rgba(59,130,246,0.25);" contenteditable="false"><ion-icon name="business-outline"></ion-icon> ${item.name}</span>&nbsp;`;
+            htmlToInsert = `<span class="mention-chip mention-party" style="display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:6px; background:rgba(59,130,246,0.12); color:var(--primary); font-weight:600; border:1px solid rgba(59,130,246,0.25);" contenteditable="false"><ion-icon name="business-outline"></ion-icon> ${item.name}</span>&nbsp;`;
         } else if (item.type === 'employee') {
-            htmlToInsert = `<span class="mention-chip mention-employee" style="display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:6px; background:rgba(16,185,129,0.12); color:#10b981; font-weight:600; border:1px solid rgba(16,185,129,0.25);" contenteditable="false"><ion-icon name="person-outline"></ion-icon> ${item.name}${item.code ? ' (' + item.code + ')' : ''}</span>&nbsp;`;
+            htmlToInsert = `<span class="mention-chip mention-employee" style="display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:6px; background:rgba(16,185,129,0.12); color:var(--success); font-weight:600; border:1px solid rgba(16,185,129,0.25);" contenteditable="false"><ion-icon name="person-outline"></ion-icon> ${item.name}${item.code ? ' (' + item.code + ')' : ''}</span>&nbsp;`;
         }
 
         if (htmlToInsert) {
@@ -697,7 +696,7 @@ function setupSlashCommands(editor, editorId) {
                     title: '/loan',
                     subtitle: 'Search & link a Loan (Code, Lender, Amount, Purpose)',
                     icon: 'card-outline',
-                    iconColor: '#8b5cf6',
+                    iconColor: 'var(--primary)',
                     bgColor: 'rgba(139, 92, 246, 0.15)'
                 },
                 {
@@ -706,7 +705,7 @@ function setupSlashCommands(editor, editorId) {
                     title: '/transaction',
                     subtitle: 'Search & link a Transaction (Income, Expense, Ref No)',
                     icon: 'receipt-outline',
-                    iconColor: '#f59e0b',
+                    iconColor: 'var(--warning)',
                     bgColor: 'rgba(245, 158, 11, 0.15)'
                 },
                 {
@@ -715,7 +714,7 @@ function setupSlashCommands(editor, editorId) {
                     title: '/party',
                     subtitle: 'Search & mention a Party (Client / Vendor / Partner)',
                     icon: 'business-outline',
-                    iconColor: '#3b82f6',
+                    iconColor: 'var(--primary)',
                     bgColor: 'rgba(59, 130, 246, 0.15)'
                 },
                 {
@@ -724,7 +723,7 @@ function setupSlashCommands(editor, editorId) {
                     title: '/employee',
                     subtitle: 'Search & mention an Employee / Team Member',
                     icon: 'people-outline',
-                    iconColor: '#10b981',
+                    iconColor: 'var(--success)',
                     bgColor: 'rgba(16, 185, 129, 0.15)'
                 }
             ];

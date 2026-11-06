@@ -118,6 +118,11 @@
 
 <body data-workspace-role="{{ auth()->user()->role ?? 'viewer' }}">
 <a class="skip-link" href="#main-content">Skip to content</a>
+    <div class="navigation-loading" id="navigationLoading" role="status" aria-live="polite" aria-atomic="true" hidden>
+        <span class="navigation-loading-spinner" aria-hidden="true"></span>
+        <span data-navigation-loading-text>Opening page…</span>
+        <button type="button" data-dismiss-navigation-loading aria-label="Dismiss loading indicator" hidden>Dismiss</button>
+    </div>
 
     <!-- Backdrop Overlay for Mobile Drawers -->
     <div class="sidebar-backdrop" id="sidebarBackdrop"></div>

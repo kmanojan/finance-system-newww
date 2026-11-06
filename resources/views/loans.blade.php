@@ -665,6 +665,7 @@
             @csrf
             @method('PUT')
             <div class="modal-body">
+                <x-loan-correction-note />
                 <x-loan-type-selector id="edit_loan_type" />
                 <div class="form-row" style="margin-bottom:1.25rem;">
                     <div class="form-col">
@@ -1215,11 +1216,14 @@ document.addEventListener('DOMContentLoaded', function() {
 function openEditLoanModal(loan) {
     const editForm = document.getElementById('editLoanForm');
     editForm.action = '/loans/' + loan.id;
-    const editable = new Set(['_token', '_method', 'loan_type', 'purpose', 'guarantor', 'collateral', 'attachments[]']);
+    const editable = new Set(['_token', '_method', 'loan_type', 'party_id', 'lender_name', 'principal_amount', 'correction_reason', 'purpose', 'guarantor', 'collateral', 'attachments[]']);
     editForm.querySelectorAll('input, select, textarea').forEach(field => {
-        field.disabled = loan.status !== 'pending' && !editable.has(field.name);
+        const name = field.name || field.closest('.amount-input-wrapper')?.querySelector('.amount-hidden')?.name;
+        field.disabled = loan.status !== 'pending' && !editable.has(name) && !field.closest('.rich-editor-wrapper');
     });
     editForm.querySelector('[name="attachments[]"]').value = '';
+    editForm.querySelector('[data-loan-correction]').hidden = loan.status === 'pending';
+    editForm.querySelector('[name="correction_reason"]').value = '';
     
     const partyEl = document.getElementById('edit_party_id');
     if (partyEl) partyEl.value = loan.party_id || '';

@@ -6,6 +6,7 @@ use App\Services\ActivityLogService;
 use App\Services\LedgerPostingService;
 use App\Services\LoanBalanceService;
 use App\Services\LoanFlowService;
+use App\Services\LoanPrincipalCorrectionService;
 use App\Services\PeriodLockService;
 use App\Services\TransactionPostingService;
 use Carbon\Carbon;
@@ -448,7 +449,7 @@ class LoanController extends Controller
 
     public function update(Request $request, $id)
     {
-        $loan = DB::table('loans')->where('id', $id)->first();
+        $loan = DB::table('loans')->where('id', $id)->lockForUpdate()->first();
         if (! $loan) {
             abort(404);
         }
@@ -456,18 +457,37 @@ class LoanController extends Controller
         $this->validateAttachments($request);
 
         if ($loan->status !== 'pending') {
-            $financial = ['principal_amount', 'currency', 'claimed_date', 'interest_method', 'interest_rate', 'interest_amount', 'bank_account_id', 'term_months', 'frequency', 'total_interest', 'upfront_interest_amount', 'is_upfront_interest', 'due_day'];
+            $financial = ['currency', 'claimed_date', 'interest_method', 'interest_rate', 'interest_amount', 'bank_account_id', 'term_months', 'frequency', 'total_interest', 'upfront_interest_amount', 'is_upfront_interest', 'due_day', 'rate_basis'];
             foreach ($financial as $field) {
                 if ($request->has($field) && (string) $request->input($field) !== (string) $loan->$field && (! is_numeric($loan->$field) || (float) $request->input($field) !== (float) $loan->$field)) {
                     throw ValidationException::withMessages([$field => 'Activated financial terms are locked. Record a draw, repayment, or settlement instead.']);
                 }
             }
-            $metadata = $request->validate(['loan_type' => 'sometimes|required|in:interest_separate,principal_and_interest', 'purpose' => 'nullable|string|max:5000', 'guarantor' => 'nullable|string|max:255', 'collateral' => 'nullable|string|max:5000']);
+            $metadata = $request->validate([
+                'loan_type' => 'sometimes|required|in:interest_separate,principal_and_interest',
+                'party_id' => 'sometimes|nullable|exists:parties,id', 'lender_name' => 'sometimes|nullable|string|max:255',
+                'principal_amount' => 'sometimes|required|numeric|min:0.01|max:9999999999999.99|decimal:0,2',
+                'purpose' => 'nullable|string|max:5000', 'guarantor' => 'nullable|string|max:255', 'collateral' => 'nullable|string|max:5000',
+            ]);
+            $partyId = array_key_exists('party_id', $metadata) ? $metadata['party_id'] : $loan->party_id;
+            $lender = array_key_exists('lender_name', $metadata) ? $metadata['lender_name'] : $loan->lender_name;
+            if (blank($lender)) {
+                $lender = $partyId ? DB::table('parties')->where('id', $partyId)->value('name') : null;
+                if (blank($lender)) {
+                    throw ValidationException::withMessages(['lender_name' => 'Select a party or enter a lender name.']);
+                }
+                $metadata['lender_name'] = $lender;
+            }
+            if (isset($metadata['principal_amount']) && round((float) $metadata['principal_amount'] * 100) !== round((float) $loan->principal_amount * 100)) {
+                $request->validate(['correction_reason' => 'required|string|max:1000']);
+                LoanPrincipalCorrectionService::correct($loan, (float) $metadata['principal_amount'], $request->input('correction_reason'));
+            }
             DB::table('loans')->where('id', $id)->update($metadata + ['updated_at' => now()]);
             ActivityLogService::logUpdate('Loan', $id, (array) $loan, $metadata);
             $this->storeAttachments($request, (int) $id);
+            $this->syncLoanMaturityReminder($id);
 
-            return back()->with('success', 'Loan details updated. Posted financial terms are preserved.');
+            return back()->with('success', 'Loan updated. Recorded repayments and the existing interest schedule are preserved.');
         }
         $this->validateTerms($request);
         $data = $request->only(['loan_type', 'party_id', 'lender_name', 'principal_amount', 'currency', 'purpose', 'claimed_date', 'term_months', 'interest_method', 'interest_amount', 'interest_rate', 'rate_basis', 'total_interest', 'due_day', 'frequency', 'guarantor', 'collateral', 'status', 'maturity_date', 'bank_account_id', 'reminder_days', 'loan_code', 'is_upfront_interest', 'upfront_interest_amount']);

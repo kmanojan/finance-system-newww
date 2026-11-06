@@ -21,6 +21,31 @@ html[data-theme="dark"] {
     --bg-table-header:transparent; --bg-table-hover:#242427; --btn-outline-hover:#29292d;
 }
 body { font:14px/1.5 var(--font-body); font-variant-numeric:tabular-nums; }
+/* CKEditor menus and link/table balloons inherit the same live theme as the editor. */
+:root {
+    --ck-color-base-background:var(--bg-card); --ck-color-base-foreground:var(--bg-page);
+    --ck-color-base-border:var(--border); --ck-color-base-text:var(--text-main);
+    --ck-color-text:var(--text-main); --ck-color-toolbar-background:var(--bg-card);
+    --ck-color-toolbar-border:var(--border); --ck-color-panel-background:var(--bg-card);
+    --ck-color-panel-border:var(--border); --ck-color-input-background:var(--bg-card);
+    --ck-color-input-text:var(--text-main); --ck-color-input-border:var(--control-border);
+    --ck-color-button-default-hover-background:var(--nav-hover);
+    --ck-color-button-default-active-background:var(--nav-hover);
+    --ck-color-button-on-background:var(--primary-light); --ck-color-button-on-color:var(--primary);
+    --ck-color-button-on-hover-background:var(--primary-light);
+    --ck-color-list-background:var(--bg-card); --ck-color-list-button-hover-background:var(--nav-hover);
+    --ck-color-list-button-on-background:var(--action); --ck-color-list-button-on-text:var(--action-ink);
+    --ck-color-focus-border:var(--primary);
+}
+.ck.ck-editor__editable .ck-placeholder::before {color:var(--text-muted)!important;}
+.ck.ck-list,.ck.ck-dropdown__panel,.ck.ck-balloon-panel {background:var(--bg-card)!important;color:var(--text-main)!important;border-color:var(--border)!important;}
+.navigation-loading {position:fixed;top:calc(env(safe-area-inset-top, 0px) + 12px);left:50%;transform:translateX(-50%);z-index:100000;display:flex;align-items:center;gap:12px;width:max-content;max-width:calc(100vw - 32px);padding:12px 16px;border:1px solid var(--border);border-radius:12px;background:var(--bg-card);color:var(--text-heading);box-shadow:0 8px 24px #0002;font-size:14px;}
+.navigation-loading[hidden],.navigation-loading button[hidden] {display:none!important;}
+.navigation-loading-spinner {width:20px;height:20px;flex:0 0 20px;border:2px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:navigation-spin .8s linear infinite;}
+.navigation-loading button {border:0;background:transparent;color:var(--primary);font:inherit;min-height:44px;cursor:pointer;}
+[data-navigation-pending] {opacity:.7;}
+@keyframes navigation-spin {to {transform:rotate(360deg);}}
+@media(prefers-reduced-motion:reduce) {.navigation-loading-spinner {animation:none;border-right-color:var(--primary);}}
 h1,.dashboard-title,.page-title { font-size:28px!important; line-height:1.25; letter-spacing:-.025em; font-weight:600!important; }
 h2 { font-size:20px; } h3 { font-size:16px; }
 p,.subtitle { line-height:1.55; }

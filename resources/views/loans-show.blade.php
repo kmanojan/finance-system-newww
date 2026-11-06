@@ -339,7 +339,7 @@
             @method('PUT')
             <div class="modal-body">
                 @if($loan->status !== 'pending')
-                    <p class="text-muted">This loan is activated. You can update its description, payable type, guarantor, and collateral. Financial terms are locked.</p>
+                    <x-loan-correction-note />
                 @endif
 
                 <x-loan-type-selector id="edit_loan_type" :value="$balance['loan_type']" />
