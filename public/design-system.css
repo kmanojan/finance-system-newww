@@ -369,3 +369,31 @@ html.secondary-navigation-closed .sidebar-secondary {display:none!important;}
 .loan-detail-grid {grid-template-columns:minmax(240px,280px) minmax(0,1fr)!important;}
 .loan-detail-grid>div {min-width:0;}
 @media(max-width:1000px) {.loan-detail-grid{grid-template-columns:minmax(0,1fr)!important;}}
+
+/* Employee cards must release the desktop table's minimum width on phones. */
+.employee-profile .salary-layout-grid > * {min-width:0;}
+.employee-profile-identity,.employee-profile-identity > div {min-width:0;}
+.employee-profile-identity img {flex-shrink:0;}
+.employee-profile-meta {flex-wrap:wrap;}
+.employee-section-heading {flex-wrap:wrap;gap:8px;}
+@media(max-width:768px) {
+    .employee-directory .filter-bar {display:block!important;}
+    .employee-directory .filter-bar form > .form-control {min-width:0!important;max-width:100%;}
+    .employee-directory .employee-table {min-width:0!important;}
+    .employee-table tbody td {display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:12px;}
+    .employee-table tbody td::before {font-size:12px;text-transform:none;letter-spacing:0;padding-right:0;}
+    .employee-cell-value {min-width:0;overflow-wrap:anywhere;}
+    .employee-cell-value .badge {white-space:normal;max-width:100%;}
+    .employee-table tbody td:first-child,.employee-table tbody td:last-child,.employee-table tbody td[colspan] {display:block!important;text-align:left!important;}
+    .employee-table tbody td:first-child::before,.employee-table tbody td:last-child::before,.employee-table tbody td[colspan]::before {display:none;}
+    .employee-table tbody td:first-child .employee-cell-value > div > div {min-width:0;}
+    .employee-table tbody td:first-child .employee-cell-value > div > div > div {flex-wrap:wrap;}
+    .employee-table tbody td:last-child .employee-cell-value {display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
+    .employee-profile-identity {gap:12px!important;}
+    .employee-profile-identity h1 {overflow-wrap:anywhere;}
+    .employee-profile-meta {gap:6px!important;}
+    .employee-profile .salary-component-identity {min-width:0!important;max-width:100%;}
+    .salary-component-identity > div {min-width:0;overflow-wrap:anywhere;}
+    .salary-component-meta,.salary-component-inputs {flex-wrap:wrap;}
+    .salary-component-meta .badge {white-space:normal;overflow-wrap:anywhere;}
+}

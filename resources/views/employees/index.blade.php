@@ -6,7 +6,7 @@
 @endsection
 
 @section('content')
-<div>
+<div class="employee-directory">
     <!-- Page Header -->
     <header class="page-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; flex-wrap:wrap; gap:1rem;">
         <div>
@@ -125,7 +125,7 @@
 
     <!-- Employees & Salary Details Table -->
     <div class="data-table-container" style="background:var(--bg-card); border-radius:12px; border:1px solid var(--border); overflow-x:auto;">
-        <table class="data-table" style="width:100%; border-collapse:collapse; min-width:1050px;">
+        <table class="data-table employee-table" style="width:100%; border-collapse:collapse; min-width:1050px;">
             <thead style="background:var(--bg-page); border-bottom:1px solid var(--border);">
                 <tr>
                     <th style="padding:1rem; text-align:left; font-weight:600; color:var(--text-muted); width:240px;">Employee</th>
@@ -146,7 +146,7 @@
                 @endphp
                 <tr style="border-bottom:1px solid var(--border-light);">
                     <!-- Employee Column -->
-                    <td style="padding:0.9rem 1rem;">
+                    <td data-label="Employee" style="padding:0.9rem 1rem;"><div class="employee-cell-value">
                         <div style="display:flex; align-items:center; gap:0.75rem;">
                             <img src="{{ $emp->profile_picture_url ?? 'https://ui-avatars.com/api/?name='.urlencode($emp->full_name).'&background=8b5cf6&color=fff' }}" 
                                  style="width:38px; height:38px; border-radius:50%; object-fit:cover; flex-shrink:0;">
@@ -161,18 +161,18 @@
                                 </div>
                             </div>
                         </div>
-                    </td>
+                    </div></td>
 
                     <!-- Basic Salary -->
-                    <td style="padding:0.9rem 1rem; text-align:right;" class="tabular-nums">
+                    <td data-label="Basic Salary" style="padding:0.9rem 1rem; text-align:right;" class="tabular-nums"><div class="employee-cell-value">
                         <span style="font-weight:600; color:var(--text-heading); font-size:0.95rem;">
                             {{ number_format($breakdown['basic_salary'], 2) }}
                         </span>
                         <div style="font-size:0.75rem; color:var(--text-muted);">{{ $breakdown['currency'] }}</div>
-                    </td>
+                    </div></td>
 
                     <!-- Allowances -->
-                    <td style="padding:0.9rem 1rem; text-align:right;" class="tabular-nums">
+                    <td data-label="Allowances (+)" style="padding:0.9rem 1rem; text-align:right;" class="tabular-nums"><div class="employee-cell-value">
                         @if($breakdown['total_allowances'] > 0)
                             <span style="font-weight:600; color:var(--success); font-size:0.95rem;">
                                 + {{ number_format($breakdown['total_allowances'], 2) }}
@@ -183,20 +183,20 @@
                         @else
                             <span style="color:var(--text-light); font-size:0.85rem;">-</span>
                         @endif
-                    </td>
+                    </div></td>
 
                     <!-- Gross Salary -->
-                    <td style="padding:0.9rem 1rem; text-align:right;" class="tabular-nums">
+                    <td data-label="Gross Salary" style="padding:0.9rem 1rem; text-align:right;" class="tabular-nums"><div class="employee-cell-value">
                         <span style="font-weight:700; color:var(--text-heading); font-size:0.95rem;">
                             {{ number_format($breakdown['gross_salary'], 2) }}
                         </span>
                         <div style="font-size:0.75rem; color:var(--text-muted);" title="EPF Base Earnings">
                             EPF: {{ number_format($breakdown['epf_base_salary'], 0) }}
                         </div>
-                    </td>
+                    </div></td>
 
                     <!-- Deductions -->
-                    <td style="padding:0.9rem 1rem; text-align:right;" class="tabular-nums">
+                    <td data-label="Deductions (-)" style="padding:0.9rem 1rem; text-align:right;" class="tabular-nums"><div class="employee-cell-value">
                         @if($breakdown['total_deductions'] > 0)
                             <span style="font-weight:600; color:var(--danger); font-size:0.95rem;">
                                 - {{ number_format($breakdown['total_deductions'], 2) }}
@@ -210,18 +210,18 @@
                         @else
                             <span style="color:var(--text-light); font-size:0.85rem;">0.00</span>
                         @endif
-                    </td>
+                    </div></td>
 
                     <!-- Net Take-Home Pay (Highlight) -->
-                    <td style="padding:0.9rem 1rem; text-align:right; background:rgba(16, 185, 129, 0.04);" class="tabular-nums">
+                    <td data-label="Net Take-Home" style="padding:0.9rem 1rem; text-align:right; background:rgba(16, 185, 129, 0.04);" class="tabular-nums"><div class="employee-cell-value">
                         <span class="badge badge-success" style="font-size:0.95rem; font-weight:700; padding:0.35rem 0.65rem; border-radius:6px;">
                             {{ number_format($breakdown['net_salary'], 2) }}
                         </span>
                         <div style="font-size:0.75rem; color:var(--success); margin-top:2px;">Disbursable</div>
-                    </td>
+                    </div></td>
 
                     <!-- Employer EPF & ETF (15%) -->
-                    <td style="padding:0.9rem 1rem; text-align:right;" class="tabular-nums">
+                    <td data-label="Employer (15%)" style="padding:0.9rem 1rem; text-align:right;" class="tabular-nums"><div class="employee-cell-value">
                         @if($breakdown['total_employer_cost'] > 0)
                             <span style="font-weight:600; color:var(--primary); font-size:0.95rem;">
                                 {{ number_format($breakdown['total_employer_cost'], 2) }}
@@ -232,24 +232,24 @@
                         @else
                             <span style="color:var(--text-light); font-size:0.85rem;">0.00</span>
                         @endif
-                    </td>
+                    </div></td>
 
                     <!-- Total CTC (Cost to Company) -->
-                    <td style="padding:0.9rem 1rem; text-align:right; background:rgba(139, 92, 246, 0.04);" class="tabular-nums">
+                    <td data-label="Total CTC" style="padding:0.9rem 1rem; text-align:right; background:rgba(139, 92, 246, 0.04);" class="tabular-nums"><div class="employee-cell-value">
                         <span style="font-weight:800; color:var(--primary); font-size:1rem;">
                             {{ number_format($breakdown['ctc'], 2) }}
                         </span>
                         <div style="font-size:0.75rem; color:var(--text-muted);">Gross + 15% ER</div>
-                    </td>
+                    </div></td>
 
                     <!-- Actions -->
-                    <td style="padding:0.9rem 1rem; text-align:center;">
+                    <td data-label="Action" style="padding:0.9rem 1rem; text-align:center;"><div class="employee-cell-value">
                         <a href="/employees/{{ $emp->id }}" class="btn btn-outline" style="padding:0.35rem 0.75rem; font-size:0.8rem; display:inline-flex; align-items:center; gap:0.35rem; border-radius:6px; text-decoration:none;" title="Configure Salary & Components">
                             <ion-icon name="create-outline"></ion-icon>
                             <span>Config</span>
                         </a>
                         <x-employee-party-action :employee="$emp" :compact="true" />
-                    </td>
+                    </div></td>
                 </tr>
                 @empty
                 <tr>

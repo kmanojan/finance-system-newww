@@ -249,21 +249,21 @@ document.addEventListener('alpine:init', () => {
 });
 </script>
 
-<div id="salaryCalculatorRoot" x-data="salaryCalculator(window.initialSalaryData)">
+<div class="employee-profile" id="salaryCalculatorRoot" x-data="salaryCalculator(window.initialSalaryData)">
     <!-- Header -->
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; flex-wrap:wrap; gap:1rem;">
-        <div style="display:flex; align-items:center; gap:1rem;">
+        <div class="employee-profile-identity" style="display:flex; align-items:center; gap:1rem;">
             <a href="/employees" class="btn btn-outline" style="padding:0.5rem; border-radius:8px;" title="Back to Employees">
                 <ion-icon name="arrow-back-outline" style="font-size:1.2rem;"></ion-icon>
             </a>
-            <div style="display:flex; align-items:center; gap:1rem;">
+            <div class="employee-profile-identity" style="display:flex; align-items:center; gap:1rem;">
                 <img src="{{ $employee->profile_picture_url ?? 'https://ui-avatars.com/api/?name='.urlencode($employee->full_name).'&background=8b5cf6&color=fff' }}" 
                      style="width:52px; height:52px; border-radius:50%; object-fit:cover; border:2px solid var(--primary-light);">
                 <div>
                     <h1 style="font-size:1.5rem; font-weight:700; color:var(--text-heading); margin:0;">
                         {{ $employee->full_name }}
                     </h1>
-                    <div style="font-size:0.85rem; color:var(--text-muted); display:flex; align-items:center; gap:0.75rem; margin-top:0.25rem;">
+                    <div class="employee-profile-meta" style="font-size:0.85rem; color:var(--text-muted); display:flex; align-items:center; gap:0.75rem; margin-top:0.25rem;">
                         <span>Code: <strong style="color:var(--text-main);">{{ $employee->employee_code ?? 'N/A' }}</strong></span>
                         <span>•</span>
                         <span>{{ $employee->job_position ?? 'Team Member' }}</span>
@@ -314,13 +314,13 @@ document.addEventListener('alpine:init', () => {
     <style>
     .salary-layout-grid {
         display: grid;
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
         gap: 1.5rem;
         align-items: start;
     }
     @media (min-width: 1024px) {
         .salary-layout-grid {
-            grid-template-columns: 2fr 1fr !important;
+            grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) !important;
         }
     }
     .component-card-active {
@@ -367,7 +367,7 @@ document.addEventListener('alpine:init', () => {
             
             <!-- Basic Compensation Card -->
             <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:1.5rem; margin-bottom:1.5rem;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem; border-bottom:1px solid var(--border-light); pb:0.75rem;">
+                <div class="employee-section-heading" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem; border-bottom:1px solid var(--border-light); pb:0.75rem;">
                     <h3 style="margin:0; font-size:1.1rem; font-weight:600; color:var(--text-heading); display:flex; align-items:center; gap:0.5rem;">
                         <ion-icon name="cash-outline" style="color:var(--primary); font-size:1.3rem;"></ion-icon>
                         Basic Salary & Payment Mode
@@ -438,7 +438,7 @@ document.addEventListener('alpine:init', () => {
 
             <!-- Components Breakdown List -->
             <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:1.5rem; margin-bottom:1.5rem;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; border-bottom:1px solid var(--border-light); pb:0.75rem;">
+                <div class="employee-section-heading" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; border-bottom:1px solid var(--border-light); pb:0.75rem;">
                     <h3 style="margin:0; font-size:1.1rem; font-weight:600; color:var(--text-heading); display:flex; align-items:center; gap:0.5rem;">
                         <ion-icon name="options-outline" style="color:var(--primary); font-size:1.3rem;"></ion-icon>
                         Salary Components & Allowances
@@ -481,13 +481,13 @@ document.addEventListener('alpine:init', () => {
                         <!-- Only Assigned Active Allowances -->
                         <template x-for="(comp, idx) in components.filter(c => c.type === 'earning' && c.code !== 'BASIC' && c.enabled)" :key="comp.id">
                             <div class="component-card-active">
-                                <div style="display:flex; align-items:center; gap:0.85rem; min-width:220px;">
+                                <div class="salary-component-identity" style="display:flex; align-items:center; gap:0.85rem; min-width:220px;">
                                     <div style="width:38px; height:38px; border-radius:8px; background:rgba(16, 185, 129, 0.12); color:var(--success); display:flex; align-items:center; justify-content:center; font-size:1.25rem; flex-shrink:0;">
                                         <ion-icon name="cash-outline"></ion-icon>
                                     </div>
                                     <div>
                                         <div style="font-weight:600; color:var(--text-heading); font-size:0.92rem;" x-text="comp.name"></div>
-                                        <div style="font-size:0.75rem; color:var(--text-muted); display:flex; gap:0.5rem; align-items:center; margin-top:2px;">
+                                        <div class="salary-component-meta" style="font-size:0.75rem; color:var(--text-muted); display:flex; gap:0.5rem; align-items:center; margin-top:2px;">
                                             <span class="badge badge-info" style="font-size:0.75rem;" x-text="comp.code"></span>
                                             <template x-if="comp.is_epf_eligible">
                                                 <span class="badge badge-warning" style="font-size:0.75rem;">EPF Eligible</span>
@@ -580,7 +580,7 @@ document.addEventListener('alpine:init', () => {
                     <div style="display:flex; flex-direction:column; gap:0.75rem;">
                         <template x-for="(comp, idx) in components.filter(c => c.type === 'deduction' && c.enabled)" :key="comp.id">
                             <div class="component-card-active">
-                                <div style="display:flex; align-items:center; gap:0.85rem; min-width:220px;">
+                                <div class="salary-component-identity" style="display:flex; align-items:center; gap:0.85rem; min-width:220px;">
                                     <div style="width:38px; height:38px; border-radius:8px; background:rgba(239, 68, 68, 0.12); color:var(--danger); display:flex; align-items:center; justify-content:center; font-size:1.25rem; flex-shrink:0;">
                                         <ion-icon name="remove-circle-outline"></ion-icon>
                                     </div>
@@ -649,7 +649,7 @@ document.addEventListener('alpine:init', () => {
                     <div style="display:flex; flex-direction:column; gap:0.75rem;">
                         <template x-for="(comp, idx) in components.filter(c => c.type === 'employer_contribution')" :key="comp.id">
                             <div style="background:var(--bg-page); border:1px solid var(--border-light); border-radius:8px; padding:0.75rem 1rem; display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
-                                <div style="display:flex; align-items:center; gap:0.75rem; min-width:200px;">
+                                <div class="salary-component-identity" style="display:flex; align-items:center; gap:0.75rem; min-width:200px;">
                                     <input type="checkbox" value="1" x-model="comp.enabled" @change="recalculate()" style="width:18px; height:18px; cursor:pointer;">
                                     <div>
                                         <div style="font-weight:600; color:var(--text-heading); font-size:0.9rem;" x-text="comp.name"></div>
@@ -659,7 +659,7 @@ document.addEventListener('alpine:init', () => {
                                     </div>
                                 </div>
 
-                                <div style="display:flex; align-items:center; gap:1rem;">
+                                <div class="salary-component-inputs" style="display:flex; align-items:center; gap:1rem;">
                                     <div style="width:150px;">
                                         <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:2px;">Contribution %</div>
                                         <input type="number" step="0.01" 
@@ -693,7 +693,7 @@ document.addEventListener('alpine:init', () => {
         <div style="position:sticky; top:1.5rem; display:flex; flex-direction:column; gap:1.5rem;">
             
             <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:1.5rem; box-shadow:0 4px 12px rgba(0,0,0,0.05);">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; border-bottom:1px solid var(--border-light); pb:0.5rem;">
+                <div class="employee-section-heading" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; border-bottom:1px solid var(--border-light); pb:0.5rem;">
                     <h3 style="margin:0; font-size:1.05rem; font-weight:700; color:var(--text-heading);">Live Salary Breakdown</h3>
                     <span class="badge badge-info" style="font-size:0.75rem;">Interactive Preview</span>
                 </div>
