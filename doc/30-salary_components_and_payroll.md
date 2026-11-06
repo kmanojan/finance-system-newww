@@ -92,3 +92,11 @@ Accessible by clicking an employee name or the **"Config"** action from `/employ
    - **Employer (15%)**: Employer EPF (12%) + ETF (3%).
    - **Total CTC**: Total cost to company for this employee.
    - **Action**: One-click **"Config"** button leading directly to the salary configuration panel.
+
+## Salary change history
+
+Open an employee, then select **Salary history**. The Table view shows recorded date/time, changed fields, previous/new basic and net salary, the editor, and an optional reason. Expand a change to see component definitions and gross/deduction/company-cost totals. Flow shows the same page of changes in chronological order. Chart shows the latest 100 changes with selectable basic, gross, net, or company-cost measures and separate currency selection. Table and Flow paginate ten changes at a time.
+
+Saving a salary profile records immutable before/after snapshots in the existing activity ledger (`salary_change`, model `Employee`). Component master edits or deletions also record affected employees, with batch audit inserts for shared components. Unchanged saves and bank-only changes do not add salary history. Profile viewing is read-only; suggested statutory defaults are assigned only on an authorized save. No new schema migration is required.
+
+Changes take effect immediately when saved; the recorded timestamp uses the displayed application timezone. The previous profile in the first change has an unknown start date. No earlier salary changes are invented or reconstructed from current values. Monthly payroll adjustments and paid amounts remain in payroll records. Historic snapshots retain component names/rules and currency even when the current master changes. Salary history does not store employee bank account details.

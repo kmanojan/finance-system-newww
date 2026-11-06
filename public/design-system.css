@@ -397,3 +397,58 @@ html.secondary-navigation-closed .sidebar-secondary {display:none!important;}
     .salary-component-meta,.salary-component-inputs {flex-wrap:wrap;}
     .salary-component-meta .badge {white-space:normal;overflow-wrap:anywhere;}
 }
+
+.employee-view-tabs {display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--border);margin-bottom:20px;}
+.employee-view-tabs button {border:0;border-bottom:2px solid transparent;background:transparent;padding:12px 16px;min-height:44px;color:var(--text-muted);font:inherit;font-weight:600;cursor:pointer;}
+.employee-view-tabs button[aria-selected="true"] {color:var(--primary);border-bottom-color:var(--primary);}
+.employee-view-tabs button span {margin-left:6px;font-size:12px;}
+.employee-profile [role="tabpanel"][hidden],.salary-history [hidden] {display:none!important;}
+.salary-change-note {margin-bottom:20px;}
+.salary-history {background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:24px;min-width:0;}
+.salary-history-heading {display:flex;align-items:start;justify-content:space-between;gap:16px;flex-wrap:wrap;}
+.salary-history-heading h2 {margin:0 0 6px;}
+.salary-history-heading .employee-view-tabs {margin:0;}
+.salary-history-help {color:var(--text-muted);font-size:13px;max-width:85ch;margin:16px 0 24px;}
+.salary-history-empty {padding:24px 0;border-top:1px solid var(--border-light);}
+.salary-history-empty h3 {margin-top:0;}
+.salary-history-table-wrap {overflow-x:auto;max-width:100%;}
+.salary-history-table {width:100%;min-width:870px;border-collapse:collapse;font-size:13px;}
+.salary-history-table th {text-align:left;color:var(--text-muted);font-weight:500;padding:12px;border-bottom:1px solid var(--border);}
+.salary-history-table td {padding:16px 12px;border-bottom:1px solid var(--border-light);vertical-align:top;max-width:280px;overflow-wrap:anywhere;}
+.salary-history-table td:first-child {min-width:132px;}
+.salary-history-table small,.salary-history-amount strong,.salary-history-amount > span {display:block;}
+.salary-history-table p {margin:4px 0 0;}
+.salary-history-amount {text-align:right;white-space:nowrap;}
+.salary-history-change-list summary {cursor:pointer;line-height:1.6;max-width:32ch;}
+.salary-history-change-list dl {margin:12px 0 0;}
+.salary-history-change-list dt {font-weight:600;margin-top:8px;}
+.salary-history-change-list dd {margin:2px 0;color:var(--text-muted);overflow-wrap:anywhere;}
+.salary-history-flow {list-style:none;padding:0 0 0 20px;margin:24px 0;max-width:760px;}
+.salary-history-flow > li {position:relative;padding:0 0 24px 28px;border-left:2px solid var(--border);}
+.salary-history-flow > li::before {content:'';position:absolute;width:12px;height:12px;background:var(--primary);border:3px solid var(--bg-card);border-radius:50%;left:-7px;top:20px;}
+.salary-history-flow > li:last-child {padding-bottom:0;}
+.salary-history-flow article {padding:20px;border:1px solid var(--border);border-radius:10px;}
+.salary-history-flow header {display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;}
+.salary-flow-values {display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:20px 0;}
+.salary-flow-values strong,.salary-flow-values .text-muted {display:block;}
+.salary-history-flow footer {margin-top:16px;color:var(--text-muted);font-size:13px;overflow-wrap:anywhere;}
+.salary-chart-controls {display:flex;flex-wrap:wrap;gap:16px;margin:20px 0;}
+.salary-chart-controls label {display:grid;gap:6px;min-width:160px;}
+.salary-chart-scroll {overflow-x:auto;}
+#salary-history-chart {display:block;width:100%;min-width:580px;}
+.salary-chart-grid {stroke:var(--border-light);stroke-width:1;}
+.salary-chart-axis {fill:var(--text-muted);font-size:12px;}
+.salary-chart-line {stroke:var(--primary);fill:none;stroke-width:2;}
+.salary-chart-point {stroke:var(--bg-card);stroke-width:2;fill:var(--primary);cursor:pointer;}
+.salary-chart-point:focus {outline:none;stroke:var(--text-heading);stroke-width:3;}
+.salary-chart-value {display:block;min-height:44px;padding:12px 0;color:var(--text-heading);}
+.salary-history-pagination {display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:20px;}
+@media(max-width:640px) {
+    .salary-history {padding:16px;}
+    .salary-history-heading .employee-view-tabs {width:100%;}
+    .salary-history-flow {padding-left:6px;}
+    .salary-history-flow > li {padding-left:18px;}
+    .salary-history-flow article {padding:14px;}
+    .salary-chart-controls label {min-width:0;flex:1;}
+}
+.employee-profile [data-salary-profile-action][hidden] {display:none!important;}

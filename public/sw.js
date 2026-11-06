@@ -1,4 +1,4 @@
-const CACHE_NAME = "finance-system-v2";
+const CACHE_NAME = "finance-system-v3";
 const STATIC_ASSETS = [
     "/manifest.json",
     "/offline.html",

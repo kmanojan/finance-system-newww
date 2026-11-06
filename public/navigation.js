@@ -69,9 +69,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const loadingText = loading.querySelector('[data-navigation-loading-text]');
     const dismiss = loading.querySelector('[data-dismiss-navigation-loading]');
     const main = document.getElementById('main-content');
-    let showTimer, slowTimer, resetTimer;
+    let slowTimer, resetTimer;
     function clearLoading() {
-        clearTimeout(showTimer); clearTimeout(slowTimer); clearTimeout(resetTimer);
+        clearTimeout(slowTimer); clearTimeout(resetTimer);
         loading.hidden = true;
         dismiss.hidden = true;
         main?.removeAttribute('aria-busy');
@@ -83,7 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
         loadingText.textContent = name ? `Opening ${name}…` : 'Opening page…';
         link.setAttribute('data-navigation-pending', 'true');
         main?.setAttribute('aria-busy', 'true');
-        showTimer = setTimeout(() => {loading.hidden = false;}, 120);
+        loading.hidden = false;
         slowTimer = setTimeout(() => {
             loadingText.textContent = navigator.onLine ? 'Still loading. This is taking longer than usual…' : 'You appear to be offline. Check your connection.';
             dismiss.hidden = false;
@@ -99,7 +99,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!['http:', 'https:'].includes(url.protocol) || url.origin !== location.origin) return;
         if (link.getAttribute('href').startsWith('#') || (url.pathname === location.pathname && url.search === location.search && url.hash)) return;
         if (/\/(?:download|export)(?:\/|$)|\.(?:pdf|csv|xlsx?|zip|docx?|png|jpe?g)$/i.test(url.pathname)) return;
-        queueMicrotask(() => {if (!event.defaultPrevented) showLoading(link);});
+        showLoading(link);
+        // One handler owns standalone navigation and feedback. Allow the loader to paint
+        // before iOS begins loading the next document (the old handler prevented this click).
+        if (navigator.standalone === true || matchMedia('(display-mode: standalone)').matches) {
+            event.preventDefault();
+            requestAnimationFrame(() => requestAnimationFrame(() => location.assign(url.href)));
+        }
     });
     dismiss.addEventListener('click', clearLoading);
     document.addEventListener('keydown', event => {if (event.key === 'Escape') clearLoading();});

@@ -13,17 +13,33 @@ class ActivityLogService
      */
     public static function log(string $action, ?string $modelType = null, ?int $modelId = null, mixed $oldValue = null, mixed $newValue = null): void
     {
-        $entry = [
-            'action' => $action, 'model_type' => $modelType, 'model_id' => $modelId,
-            'old_value' => $oldValue === null ? null : json_encode(self::redact($oldValue)),
-            'new_value' => $newValue === null ? null : json_encode(self::redact($newValue)),
-            'user_id' => Auth::id(),
-            'created_at' => now(), 'updated_at' => now(),
-        ];
-        if (Schema::hasColumn('activity_logs', 'ip_address')) {
-            $entry['ip_address'] = request()->ip();
+        self::logBatch([['action' => $action, 'model_type' => $modelType, 'model_id' => $modelId, 'old_value' => $oldValue, 'new_value' => $newValue]]);
+    }
+
+    /** Batch related audit records without repeating schema checks for every employee. */
+    public static function logBatch(array $entries): void
+    {
+        if (! $entries) {
+            return;
         }
-        DB::table('activity_logs')->insert($entry);
+        $hasIp = Schema::hasColumn('activity_logs', 'ip_address');
+        $now = now();
+        $rows = array_map(function ($entry) use ($hasIp, $now) {
+            $row = [
+                'action' => $entry['action'], 'model_type' => $entry['model_type'], 'model_id' => $entry['model_id'],
+                'old_value' => $entry['old_value'] === null ? null : json_encode(self::redact($entry['old_value'])),
+                'new_value' => $entry['new_value'] === null ? null : json_encode(self::redact($entry['new_value'])),
+                'user_id' => Auth::id(), 'created_at' => $now, 'updated_at' => $now,
+            ];
+            if ($hasIp) {
+                $row['ip_address'] = request()->ip();
+            }
+
+            return $row;
+        }, $entries);
+        foreach (array_chunk($rows, 100) as $chunk) {
+            DB::table('activity_logs')->insert($chunk);
+        }
     }
 
     private static function redact(mixed $value): mixed

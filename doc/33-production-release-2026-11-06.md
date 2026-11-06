@@ -37,3 +37,11 @@ Validation: 119 PHPUnit tests / 1,048 assertions passed, Vite production build p
 The employee table retained its 1,050 px desktop minimum width after switching to mobile cards, putting employee names, amounts, and actions outside the viewport. Mobile cards now release that minimum width, pair explicit field labels with grouped values, and keep identity and actions across the card width. The employee profile grid and component labels also wrap without clipping. Desktop retains the tabular layout.
 
 Browser DOM and geometry checks passed at 320, 390, and 768 px for employee cards and profiles, with desktop table semantics verified at 1,440 px. Light and dark themes were checked. The 12 existing employee salary/party tests passed (109 assertions), Blade compilation and the Vite build passed. No salary data was changed during browser verification.
+
+## Salary history and standalone PWA loader correction — 7 November
+
+Employee profiles now include Table, Flow, and Chart history views backed by immutable salary snapshots in the existing audit ledger. Basic salary, enabled component changes, and component master edits/deletions record before/after totals, currency, actor, source, and optional reason. No new migrations are needed. Opening a profile no longer writes default salary mappings. History is captured from this release onward; existing unrecorded revisions are not recoverable.
+
+The missing PWA loader was caused by `script.js` preventing the standalone navigation click before `navigation.js` received it. The duplicate handler was removed. One navigation handler now shows the loader immediately and gives it a paint opportunity before changing the standalone document. Downloads, hash tabs, new-window links, modified clicks, and cancelled clicks remain excluded. The service-worker static cache version was advanced to refresh old assets.
+
+Validation: 125 PHP tests (1,105 assertions), three navigation regression tests, Blade compilation, and the production build passed. Local browser checks verified a saved salary change across all three views, keyboard tab navigation, light/dark chart colours, and mobile containment. A standalone-mode fixture verified the loader below a simulated status-bar inset. Physical iOS device testing remains outstanding; production salary records were not modified.

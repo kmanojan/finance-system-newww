@@ -192,6 +192,7 @@ function salaryCalculator(initialData) {
 
             const payload = {
                 basic_salary: basicVal,
+                salary_change_reason: form?.querySelector('[name="salary_change_reason"]')?.value || null,
                 currency: form ? (form.querySelector('select[name="currency"]')?.value || 'LKR') : 'LKR',
                 payment_mode: form ? (form.querySelector('select[name="payment_mode"]')?.value || 'bank_transfer') : 'bank_transfer',
                 bank_name: form ? (form.querySelector('input[name="bank_name"]')?.value || null) : null,
@@ -277,7 +278,7 @@ document.addEventListener('alpine:init', () => {
         </div>
         <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
             <x-employee-party-action :employee="$employee" />
-            <button type="button" @click="submitForm()" :disabled="isSubmitting" class="btn btn-primary" style="display:flex; align-items:center; gap:0.5rem; padding:0.65rem 1.25rem; font-weight:600;">
+            <button data-salary-profile-action type="button" @click="submitForm()" :disabled="isSubmitting" class="btn btn-primary" style="display:flex; align-items:center; gap:0.5rem; padding:0.65rem 1.25rem; font-weight:600;">
                 <ion-icon :name="isSubmitting ? 'hourglass-outline' : 'save-outline'" style="font-size:1.15rem;"></ion-icon>
                 <span x-text="isSubmitting ? 'Saving Profile...' : 'Save Salary Profile'">Save Salary Profile</span>
             </button>
@@ -358,13 +359,22 @@ document.addEventListener('alpine:init', () => {
     }
     </style>
 
+    <div class="employee-view-tabs" role="tablist" aria-label="Employee details">
+        <button type="button" id="employee-profile-tab" role="tab" aria-selected="true" aria-controls="employee-profile-panel" data-employee-view="profile">Salary profile</button>
+        <button type="button" id="employee-history-tab" role="tab" aria-selected="false" aria-controls="salary-history" data-employee-view="history" tabindex="-1">Salary history <span>{{ $salaryHistory->total() }}</span></button>
+    </div>
     <!-- Main Grid: Config Form & Live Summary Card -->
-    <div class="salary-layout-grid">
+    <div class="salary-layout-grid" id="employee-profile-panel" role="tabpanel" aria-labelledby="employee-profile-tab">
         
         <!-- Left: Salary Configuration Form -->
         <form id="salaryConfigForm" method="POST" action="/employees/{{ $employee->id }}/salary" @submit.prevent="submitForm()">
             @csrf
             
+            <div class="salary-change-note">
+                <label class="form-label" for="salary_change_reason">Reason for salary change <span class="text-muted">(optional)</span></label>
+                <input class="form-control" id="salary_change_reason" name="salary_change_reason" maxlength="1000" placeholder="E.g. Annual review, promotion, allowance adjustment">
+                <small class="text-muted">Saved with the previous and new salary in this employee’s history. Changes apply immediately.</small>
+            </div>
             <!-- Basic Compensation Card -->
             <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:1.5rem; margin-bottom:1.5rem;">
                 <div class="employee-section-heading" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem; border-bottom:1px solid var(--border-light); pb:0.75rem;">
@@ -807,5 +817,7 @@ document.addEventListener('alpine:init', () => {
         </div>
 
     </div>
+    @include('employees.salary-history')
 </div>
+<script defer src="{{ asset('salary-history.js') }}?v={{ filemtime(public_path('salary-history.js')) }}"></script>
 @endsection

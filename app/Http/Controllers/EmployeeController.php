@@ -7,6 +7,7 @@ use App\Models\Employee;
 use App\Models\EmployeeSalaryComponent;
 use App\Models\SalaryComponent;
 use App\Services\EmployeePartyService;
+use App\Services\SalaryHistoryService;
 use Illuminate\Http\Request;
 
 class EmployeeController extends Controller
@@ -80,19 +81,7 @@ class EmployeeController extends Controller
         $employee = Employee::with(['salaryComponents.component', 'costAllocations.project'])->findOrFail($id);
         $allComponents = SalaryComponent::active()->orderBy('sort_order')->get();
 
-        // Ensure default statutory components exist for this employee with default values
-        $existingComponentIds = $employee->salaryComponents->pluck('salary_component_id')->toArray();
-        foreach ($allComponents as $comp) {
-            if (! in_array($comp->id, $existingComponentIds)) {
-                $employee->salaryComponents()->create([
-                    'salary_component_id' => $comp->id,
-                    'value' => $comp->default_value,
-                    'is_enabled' => $comp->is_statutory, // enable statutory by default
-                ]);
-            }
-        }
-
-        $employee->load('salaryComponents.component');
+        // Defaults are previewed here and only assigned when the user saves.
         $salaryBreakdown = $employee->salary_breakdown;
 
         $componentsData = $allComponents->map(function ($c) use ($employee) {
@@ -113,7 +102,12 @@ class EmployeeController extends Controller
             ];
         })->values()->toArray();
 
-        return view('employees.show', compact('employee', 'allComponents', 'salaryBreakdown', 'componentsData'));
+        $salaryHistory = SalaryHistoryService::query($employee->id)->orderByDesc('id')->paginate(10, ['*'], 'salary_history_page')->withQueryString()->fragment('salary-history');
+        $salaryHistory->through(fn ($row) => SalaryHistoryService::present($row));
+        $salaryChart = SalaryHistoryService::query($employee->id)->orderByDesc('id')->limit(100)->get()->reverse()->map(fn ($row) => SalaryHistoryService::present($row))->values();
+        $salaryCurrent = SalaryHistoryService::snapshot($employee);
+
+        return view('employees.show', compact('employee', 'allComponents', 'salaryBreakdown', 'componentsData', 'salaryHistory', 'salaryChart', 'salaryCurrent'));
     }
 
     public function syncParty($id)
@@ -130,10 +124,11 @@ class EmployeeController extends Controller
 
     public function updateSalary(Request $request, $id)
     {
-        $employee = Employee::findOrFail($id);
+        $employee = Employee::lockForUpdate()->findOrFail($id);
 
         $validated = $request->validate([
-            'basic_salary' => 'required|numeric|min:0',
+            'basic_salary' => 'required|numeric|min:0|max:9999999999.99|decimal:0,2',
+            'salary_change_reason' => 'nullable|string|max:1000',
             'currency' => 'required|string|size:3',
             'payment_mode' => 'required|string|in:bank_transfer,cash,cheque',
             'bank_name' => 'nullable|string|max:100',
@@ -145,6 +140,8 @@ class EmployeeController extends Controller
             'components.*.value' => 'nullable|numeric|min:0',
             'components.*.enabled' => 'nullable',
         ]);
+
+        $salaryBefore = SalaryHistoryService::snapshot($employee);
 
         $employee->update([
             'basic_salary' => $validated['basic_salary'],
@@ -174,6 +171,8 @@ class EmployeeController extends Controller
                 );
             }
         }
+
+        SalaryHistoryService::record($employee, $salaryBefore, $validated['salary_change_reason'] ?? null);
 
         if ($request->wantsJson()) {
             return response()->json([

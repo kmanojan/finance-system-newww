@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\SalaryComponent;
+use App\Services\SalaryHistoryService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
@@ -99,7 +100,7 @@ class SalaryComponentController extends Controller
         $validated['is_statutory'] = $request->boolean('is_statutory');
         $validated['is_active'] = $request->boolean('is_active', true);
 
-        $component->update($validated);
+        SalaryHistoryService::changeComponent($component, fn () => $component->update($validated));
 
         if ($request->wantsJson()) {
             return response()->json(['success' => true, 'component' => $component]);
@@ -125,7 +126,7 @@ class SalaryComponentController extends Controller
             return redirect()->back()->with('error', "Core statutory component '{$component->name}' cannot be deleted. You can deactivate it instead.");
         }
 
-        $component->delete();
+        SalaryHistoryService::changeComponent($component, fn () => $component->delete());
 
         return redirect()->back()->with('success', "Salary component '{$component->name}' removed successfully.");
     }
