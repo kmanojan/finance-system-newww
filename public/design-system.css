@@ -99,7 +99,7 @@ body.dialog-open #pwaInstallBanner { display:none!important; }
 .ds-panel h2 { margin-bottom:16px; }
 @media(min-width:1101px) and (max-width:1350px) { .main-content{padding:28px 24px;} }
 @media(max-width:1100px) {
-    .sidebar-primary { transform:translateX(-100%); width:240px; padding:20px 12px; z-index:2000; top:0; height:100dvh; }
+    .sidebar-primary { transform:translateX(-100%); width:240px; padding:calc(20px + env(safe-area-inset-top, 0px)) calc(12px + env(safe-area-inset-right, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)) calc(12px + env(safe-area-inset-left, 0px)); z-index:2000; top:0; height:100dvh; }
     .sidebar-primary.open,.sidebar-primary.active { transform:translateX(0); }
     .sidebar-primary .logo {flex-direction:row;gap:12px;margin:0 12px 20px;}
     .sidebar-primary .logo::after {content:'Apptimus Finance';font-size:14px;}
@@ -108,7 +108,17 @@ body.dialog-open #pwaInstallBanner { display:none!important; }
     .sidebar-bottom {flex-direction:row!important;justify-content:space-around;gap:4px!important;}
     .sidebar-bottom>button,.sidebar-bottom>form>button,.sidebar-bottom>a,.quick-tx-btn {min-height:44px;width:44px;}
     .quick-tx-panel {position:fixed!important;left:16px!important;bottom:72px!important;width:min(400px,calc(100vw - 32px))!important;max-height:calc(100dvh - 100px);overflow-y:auto;}
-    .mobile-header { display:flex; height:56px; padding:0 16px; }
+    /* Keep a full 56px toolbar below the iOS status bar, including in standalone mode. */
+    .mobile-header {
+        display:flex; align-items:center; justify-content:space-between;
+        position:sticky; top:0; z-index:40; box-sizing:border-box; flex-shrink:0;
+        height:calc(56px + env(safe-area-inset-top, 0px));
+        padding:env(safe-area-inset-top, 0px) calc(16px + env(safe-area-inset-right, 0px)) 0 calc(16px + env(safe-area-inset-left, 0px));
+        background:var(--bg-card); border-bottom:1px solid var(--border-light);
+        backdrop-filter:none; -webkit-backdrop-filter:none;
+    }
+    .mobile-header-left,.mobile-header-right {display:flex;align-items:center;gap:8px;}
+    .mobile-header .mobile-nav-btn {min-width:44px;min-height:44px;}
     .sidebar-secondary { position:relative; left:0; top:56px; width:100%; height:auto; padding:12px 16px; border-right:0; overflow-x:auto; }
     .sidebar-secondary .sidebar-title { display:none; } .sidebar-secondary .nav-links { flex-direction:row; gap:8px; width:max-content; }
     .sidebar-secondary .nav-link { white-space:nowrap; }

@@ -43,6 +43,12 @@ This document covers the Progressive Web App (PWA) configuration, long-lived aut
   - "Install App Now" button triggering the native install prompt on Chrome / Android / Desktop.
   - Step-by-step installation instructions for iOS Safari (*Share > Add to Home Screen*) and Android/Desktop Chrome.
 
+### Mobile header and device safe areas
+- The shared mobile/tablet header reserves a 56px toolbar **in addition to** `env(safe-area-inset-top)`, keeping its logo and controls below the iPhone status bar in standalone mode.
+- Header side padding and navigation-drawer padding include device safe-area insets. Header controls retain 44px touch targets, and the header uses an opaque background while scrolling.
+- The shared design stylesheet is versioned in the layout, so reopening the PWA fetches the updated spacing. No app reinstallation is required.
+- Verified with rendered DOM geometry (no screenshots): simulated 59px portrait top inset, 59px landscape side insets, ordinary mobile, tablet and desktop widths, and drawer/section open-close controls. Physical iOS verification remains a device check.
+
 ---
 
 ## 4. Reusable Blade Components
