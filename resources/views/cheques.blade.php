@@ -24,7 +24,7 @@
 
 <!-- Summary Cards -->
 <div class="metric-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:1.25rem; margin-bottom:1.5rem;">
-    <div class="metric-card" style="background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%); padding: 1.25rem; border-radius: 12px; color: white;">
+    <div class="metric-card" style="background:var(--bg-card); padding: 1.25rem; border-radius: 12px; color: white;">
         <div style="display:flex; justify-content:space-between; align-items:center;">
             <h3 style="margin:0; font-size:0.8rem; font-weight:600; text-transform:uppercase; opacity:0.9;">Pending Deposit</h3>
             <ion-icon name="time-outline" style="font-size:1.3rem; opacity:0.85;"></ion-icon>
@@ -33,7 +33,7 @@
         <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">Awaiting bank deposit</div>
     </div>
 
-    <div class="metric-card" style="background: linear-gradient(135deg, #0284c7 0%, #06b6d4 100%); padding: 1.25rem; border-radius: 12px; color: white;">
+    <div class="metric-card" style="background:var(--bg-card); padding: 1.25rem; border-radius: 12px; color: white;">
         <div style="display:flex; justify-content:space-between; align-items:center;">
             <h3 style="margin:0; font-size:0.8rem; font-weight:600; text-transform:uppercase; opacity:0.9;">Deposited</h3>
             <ion-icon name="arrow-forward-circle-outline" style="font-size:1.3rem; opacity:0.85;"></ion-icon>
@@ -42,7 +42,7 @@
         <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">In clearing process</div>
     </div>
 
-    <div class="metric-card" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); padding: 1.25rem; border-radius: 12px; color: white;">
+    <div class="metric-card" style="background:var(--bg-card); padding: 1.25rem; border-radius: 12px; color: white;">
         <div style="display:flex; justify-content:space-between; align-items:center;">
             <h3 style="margin:0; font-size:0.8rem; font-weight:600; text-transform:uppercase; opacity:0.9;">Cleared</h3>
             <ion-icon name="checkmark-circle-outline" style="font-size:1.3rem; opacity:0.85;"></ion-icon>
@@ -51,7 +51,7 @@
         <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">Funds realized</div>
     </div>
 
-    <div class="metric-card" style="background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%); padding: 1.25rem; border-radius: 12px; color: white;">
+    <div class="metric-card" style="background:var(--bg-card); padding: 1.25rem; border-radius: 12px; color: white;">
         <div style="display:flex; justify-content:space-between; align-items:center;">
             <h3 style="margin:0; font-size:0.8rem; font-weight:600; text-transform:uppercase; opacity:0.9;">Bounced</h3>
             <ion-icon name="alert-circle-outline" style="font-size:1.3rem; opacity:0.85;"></ion-icon>

@@ -3,6 +3,10 @@
 namespace App\Services;
 
 use App\Models\FixedAsset;
+use App\Models\JournalEntry;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class DepreciationService
 {
@@ -11,53 +15,66 @@ class DepreciationService
      */
     public static function processMonthlyDepreciation(FixedAsset $asset, string $postingDate): float
     {
-        if ($asset->status !== 'active') {
-            return 0.0;
-        }
+        return DB::transaction(function () use ($asset, $postingDate) {
+            $asset = FixedAsset::whereKey($asset->id)->lockForUpdate()->firstOrFail();
+            PeriodLockService::checkLockedDate($postingDate);
+            $date = Carbon::parse($postingDate);
+            if ($date->lt($asset->purchase_date)) {
+                throw ValidationException::withMessages(['posting_date' => 'Depreciation cannot precede the purchase date.']);
+            }
+            $alreadyPosted = JournalEntry::where('reference_type', FixedAsset::class)->where('reference_id', $asset->id)->whereBetween('entry_date', [$date->copy()->startOfMonth()->toDateString(), $date->copy()->endOfMonth()->toDateString()])->exists();
+            if ($alreadyPosted) {
+                throw ValidationException::withMessages(['posting_date' => 'Depreciation has already been posted for this month.']);
+            }
+            if ($asset->status !== 'active') {
+                return 0.0;
+            }
 
-        $depreciableBase = $asset->purchase_cost - $asset->salvage_value;
+            $depreciableBase = $asset->purchase_cost - $asset->salvage_value;
 
-        if ($asset->accumulated_depreciation >= $depreciableBase) {
-            $asset->update(['status' => 'fully_depreciated']);
-            return 0.0;
-        }
+            if ($asset->accumulated_depreciation >= $depreciableBase) {
+                $asset->update(['status' => 'fully_depreciated']);
 
-        $monthlyAmount = 0.0;
+                return 0.0;
+            }
 
-        if ($asset->depreciation_method === 'straight_line') {
-            $totalMonths = max(1, $asset->lifespan_years * 12);
-            $monthlyAmount = round($depreciableBase / $totalMonths, 2);
-        } else {
-            // Reducing balance method (assumes 20% annual rate)
-            $bookValue = $asset->purchase_cost - $asset->accumulated_depreciation;
-            $monthlyAmount = round(($bookValue * 0.20) / 12, 2);
-        }
+            $monthlyAmount = 0.0;
 
-        // Cap to remaining depreciable base
-        $remaining = $depreciableBase - $asset->accumulated_depreciation;
-        if ($monthlyAmount > $remaining) {
-            $monthlyAmount = $remaining;
-        }
+            if ($asset->depreciation_method === 'straight_line') {
+                $totalMonths = max(1, $asset->lifespan_years * 12);
+                $monthlyAmount = round($depreciableBase / $totalMonths, 2);
+            } else {
+                // Reducing balance method (assumes 20% annual rate)
+                $bookValue = $asset->purchase_cost - $asset->accumulated_depreciation;
+                $monthlyAmount = round(($bookValue * 0.20) / 12, 2);
+            }
 
-        $newAccumulated = round($asset->accumulated_depreciation + $monthlyAmount, 2);
-        $asset->update([
-            'accumulated_depreciation' => $newAccumulated,
-            'status' => $newAccumulated >= $depreciableBase ? 'fully_depreciated' : 'active',
-        ]);
+            // Cap to remaining depreciable base
+            $remaining = $depreciableBase - $asset->accumulated_depreciation;
+            if ($monthlyAmount > $remaining) {
+                $monthlyAmount = $remaining;
+            }
 
-        // Post Double-Entry Journal:
-        // Debit: Depreciation Expense (5800), Credit: Accumulated Depreciation (1800)
-        LedgerPostingService::postJournal(
-            $postingDate,
-            "Monthly Depreciation for Asset {$asset->asset_code} — {$asset->asset_name}",
-            [
-                ['account_code' => '5800', 'debit' => $monthlyAmount, 'credit' => 0, 'currency' => 'LKR'],
-                ['account_code' => '1800', 'debit' => 0, 'credit' => $monthlyAmount, 'currency' => 'LKR'],
-            ],
-            $asset->id,
-            FixedAsset::class
-        );
+            $newAccumulated = round($asset->accumulated_depreciation + $monthlyAmount, 2);
+            $asset->update([
+                'accumulated_depreciation' => $newAccumulated,
+                'status' => $newAccumulated >= $depreciableBase ? 'fully_depreciated' : 'active',
+            ]);
 
-        return $monthlyAmount;
+            // Post Double-Entry Journal:
+            // Debit: Depreciation Expense (5800), Credit: Accumulated Depreciation (1800)
+            LedgerPostingService::postJournal(
+                $postingDate,
+                "Monthly Depreciation for Asset {$asset->asset_code} — {$asset->asset_name}",
+                [
+                    ['account_code' => '5800', 'debit' => $monthlyAmount, 'credit' => 0, 'currency' => 'LKR'],
+                    ['account_code' => '1800', 'debit' => 0, 'credit' => $monthlyAmount, 'currency' => 'LKR'],
+                ],
+                $asset->id,
+                FixedAsset::class
+            );
+
+            return $monthlyAmount;
+        });
     }
 }

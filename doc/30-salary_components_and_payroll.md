@@ -1,5 +1,7 @@
 # 30. Salary Components Master & Employee Compensation
 
+The monthly payroll workflow is now available at **People → Monthly payroll**. See [Monthly payroll](32-monthly-payroll.md) for preparation, approval, payslips, advances and salary/statutory payment tracking. The employee screens below maintain the salary package; they are not payment records.
+
 ## Overview
 This module provides full employee compensation management, including **Salary Components Master** (heads/allowances, statutory employee deductions, and employer contributions), individual **Employee Salary Configuration**, and live net pay / CTC calculation with extensive detailing across the **Employees Index** and **Employee Single View**.
 

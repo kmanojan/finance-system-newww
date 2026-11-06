@@ -1,6 +1,10 @@
 @extends('layouts.app')
 @section('title', 'Employees & Salary Management')
 
+@section('secondary-sidebar')
+@include('navigation.people')
+@endsection
+
 @section('content')
 <div>
     <!-- Page Header -->
@@ -9,7 +13,8 @@
             <h1 style="font-size:1.75rem; font-weight:700; color:var(--text-heading); margin-bottom:0.25rem;">Employees & Salary Management</h1>
             <p style="color:var(--text-muted); font-size:0.9rem;">Configure employee basic salary, allowances, EPF 8%/12%, ETF 3%, APIT tax, and net payroll.</p>
         </div>
-        <div style="display:flex; gap:0.75rem; align-items:center;">
+        <div style="display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap;">
+            <a href="/payroll" class="btn btn-primary"><ion-icon name="calendar-outline" aria-hidden="true"></ion-icon><span>Monthly payroll</span></a>
             <a href="/master/salary-components" class="btn btn-outline" style="display:flex; align-items:center; gap:0.5rem; border-radius:8px; padding:0.6rem 1rem; text-decoration:none;">
                 <ion-icon name="options-outline"></ion-icon>
                 <span>Salary Heads Master</span>
@@ -28,7 +33,7 @@
     @endif
 
     <!-- Top Executive Payroll KPI Tiles -->
-    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:1rem; margin-bottom:1.5rem;">
+    <div class="ds-summary-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:1rem; margin-bottom:1.5rem;">
         <!-- Active Employees -->
         <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:1.1rem;">
             <div style="font-size:0.75rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; display:flex; align-items:center; gap:0.4rem;">
@@ -163,7 +168,7 @@
                         <span style="font-weight:600; color:var(--text-heading); font-size:0.95rem;">
                             {{ number_format($breakdown['basic_salary'], 2) }}
                         </span>
-                        <div style="font-size:0.7rem; color:var(--text-muted);">{{ $breakdown['currency'] }}</div>
+                        <div style="font-size:0.75rem; color:var(--text-muted);">{{ $breakdown['currency'] }}</div>
                     </td>
 
                     <!-- Allowances -->
@@ -172,7 +177,7 @@
                             <span style="font-weight:600; color:var(--success); font-size:0.95rem;">
                                 + {{ number_format($breakdown['total_allowances'], 2) }}
                             </span>
-                            <div style="font-size:0.7rem; color:var(--text-muted);">
+                            <div style="font-size:0.75rem; color:var(--text-muted);">
                                 {{ count($breakdown['earnings']) }} item(s)
                             </div>
                         @else
@@ -185,7 +190,7 @@
                         <span style="font-weight:700; color:var(--text-heading); font-size:0.95rem;">
                             {{ number_format($breakdown['gross_salary'], 2) }}
                         </span>
-                        <div style="font-size:0.7rem; color:var(--text-muted);" title="EPF Base Earnings">
+                        <div style="font-size:0.75rem; color:var(--text-muted);" title="EPF Base Earnings">
                             EPF: {{ number_format($breakdown['epf_base_salary'], 0) }}
                         </div>
                     </td>
@@ -196,7 +201,7 @@
                             <span style="font-weight:600; color:var(--danger); font-size:0.95rem;">
                                 - {{ number_format($breakdown['total_deductions'], 2) }}
                             </span>
-                            <div style="font-size:0.7rem; color:var(--text-muted);">
+                            <div style="font-size:0.75rem; color:var(--text-muted);">
                                 EPF 8%: {{ number_format($breakdown['employee_epf'], 0) }}
                                 @if($breakdown['apit_tax'] > 0)
                                     | Tax: {{ number_format($breakdown['apit_tax'], 0) }}
@@ -212,7 +217,7 @@
                         <span class="badge badge-success" style="font-size:0.95rem; font-weight:700; padding:0.35rem 0.65rem; border-radius:6px;">
                             {{ number_format($breakdown['net_salary'], 2) }}
                         </span>
-                        <div style="font-size:0.7rem; color:var(--success); margin-top:2px;">Disbursable</div>
+                        <div style="font-size:0.75rem; color:var(--success); margin-top:2px;">Disbursable</div>
                     </td>
 
                     <!-- Employer EPF & ETF (15%) -->
@@ -221,7 +226,7 @@
                             <span style="font-weight:600; color:var(--primary); font-size:0.95rem;">
                                 {{ number_format($breakdown['total_employer_cost'], 2) }}
                             </span>
-                            <div style="font-size:0.7rem; color:var(--text-muted);">
+                            <div style="font-size:0.75rem; color:var(--text-muted);">
                                 EPF 12%: {{ number_format($breakdown['employer_epf'], 0) }} | ETF 3%: {{ number_format($breakdown['employer_etf'], 0) }}
                             </div>
                         @else
@@ -234,7 +239,7 @@
                         <span style="font-weight:800; color:var(--primary); font-size:1rem;">
                             {{ number_format($breakdown['ctc'], 2) }}
                         </span>
-                        <div style="font-size:0.7rem; color:var(--text-muted);">Gross + 15% ER</div>
+                        <div style="font-size:0.75rem; color:var(--text-muted);">Gross + 15% ER</div>
                     </td>
 
                     <!-- Actions -->
@@ -243,6 +248,7 @@
                             <ion-icon name="create-outline"></ion-icon>
                             <span>Config</span>
                         </a>
+                        <x-employee-party-action :employee="$emp" :compact="true" />
                     </td>
                 </tr>
                 @empty

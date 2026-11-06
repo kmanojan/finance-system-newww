@@ -37,7 +37,7 @@
             <span style="display: flex; align-items: center; gap: 0.6rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                 <ion-icon name="server-outline" style="color: var(--primary); font-size: 1.1rem; flex-shrink: 0;"></ion-icon>
                 <span x-text="getSelected().name" style="font-weight: 600; font-size: 0.85rem; color: var(--text-heading);"></span>
-                <span class="badge" x-show="getSelected().provider" x-text="getSelected().provider" style="background: var(--primary-light); color: var(--primary); font-size: 0.7rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: 4px; text-transform: uppercase;"></span>
+                <span class="badge" x-show="getSelected().provider" x-text="getSelected().provider" style="background: var(--primary-light); color: var(--primary); font-size:0.75rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: 4px; text-transform: uppercase;"></span>
             </span>
         </template>
         <template x-if="!getSelected()">

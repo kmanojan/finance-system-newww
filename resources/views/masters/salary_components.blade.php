@@ -57,6 +57,7 @@
                 <th style="padding:1rem; text-align:left; font-weight:600; color:var(--text-muted);">Type</th>
                 <th style="padding:1rem; text-align:left; font-weight:600; color:var(--text-muted);">Calculation Basis</th>
                 <th style="padding:1rem; text-align:right; font-weight:600; color:var(--text-muted);">Default Value</th>
+                <th style="padding:1rem; text-align:left;">Payroll entry</th>
                 <th style="padding:1rem; text-align:center; font-weight:600; color:var(--text-muted);">Rules & Flags</th>
                 <th style="padding:1rem; text-align:center; font-weight:600; color:var(--text-muted);">Status</th>
                 <th style="padding:1rem; text-align:right; font-weight:600; color:var(--text-muted);">Actions</th>
@@ -69,7 +70,7 @@
                     <div style="font-weight:600; color:var(--text-heading); display:flex; align-items:center; gap:0.5rem;">
                         {{ $item->name }}
                         @if($item->is_statutory)
-                            <span class="badge" style="background:rgba(139, 92, 246, 0.15); color:var(--primary); font-size:0.7rem; padding:0.2em 0.5em; border-radius:4px;">Statutory</span>
+                            <span class="badge" style="background:rgba(139, 92, 246, 0.15); color:var(--primary); font-size:0.75rem; padding:0.2em 0.5em; border-radius:4px;">Statutory</span>
                         @endif
                     </div>
                     <div style="font-size:0.75rem; color:var(--text-muted); font-family:monospace; margin-top:2px;">
@@ -118,13 +119,14 @@
                         <span style="font-weight:600; color:var(--text-heading); font-size:0.95rem;">{{ number_format($item->default_value, 2) }}</span>
                     @endif
                 </td>
+                <td style="padding:1rem;"><span>{{ $item->payroll_input_mode === 'monthly_amount' ? 'Enter amount each payroll' : 'Display only' }}</span></td>
                 <td style="padding:1rem; text-align:center;">
                     <div style="display:inline-flex; gap:0.35rem; flex-wrap:wrap; justify-content:center;">
                         @if($item->is_epf_eligible)
-                            <span class="badge badge-warning" title="Counted towards EPF/ETF base earnings" style="font-size:0.7rem; padding:0.2em 0.5em; border-radius:4px;">EPF Eligible</span>
+                            <span class="badge badge-warning" title="Counted towards EPF/ETF base earnings" style="font-size:0.75rem; padding:0.2em 0.5em; border-radius:4px;">EPF Eligible</span>
                         @endif
                         @if($item->is_taxable)
-                            <span class="badge" style="background:#f1f5f9; color:#475569; font-size:0.7rem; padding:0.2em 0.5em; border-radius:4px;" title="Subject to APIT Income Tax">Taxable</span>
+                            <span class="badge" style="background:#f1f5f9; color:#475569; font-size:0.75rem; padding:0.2em 0.5em; border-radius:4px;" title="Subject to APIT Income Tax">Taxable</span>
                         @endif
                     </div>
                 </td>
@@ -156,7 +158,7 @@
             </tr>
             @empty
             <tr>
-                <td colspan="7" style="text-align:center; padding:3rem; color:var(--text-muted);">
+                <td colspan="8" style="text-align:center; padding:3rem; color:var(--text-muted);">
                     <ion-icon name="calculator-outline" style="font-size:3rem; opacity:0.4; margin-bottom:0.5rem;"></ion-icon><br>
                     No salary components found.
                 </td>
@@ -180,6 +182,7 @@ function openEditModal(item) {
     document.getElementById('edit_type').value = item.type || 'earning';
     document.getElementById('edit_calculation_type').value = item.calculation_type || 'fixed_amount';
     document.getElementById('edit_calculation_base').value = item.calculation_base || 'on_basic';
+    document.getElementById('edit_payroll_input_mode').value = item.payroll_input_mode || 'display';
     document.getElementById('edit_default_value').value = item.default_value || 0;
     document.getElementById('edit_is_epf_eligible').checked = !!item.is_epf_eligible;
     document.getElementById('edit_is_taxable').checked = !!item.is_taxable;
@@ -241,6 +244,14 @@ function openEditModal(item) {
                     </div>
                 </div>
 
+                <div class="form-group">
+                    <label class="form-label" for="create_payroll_input_mode">Payroll entry</label>
+                    <select id="create_payroll_input_mode" name="payroll_input_mode" class="form-control" required>
+                        <option value="display">Display only — use employee salary profile</option>
+                        <option value="monthly_amount">Enter amount each payroll — show a text box</option>
+                    </select>
+                    <p style="color:var(--text-muted);font-size:13px;margin-top:8px;">Use Display only for basic salary and regular allowances. Use monthly entry for variable components such as project commission. Monthly inputs are final currency amounts and start at zero; they do not change the employee salary profile. Basic salary, EPF, ETF, APIT and advances retain their dedicated controls.</p>
+                </div>
                 <div class="form-group" style="margin-bottom:1rem;">
                     <label class="form-label">Default Value (Amount or %)</label>
                     <input type="number" step="0.01" name="default_value" class="form-control" value="0.00" required>
@@ -328,6 +339,14 @@ function openEditModal(item) {
                     </div>
                 </div>
 
+                <div class="form-group">
+                    <label class="form-label" for="edit_payroll_input_mode">Payroll entry</label>
+                    <select id="edit_payroll_input_mode" name="payroll_input_mode" class="form-control" required>
+                        <option value="display">Display only — use employee salary profile</option>
+                        <option value="monthly_amount">Enter amount each payroll — show a text box</option>
+                    </select>
+                    <p style="color:var(--text-muted);font-size:13px;margin-top:8px;">Use Display only for basic salary and regular allowances. Use monthly entry for variable components such as project commission. Monthly inputs are final currency amounts and start at zero; they do not change the employee salary profile. Basic salary, EPF, ETF, APIT and advances retain their dedicated controls.</p>
+                </div>
                 <div class="form-group" style="margin-bottom:1rem;">
                     <label class="form-label">Default Value (Amount or %)</label>
                     <input type="number" step="0.01" id="edit_default_value" name="default_value" class="form-control" required>

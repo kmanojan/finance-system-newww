@@ -9,7 +9,7 @@
 <header class="page-header">
     <div class="header-titles">
         <h1>Parties</h1>
-        <p class="subtitle">Manage clients, vendors, and partner organizations.</p>
+        <p class="subtitle">Manage clients, vendors, partners, lenders and employee parties.</p>
     </div>
     <button class="btn btn-primary btn-pill" onclick="openCreateModal()">
         <ion-icon name="add-outline"></ion-icon> Add New Party
@@ -41,12 +41,19 @@
         </span>
     </div>
     <div class="toolbar-right">
-        <form method="GET" action="/master/parties" style="margin:0; display:flex; gap:0.5rem; align-items:center;">
+        <form method="GET" action="/master/parties" style="margin:0; display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+            <label for="party-type-filter" class="sr-only">Party type</label>
+            <select id="party-type-filter" name="type" class="form-control" style="width:auto;" onchange="this.form.submit()">
+                <option value="all">All party types</option>
+                @foreach(['employee', 'client', 'vendor', 'partner', 'lender'] as $partyType)
+                    <option value="{{ $partyType }}" @selected(request('type') === $partyType)>{{ ucfirst($partyType) }}</option>
+                @endforeach
+            </select>
             <div class="search-input">
                 <ion-icon name="search-outline"></ion-icon>
                 <input type="text" name="search" value="{{ request('search') }}" placeholder="Search parties by name, email, phone...">
             </div>
-            @if(request('search') || request('type') || request('status'))
+            @if(request('search') || request('type') || request('status') || request('party_id'))
                 <a href="/master/parties" class="btn btn-outline" style="padding:0.4rem 0.75rem; font-size:0.85rem;" title="Clear Filters">Clear</a>
             @endif
         </form>
@@ -69,7 +76,14 @@
         <tbody>
             @foreach($data as $item)
             <tr>
-                <td data-label="Name"><span class="font-medium">{{ $item->name ?? '' }}</span></td>
+                <td data-label="Name"><span class="font-medium">{{ $item->name ?? '' }}</span>
+                    @if($item->employee_id)
+                        <small style="display:block; color:var(--text-muted); margin-top:4px;">Employee · {{ $item->employee_code ?: '#'.$item->employee_id }}</small>
+                        @if(in_array(strtolower(auth()->user()->role), ['admin', 'manager', 'accountant']))
+                            <a href="/employees/{{ $item->employee_id }}" style="font-size:12px;">Employee profile</a>
+                        @endif
+                    @endif
+                </td>
                 <td data-label="Type(s)">
                     @foreach(explode(',', $item->types) as $type)
                         @if(!empty($type))
@@ -167,6 +181,10 @@
         if (document.getElementById('edit_address')) document.getElementById('edit_address').value = item.address || '';
         if (document.getElementById('edit_notes')) document.getElementById('edit_notes').value = item.notes || '';
         
+        ['name', 'email', 'phone'].forEach(field => document.getElementById('edit_' + field).readOnly = !!item.employee_id);
+        document.getElementById('employee-party-note').hidden = !item.employee_id;
+        document.getElementById('edit_type_employee').checked = (item.types || '').split(',').includes('employee');
+        document.getElementById('edit_type_lender').checked = (item.types || '').split(',').includes('lender');
         var types = (item.types || '').split(',');
         if (document.getElementById('edit_type_client')) document.getElementById('edit_type_client').checked = types.includes('client');
         if (document.getElementById('edit_type_partner')) document.getElementById('edit_type_partner').checked = types.includes('partner');
@@ -198,7 +216,7 @@
 
                 <div class="form-group">
                     <label class="form-label" style="display:block; margin-bottom:0.5rem;">Party Type(s) *</label>
-                    <div style="display:flex; gap:1.5rem; align-items:center;">
+                    <div style="display:flex; gap:1.5rem; align-items:center; flex-wrap:wrap;">
                         <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; font-weight:500;">
                             <input type="checkbox" name="types[]" value="client" checked style="width:1.1rem; height:1.1rem; accent-color:var(--primary);"> Client
                         </label>
@@ -207,6 +225,9 @@
                         </label>
                         <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; font-weight:500;">
                             <input type="checkbox" name="types[]" value="vendor" id="create_type_vendor" style="width:1.1rem; height:1.1rem; accent-color:var(--primary);" onchange="toggleCommFields('create')"> Vendor
+                        </label>
+                        <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; font-weight:500;">
+                            <input type="checkbox" name="types[]" value="lender" id="create_type_lender"> Lender
                         </label>
                     </div>
                 </div>
@@ -278,11 +299,12 @@
                 <div class="form-group">
                     <label class="form-label">Name</label>
                     <input type="text" name="name" id="edit_name" class="form-control" required>
+                    <small id="employee-party-note" class="text-muted" hidden>Name, email and phone follow the linked employee profile. The employee link is retained for salary and loan history.</small>
                 </div>
 
                 <div class="form-group">
                     <label class="form-label" style="display:block; margin-bottom:0.5rem;">Party Type(s) *</label>
-                    <div style="display:flex; gap:1.5rem; align-items:center;">
+                    <div style="display:flex; gap:1.5rem; align-items:center; flex-wrap:wrap;">
                         <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; font-weight:500;">
                             <input type="checkbox" name="types[]" value="client" id="edit_type_client" style="width:1.1rem; height:1.1rem; accent-color:var(--primary);"> Client
                         </label>
@@ -291,6 +313,12 @@
                         </label>
                         <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; font-weight:500;">
                             <input type="checkbox" name="types[]" value="vendor" id="edit_type_vendor" style="width:1.1rem; height:1.1rem; accent-color:var(--primary);" onchange="toggleCommFields('edit')"> Vendor
+                        </label>
+                        <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; font-weight:500;">
+                            <input type="checkbox" name="types[]" value="lender" id="edit_type_lender"> Lender
+                        </label>
+                        <label style="display:flex; align-items:center; gap:0.5rem; font-weight:500;">
+                            <input type="checkbox" id="edit_type_employee" disabled> Employee
                         </label>
                     </div>
                 </div>

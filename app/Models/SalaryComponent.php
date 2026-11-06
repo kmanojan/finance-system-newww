@@ -17,6 +17,7 @@ class SalaryComponent extends Model
         'calculation_type', // 'fixed_amount', 'percentage'
         'calculation_base', // 'on_basic', 'on_epf_base', 'on_gross', 'custom'
         'default_value',
+        'payroll_input_mode',
         'is_epf_eligible',
         'is_taxable',
         'is_statutory',
@@ -26,12 +27,12 @@ class SalaryComponent extends Model
     ];
 
     protected $casts = [
-        'default_value'    => 'decimal:2',
-        'is_epf_eligible'  => 'boolean',
-        'is_taxable'       => 'boolean',
-        'is_statutory'     => 'boolean',
-        'is_active'        => 'boolean',
-        'sort_order'       => 'integer',
+        'default_value' => 'decimal:2',
+        'is_epf_eligible' => 'boolean',
+        'is_taxable' => 'boolean',
+        'is_statutory' => 'boolean',
+        'is_active' => 'boolean',
+        'sort_order' => 'integer',
     ];
 
     public function employeeComponents()
@@ -70,10 +71,10 @@ class SalaryComponent extends Model
 
         // Percentage based calculation
         $base = match ($this->calculation_base) {
-            'on_basic'    => $basicSalary,
+            'on_basic' => $basicSalary,
             'on_epf_base' => $epfBase,
-            'on_gross'    => $grossEarnings,
-            default       => $basicSalary,
+            'on_gross' => $grossEarnings,
+            default => $basicSalary,
         };
 
         return round($base * ($value / 100), 2);

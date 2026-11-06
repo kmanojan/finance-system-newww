@@ -277,7 +277,7 @@ function viewDiff(log) {
                     <tr style="background:rgba(254, 243, 199, 0.25);">
                         <td style="font-weight:700; color:var(--text-heading);">
                             ${formatFieldName(k)}
-                            <span style="font-size:0.65rem; background:#fbbf24; color:#78350f; font-weight:800; padding:0.1rem 0.35rem; border-radius:4px; margin-left:0.3rem;">CHANGED</span>
+                            <span style="font-size:0.75rem; background:#fbbf24; color:#78350f; font-weight:800; padding:0.1rem 0.35rem; border-radius:4px; margin-left:0.3rem;">CHANGED</span>
                         </td>
                         <td>
                             <span class="diff-old-val">${oldStr}</span>

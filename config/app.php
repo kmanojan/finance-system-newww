@@ -39,7 +39,7 @@ return [
     |
     */
 
-    'debug' => (bool) env('APP_DEBUG', false),
+    'debug' => env('VERCEL') ? false : (bool) env('APP_DEBUG', false),
 
     /*
     |--------------------------------------------------------------------------

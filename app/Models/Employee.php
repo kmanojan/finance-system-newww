@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use App\Services\EmployeePartyService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Employee extends Model
 {
@@ -34,8 +36,22 @@ class Employee extends Model
 
     protected $casts = [
         'basic_salary' => 'decimal:2',
-        'synced_at'    => 'datetime',
+        'synced_at' => 'datetime',
     ];
+
+    protected static function booted(): void
+    {
+        static::saved(function (Employee $employee) {
+            if (! $employee->party_id || $employee->wasChanged(['full_name', 'personal_email', 'mobile_phone'])) {
+                EmployeePartyService::sync($employee);
+            }
+        });
+    }
+
+    public function party(): BelongsTo
+    {
+        return $this->belongsTo(Party::class);
+    }
 
     public function costAllocations()
     {
@@ -75,21 +91,21 @@ class Employee extends Model
         // Process earnings first to determine gross salary & EPF base
         foreach ($mappings as $mapping) {
             $comp = $mapping->component;
-            if (!$comp || !$comp->is_active || !$mapping->is_enabled) {
+            if (! $comp || ! $comp->is_active || ! $mapping->is_enabled) {
                 continue;
             }
 
             if ($comp->type === 'earning') {
                 $val = (float) $mapping->value;
-                $amount = $val; // For earnings, usually fixed amount
+                $amount = $comp->calculateAmount($val, $basicSalary, $basicSalary, $basicSalary); // Earnings use the base before allowances to avoid circular percentages.
                 $activeEarnings[] = [
-                    'id'               => $comp->id,
-                    'code'             => $comp->code,
-                    'name'             => $comp->name,
+                    'id' => $comp->id,
+                    'code' => $comp->code,
+                    'name' => $comp->name,
                     'calculation_type' => $comp->calculation_type,
-                    'value'            => $val,
-                    'amount'           => $amount,
-                    'is_epf_eligible'  => (bool) $comp->is_epf_eligible,
+                    'value' => $val,
+                    'amount' => $amount,
+                    'is_epf_eligible' => (bool) $comp->is_epf_eligible,
                 ];
 
                 $totalAllowances += $amount;
@@ -109,7 +125,7 @@ class Employee extends Model
         // Process deductions
         foreach ($mappings as $mapping) {
             $comp = $mapping->component;
-            if (!$comp || !$comp->is_active || !$mapping->is_enabled) {
+            if (! $comp || ! $comp->is_active || ! $mapping->is_enabled) {
                 continue;
             }
 
@@ -118,13 +134,13 @@ class Employee extends Model
                 $amount = $comp->calculateAmount($val, $basicSalary, $epfBaseSalary, $grossSalary);
 
                 $activeDeductions[] = [
-                    'id'               => $comp->id,
-                    'code'             => $comp->code,
-                    'name'             => $comp->name,
+                    'id' => $comp->id,
+                    'code' => $comp->code,
+                    'name' => $comp->name,
                     'calculation_type' => $comp->calculation_type,
                     'calculation_base' => $comp->calculation_base,
-                    'value'            => $val,
-                    'amount'           => $amount,
+                    'value' => $val,
+                    'amount' => $amount,
                 ];
 
                 $totalDeductions += $amount;
@@ -146,7 +162,7 @@ class Employee extends Model
         // Process employer contributions (EPF 12%, ETF 3%)
         foreach ($mappings as $mapping) {
             $comp = $mapping->component;
-            if (!$comp || !$comp->is_active || !$mapping->is_enabled) {
+            if (! $comp || ! $comp->is_active || ! $mapping->is_enabled) {
                 continue;
             }
 
@@ -155,13 +171,13 @@ class Employee extends Model
                 $amount = $comp->calculateAmount($val, $basicSalary, $epfBaseSalary, $grossSalary);
 
                 $activeEmployerContributions[] = [
-                    'id'               => $comp->id,
-                    'code'             => $comp->code,
-                    'name'             => $comp->name,
+                    'id' => $comp->id,
+                    'code' => $comp->code,
+                    'name' => $comp->name,
                     'calculation_type' => $comp->calculation_type,
                     'calculation_base' => $comp->calculation_base,
-                    'value'            => $val,
-                    'amount'           => $amount,
+                    'value' => $val,
+                    'amount' => $amount,
                 ];
 
                 $totalEmployerCost += $amount;
@@ -177,22 +193,22 @@ class Employee extends Model
         $ctc = $grossSalary + $totalEmployerCost;
 
         return [
-            'currency'               => $this->currency ?? 'LKR',
-            'basic_salary'           => $basicSalary,
-            'earnings'               => $activeEarnings,
-            'total_allowances'       => $totalAllowances,
-            'gross_salary'           => $grossSalary,
-            'epf_base_salary'        => $epfBaseSalary,
-            'deductions'             => $activeDeductions,
-            'employee_epf'           => $employeeEpf,
-            'apit_tax'               => $apitTax,
-            'total_deductions'       => $totalDeductions,
-            'net_salary'             => $netSalary,
+            'currency' => $this->currency ?? 'LKR',
+            'basic_salary' => $basicSalary,
+            'earnings' => $activeEarnings,
+            'total_allowances' => $totalAllowances,
+            'gross_salary' => $grossSalary,
+            'epf_base_salary' => $epfBaseSalary,
+            'deductions' => $activeDeductions,
+            'employee_epf' => $employeeEpf,
+            'apit_tax' => $apitTax,
+            'total_deductions' => $totalDeductions,
+            'net_salary' => $netSalary,
             'employer_contributions' => $activeEmployerContributions,
-            'employer_epf'           => $employerEpf,
-            'employer_etf'           => $employerEtf,
-            'total_employer_cost'    => $totalEmployerCost,
-            'ctc'                    => $ctc,
+            'employer_epf' => $employerEpf,
+            'employer_etf' => $employerEtf,
+            'total_employer_cost' => $totalEmployerCost,
+            'ctc' => $ctc,
         ];
     }
 

@@ -20,6 +20,7 @@
                 <x-amount-input name="pm_amount[]" required="true" class="form-control" style="padding: 0.3rem 0.5rem; font-size: 0.85rem;" />
             </div>
 
+            <div style="flex:1 1 180px; min-width:160px"><label class="form-label">Deposit account</label><select name="pm_bank_account_id[]" class="form-control"><option value="">Cash / no bank account</option>@foreach(\Illuminate\Support\Facades\DB::table('bank_accounts')->whereNull('deleted_at')->get() as $depositAccount)<option value="{{ $depositAccount->id }}">{{ $depositAccount->bank_name }} · {{ $depositAccount->currency }} · {{ $depositAccount->account_no }}</option>@endforeach</select></div>
             <div class="pm-bank-col" style="display: none; flex: 1 1 110px; min-width: 110px;">
                 <label style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.2rem; display: block;">Bank</label>
                 <input type="text" name="pm_bank[]" class="form-control pm-bank-input" style="padding: 0.3rem 0.5rem; font-size: 0.85rem;">

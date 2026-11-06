@@ -1,0 +1,13 @@
+@extends('layouts.app')
+@section('title', 'Design system')
+@section('content')
+<header class="page-header"><div><h1>Finance design system</h1><p class="subtitle">Shared controls, typography and states for every finance workflow. Use the theme switch to review both themes.</p></div></header>
+<div class="ds-stack">
+<section class="ds-panel"><h2>Reading hierarchy</h2><p>Body text is 14px with 1.5 line spacing. Page titles are 28px on desktop and 22px on phones. Supporting labels use at least 12px.</p><div class="work-row"><span>Outstanding balance</span><strong class="amount-cell">LKR 125,450.00</strong></div><p class="text-muted">Use currency codes and two decimals. Never use colour alone to explain a balance.</p></section>
+<section class="ds-panel"><h2>Actions and states</h2><div class="toolbar"><button class="btn btn-primary" type="button" onclick="openModal('exampleDialog')">Open example dialog</button><button class="btn btn-outline" type="button" disabled>Unavailable action</button><span class="badge badge-success">Paid</span><span class="badge badge-danger">Overdue</span><span class="badge badge-neutral">Draft</span></div></section>
+<section class="ds-panel"><h2>Forms</h2><div class="ds-form-grid"><div><label class="form-label" for="exampleReference">Reference</label><input id="exampleReference" class="form-control" placeholder="e.g. INV-2026-001"><p class="text-muted">Keep labels visible when fields have values.</p></div><div><label class="form-label" for="exampleDate">Payment date</label><input id="exampleDate" type="date" class="form-control"></div></div></section>
+<section class="ds-panel"><h2>Tables</h2><table class="data-table"><thead><tr><th>Reference</th><th>Status</th><th>Amount</th></tr></thead><tbody><tr><td data-label="Reference">INV-2026-001</td><td data-label="Status"><span class="badge badge-success">Paid</span></td><td data-label="Amount" class="amount-cell">LKR 12,500.00</td></tr></tbody></table><p class="text-muted">Phone rows retain their column labels. Keep amount columns right aligned.</p></section>
+<div class="ds-notice error" role="status">Example validation state: explain what needs correcting and keep the entered values.</div>
+</div>
+<div class="modal-backdrop" id="exampleDialog"><div class="modal-card"><div class="modal-header"><h2 class="modal-title">Dialog example</h2><button class="btn-close" type="button" aria-label="Close dialog" onclick="closeModal('exampleDialog')">×</button></div><div class="modal-body"><p>Focus moves inside this dialog. Tab stays inside; Escape closes it and returns focus to the trigger.</p></div><div class="modal-footer"><button class="btn btn-primary" type="button" onclick="closeModal('exampleDialog')">Done</button></div></div></div>
+@endsection

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\LoanMentionSearch;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -14,9 +15,10 @@ class CKeditorController extends Controller
      */
     public function mentions(Request $request)
     {
+        $request->validate(['q' => 'nullable|string|max:200']);
         $type = $request->input('type', 'loan'); // 'loan', 'party', 'employee', 'transaction', 'all'
-        $q = trim($request->input('q', ''));
-        $limit = min(50, max(1, (int)$request->input('limit', 10)));
+        $q = trim((string) $request->input('q', ''));
+        $limit = min(50, max(1, (int) $request->input('limit', 10)));
 
         $data = [
             'type' => $type,
@@ -31,14 +33,14 @@ class CKeditorController extends Controller
         if (($type === 'loan' || $type === 'all') && Schema::hasTable('loans')) {
             $hasLoanCode = Schema::hasColumn('loans', 'loan_code');
             $selects = [
-                'loans.id', 
-                'loans.lender_name', 
+                'loans.id',
+                'loans.lender_name',
                 'loans.party_id',
                 'parties.name as party_name',
-                'loans.principal_amount', 
-                'loans.currency', 
+                'loans.principal_amount',
+                'loans.currency',
                 'loans.status',
-                'loans.purpose'
+                'loans.purpose',
             ];
             if ($hasLoanCode) {
                 $selects[] = 'loans.loan_code';
@@ -47,40 +49,31 @@ class CKeditorController extends Controller
             $loanQuery = DB::table('loans')
                 ->leftJoin('parties', 'loans.party_id', '=', 'parties.id');
 
-            if (!empty($q)) {
-                $search = '%' . $q . '%';
-                $loanQuery->where(function ($sub) use ($search, $hasLoanCode, $q) {
-                    $sub->where('loans.lender_name', 'LIKE', $search)
-                        ->orWhere('loans.purpose', 'LIKE', $search)
-                        ->orWhere('parties.name', 'LIKE', $search);
-                    if ($hasLoanCode) {
-                        $sub->orWhere('loans.loan_code', 'LIKE', $search);
-                    }
-                    if (is_numeric($q)) {
-                        $sub->orWhere('loans.id', '=', (int)$q)
-                            ->orWhere('loans.principal_amount', 'LIKE', $search);
-                    }
-                });
-            }
-
-            $loans = $loanQuery
-                ->select($selects)
-                ->orderBy('loans.id', 'desc')
-                ->limit($type === 'all' ? 4 : $limit)
-                ->get()
+            $resultLimit = $type === 'all' ? 4 : $limit;
+            $loanQuery->select($selects);
+            // Search visible rich text and formatted numbers before limiting results.
+            // Chunking bounds memory even when the match is beyond the newest loans.
+            $records = $q !== ''
+                ? $loanQuery->lazyByIdDesc(200, 'loans.id', 'id')
+                : $loanQuery->orderByDesc('loans.id')->limit($resultLimit)->get();
+            $loans = $records
                 ->map(function ($l) {
                     return [
                         'id' => $l->id,
-                        'loan_code' => ($l->loan_code ?? null) ?: ('LN-' . str_pad($l->id, 4, '0', STR_PAD_LEFT)),
+                        'loan_code' => ($l->loan_code ?? null) ?: ('LN-'.str_pad($l->id, 4, '0', STR_PAD_LEFT)),
                         'lender_name' => $l->lender_name,
                         'party_name' => $l->party_name,
                         'party_id' => $l->party_id,
-                        'principal_amount' => (float)$l->principal_amount,
+                        'principal_amount' => (float) $l->principal_amount,
                         'currency' => $l->currency ?: 'LKR',
                         'status' => $l->status,
-                        'purpose' => $l->purpose ? trim(strip_tags($l->purpose)) : '',
+                        'purpose' => LoanMentionSearch::plainDescription($l->purpose),
                     ];
-                });
+                })
+                ->filter(fn ($loan) => $q === '' || LoanMentionSearch::matches($loan, $q))
+                ->take($resultLimit)
+                ->values()
+                ->all();
 
             $data['loans'] = $loans;
             if ($type === 'loan') {
@@ -91,8 +84,8 @@ class CKeditorController extends Controller
         // 2. Parties (/party)
         if (($type === 'party' || $type === 'all') && Schema::hasTable('parties')) {
             $partyQuery = DB::table('parties');
-            if (!empty($q)) {
-                $search = '%' . $q . '%';
+            if (! empty($q)) {
+                $search = '%'.$q.'%';
                 $partyQuery->where(function ($sub) use ($search) {
                     $sub->where('name', 'LIKE', $search)
                         ->orWhere('contact_person', 'LIKE', $search)
@@ -116,8 +109,8 @@ class CKeditorController extends Controller
         // 3. Employees (/employee)
         if (($type === 'employee' || $type === 'all') && Schema::hasTable('employees')) {
             $empQuery = DB::table('employees');
-            if (!empty($q)) {
-                $search = '%' . $q . '%';
+            if (! empty($q)) {
+                $search = '%'.$q.'%';
                 $empQuery->where(function ($sub) use ($search) {
                     $sub->where('first_name', 'LIKE', $search)
                         ->orWhere('last_name', 'LIKE', $search)
@@ -133,8 +126,11 @@ class CKeditorController extends Controller
                 ->limit($type === 'all' ? 3 : $limit)
                 ->get()
                 ->map(function ($e) {
-                    $name = trim(($e->first_name ?? '') . ' ' . ($e->last_name ?? ''));
-                    if (empty($name)) $name = $e->full_name ?? 'Employee #' . $e->id;
+                    $name = trim(($e->first_name ?? '').' '.($e->last_name ?? ''));
+                    if (empty($name)) {
+                        $name = $e->full_name ?? 'Employee #'.$e->id;
+                    }
+
                     return [
                         'id' => $e->id,
                         'name' => $name,
@@ -154,15 +150,15 @@ class CKeditorController extends Controller
             $txQuery = DB::table('transactions')
                 ->leftJoin('categories', 'transactions.category_id', '=', 'categories.id');
 
-            if (!empty($q)) {
-                $search = '%' . $q . '%';
+            if (! empty($q)) {
+                $search = '%'.$q.'%';
                 $txQuery->where(function ($sub) use ($search, $q) {
                     $sub->where('transactions.description', 'LIKE', $search)
                         ->orWhere('transactions.reference_no', 'LIKE', $search)
                         ->orWhere('transactions.type', 'LIKE', $search)
                         ->orWhere('categories.name', 'LIKE', $search);
                     if (is_numeric($q)) {
-                        $sub->orWhere('transactions.id', '=', (int)$q)
+                        $sub->orWhere('transactions.id', '=', (int) $q)
                             ->orWhere('transactions.amount', 'LIKE', $search);
                     }
                 });
@@ -188,10 +184,10 @@ class CKeditorController extends Controller
                     return [
                         'id' => $t->id,
                         'type' => $t->type,
-                        'amount' => (float)$t->amount,
+                        'amount' => (float) $t->amount,
                         'currency' => $t->currency ?: 'LKR',
                         'transaction_date' => $t->transaction_date,
-                        'description' => $t->description ?: 'Transaction #' . $t->id,
+                        'description' => $t->description ?: 'Transaction #'.$t->id,
                         'reference_no' => $t->reference_no,
                         'payment_method' => $t->payment_method,
                         'category_name' => $t->category_name,

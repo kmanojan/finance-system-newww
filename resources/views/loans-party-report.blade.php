@@ -2,37 +2,21 @@
 @section('title', 'Party Loan Payables & Facilities Report')
 
 @section('secondary-sidebar')
-<aside class="sidebar-secondary" id="sidebarSecondary">
-    <h2 class="sidebar-title">Loan Management</h2>
-    <nav class="nav-links">
-        <a href="/loans" class="nav-link {{ request()->is('loans') ? 'active' : '' }}">
-            <ion-icon name="cash-outline"></ion-icon> Active Loans
-        </a>
-        <a href="/loans/schedules" class="nav-link {{ request()->is('loans/schedules') ? 'active' : '' }}">
-            <ion-icon name="calendar-outline"></ion-icon> Schedules
-        </a>
-        <a href="/loans/settlements" class="nav-link {{ request()->is('loans/settlements') ? 'active' : '' }}">
-            <ion-icon name="checkmark-done-circle-outline"></ion-icon> Settlements
-        </a>
-        <a href="/loans/party-report" class="nav-link {{ request()->is('loans/party-report') ? 'active' : '' }}">
-            <ion-icon name="pie-chart-outline"></ion-icon> Party Payables & Paids
-        </a>
-    </nav>
-</aside>
+@include('navigation.loans')
 @endsection
 
 @section('content')
 <header class="page-header" style="margin-bottom: 1.5rem;">
     <div class="header-titles">
         <h1 style="font-size:1.75rem; font-weight:800; color:var(--text-heading); margin:0;">Party Loan Payables & Facilities</h1>
-        <p class="subtitle" style="margin-top:0.3rem;">Facility breakdown of principal borrowed, settlements, and net payables grouped by party. Expand any party to view its individual loan facilities.</p>
+        <p class="subtitle" style="margin-top:0.3rem;">Type 1 payable is remaining principal; interest is shown separately. Type 2 payable includes unpaid scheduled interest. Expand a party to see each loan and its type.</p>
     </div>
 </header>
 
 <!-- Overall Summary KPI Tiles -->
 <div class="metric-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:1.25rem; margin-bottom:1.5rem;">
     <!-- Tile 1: Total Borrowed -->
-    <div class="metric-card" style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); padding: 1.25rem; border-radius: 12px; color: white;">
+    <div class="metric-card" style="background:var(--bg-card); padding: 1.25rem; border-radius: 12px; color: white;">
         <div style="display:flex; justify-content:space-between; align-items:center;">
             <div style="font-size:0.8rem; font-weight:600; text-transform:uppercase; opacity:0.9;">Total Facilities Borrowed</div>
             <ion-icon name="wallet-outline" style="font-size:1.3rem; opacity:0.85;"></ion-icon>
@@ -42,7 +26,7 @@
     </div>
 
     <!-- Tile 2: Total Settlements Paid -->
-    <div class="metric-card" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); padding: 1.25rem; border-radius: 12px; color: white;">
+    <div class="metric-card" style="background:var(--bg-card); padding: 1.25rem; border-radius: 12px; color: white;">
         <div style="display:flex; justify-content:space-between; align-items:center;">
             <div style="font-size:0.8rem; font-weight:600; text-transform:uppercase; opacity:0.9;">Total Settlements Paid (Paids)</div>
             <ion-icon name="checkmark-done-circle-outline" style="font-size:1.3rem; opacity:0.85;"></ion-icon>
@@ -52,13 +36,13 @@
     </div>
 
     <!-- Tile 3: Net Outstanding Debt -->
-    <div class="metric-card" style="background: linear-gradient(135deg, #dc2626 0%, #f43f5e 100%); padding: 1.25rem; border-radius: 12px; color: white;">
+    <div class="metric-card" style="background:var(--bg-card); padding: 1.25rem; border-radius: 12px; color: white;">
         <div style="display:flex; justify-content:space-between; align-items:center;">
-            <div style="font-size:0.8rem; font-weight:600; text-transform:uppercase; opacity:0.9;">Net Outstanding Debt (Payables)</div>
+            <div style="font-size:0.8rem; font-weight:600; text-transform:uppercase; opacity:0.9;">Payable balance</div>
             <ion-icon name="trending-up-outline" style="font-size:1.3rem; opacity:0.85;"></ion-icon>
         </div>
         <div style="font-size:1.5rem; font-weight:800; margin-top:0.3rem;">LKR {{ number_format($overallPayables, 2) }}</div>
-        <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">Active Principal + Pending Interest</div>
+        <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">Calculated using each facility’s loan type</div>
     </div>
 </div>
 
@@ -149,6 +133,7 @@
                     <div style="font-weight:800; font-size:1.1rem; color:{{ $rep->total_payables > 0 ? 'var(--danger)' : 'var(--text-muted)' }};">
                         {{ $rep->currency }} {{ number_format($rep->total_payables, 2) }}
                     </div>
+                    <div class="text-muted" style="font-size:12px;margin-top:4px;">Unpaid interest: {{ $rep->currency }} {{ number_format($rep->total_pending_interest, 2) }}<br>Included only for type 2 loans</div>
                 </div>
             </div>
         </div>
@@ -302,6 +287,7 @@ function renderFacilitiesTable(key, facilities) {
                         <ion-icon name="document-text-outline"></ion-icon>
                         ${loan.loan_code || ('LN-' + String(loan.id).padStart(4, '0'))} - ${escapeHtml(loan.lender_name)}
                     </a>
+                    <div class="text-muted" style="font-size:12px;margin-top:4px;">${escapeHtml(loan.loan_type_label)}</div>
                     ${loan.purpose ? `<div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.2rem;">${escapeHtml(loan.purpose)}</div>` : ''}
                 </td>
                 <td style="padding:0.8rem 1rem; text-align:center;">
@@ -325,6 +311,7 @@ function renderFacilitiesTable(key, facilities) {
                 </td>
                 <td style="padding:0.8rem 1rem; text-align:right; font-weight:800; color:${loan.total_outstanding > 0 ? 'var(--danger)' : 'var(--text-muted)'}; font-size:0.92rem;">
                     ${loan.currency} ${fmt(loan.total_outstanding)}
+                    <div class="text-muted" style="font-size:12px;font-weight:400;white-space:normal;">Unpaid interest: ${fmt(loan.pending_interest)} · ${loan.interest_included ? 'Included' : 'Separate'}</div>
                 </td>
                 <td style="padding:0.8rem 1rem; text-align:center;">
                     <a href="/loans/${loan.id}" target="_blank" rel="noopener noreferrer" class="btn btn-outline" style="padding:0.35rem 0.75rem; font-size:0.8rem; display:inline-flex; align-items:center; gap:0.3rem; text-decoration:none;">

@@ -1,40 +1,69 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\DepartmentController;
-use App\Http\Controllers\CategoryController;
-use App\Http\Controllers\InvoiceTypeController;
-use App\Http\Controllers\PartyController;
-use App\Http\Controllers\TagController;
-use App\Http\Controllers\BankAccountController;
-use App\Http\Controllers\DocumentTemplateController;
-use App\Http\Controllers\ServerController;
-use App\Http\Controllers\ProjectController;
-use App\Http\Controllers\TransactionController;
-use App\Http\Controllers\InvoiceController;
-use App\Http\Controllers\LoanController;
-use App\Http\Controllers\JournalEntryController;
-use App\Http\Controllers\BudgetController;
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\ShareLinkController;
+use App\Http\Controllers\AccountController;
+use App\Http\Controllers\ActivityLogController;
+use App\Http\Controllers\ApiIntegrationController;
+use App\Http\Controllers\ApprovalController;
+use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BankAccountController;
+use App\Http\Controllers\BankReconciliationController;
+use App\Http\Controllers\BudgetController;
+use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\ChequeController;
+use App\Http\Controllers\CKeditorController;
+use App\Http\Controllers\CostAllocationController;
+use App\Http\Controllers\CurrencyController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DepartmentController;
+use App\Http\Controllers\DocumentTemplateController;
+use App\Http\Controllers\EmployeeController;
+use App\Http\Controllers\FinancialYearController;
+use App\Http\Controllers\FixedAssetController;
+use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\InvoiceTypeController;
+use App\Http\Controllers\JournalEntryController;
+use App\Http\Controllers\LoanController;
+use App\Http\Controllers\PartyController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectDocumentController;
+use App\Http\Controllers\PurchaseOrderController;
+use App\Http\Controllers\ReminderController;
+use App\Http\Controllers\ReportController;
+use App\Http\Controllers\ReportExportController;
+use App\Http\Controllers\SalaryComponentController;
+use App\Http\Controllers\SearchController;
+use App\Http\Controllers\ServerController;
+use App\Http\Controllers\ShareLinkController;
+use App\Http\Controllers\TagController;
+use App\Http\Controllers\TaxTypeController;
+use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\VendorBillController;
+use App\Http\Middleware\AtomicWorkspaceWrite;
+use App\Http\Middleware\AuthorizeWorkspace;
+use Illuminate\Support\Facades\Route;
 
 // Authentication Routes
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login')->middleware('guest');
-Route::post('/login', [AuthController::class, 'login'])->middleware('guest');
+Route::post('/login', [AuthController::class, 'login'])->middleware(['guest', 'throttle:5,1']);
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 // Public Share Links (No Auth Required)
 Route::get('/share/{token}', [ShareLinkController::class, 'showPublic']);
-Route::post('/share/{token}/password', [ShareLinkController::class, 'verifyPassword']);
+Route::post('/share/{token}/password', [ShareLinkController::class, 'verifyPassword'])->middleware('throttle:5,1');
+
+Route::get('/share/{token}/invoices/{id}/{mode}', [ShareLinkController::class, 'invoice']);
+Route::get('/share/{token}/documents/{id}', [ShareLinkController::class, 'document']);
 
 // PWA Manifest and Service Worker routes with explicit MIME and Service-Worker headers
 Route::get('/manifest.json', function () {
     $path = public_path('manifest.json');
-    if (!file_exists($path)) abort(404);
+    if (! file_exists($path)) {
+        abort(404);
+    }
+
     return response()->file($path, [
         'Content-Type' => 'application/manifest+json; charset=utf-8',
         'Access-Control-Allow-Origin' => '*',
@@ -44,7 +73,10 @@ Route::get('/manifest.json', function () {
 
 Route::get('/sw.js', function () {
     $path = public_path('sw.js');
-    if (!file_exists($path)) abort(404);
+    if (! file_exists($path)) {
+        abort(404);
+    }
+
     return response()->file($path, [
         'Content-Type' => 'application/javascript; charset=utf-8',
         'Service-Worker-Allowed' => '/',
@@ -53,17 +85,18 @@ Route::get('/sw.js', function () {
 });
 
 // Rich Editor Mentions API (Loans, Parties & Employees)
-Route::get('/rich-editor/mentions', [\App\Http\Controllers\CKeditorController::class, 'mentions']);
-Route::get('/api/rich-editor/mentions', [\App\Http\Controllers\CKeditorController::class, 'mentions']);
+Route::get('/rich-editor/mentions', [CKeditorController::class, 'mentions'])->middleware(['auth', AuthorizeWorkspace::class]);
+Route::get('/api/rich-editor/mentions', [CKeditorController::class, 'mentions'])->middleware(['auth', AuthorizeWorkspace::class]);
 
 // Dynamic Upload File Serving (Vercel Serverless Compatible)
 Route::get('/uploads/{path}', function ($path) {
-    $tmpFile = '/tmp/uploads/' . $path;
-    $publicFile = public_path('uploads/' . $path);
+    abort_if(str_contains($path, '..') || str_contains($path, chr(0)), 404);
+    $tmpFile = '/tmp/uploads/'.$path;
+    $publicFile = public_path('uploads/'.$path);
 
     $filePath = file_exists($tmpFile) ? $tmpFile : (file_exists($publicFile) ? $publicFile : null);
 
-    if (!$filePath) {
+    if (! $filePath) {
         abort(404);
     }
 
@@ -71,11 +104,35 @@ Route::get('/uploads/{path}', function ($path) {
 })->where('path', '.*');
 
 // Protected Routes
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', AuthorizeWorkspace::class, AtomicWorkspaceWrite::class])->group(function () {
+    Route::prefix('payroll')->controller(\App\Http\Controllers\PayrollController::class)->group(function () {
+        Route::get('/', 'index');
+        Route::get('/create', 'create');
+        Route::get('/employees', 'employees');
+        Route::post('/', 'store');
+        Route::post('/preview', 'preview');
+        Route::get('/advances', 'advances');
+        Route::post('/advances', 'storeAdvance');
+        Route::post('/advances/{payment}/schedule', 'scheduleAdvance')->whereNumber('payment');
+        Route::post('/payments/{payment}/reverse', 'reverse')->whereNumber('payment');
+        Route::get('/payments/{payment}/receipt', 'downloadReceipt')->whereNumber('payment');
+        Route::get('/{id}', 'show')->whereNumber('id');
+        Route::get('/{id}/export', 'export')->whereNumber('id');
+        Route::get('/{id}/employees/{item}', 'employee')->whereNumber(['id','item']);
+        Route::post('/{id}/employees/{item}', 'update')->whereNumber(['id','item']);
+        Route::get('/{id}/employees/{item}/payslip', 'payslip')->whereNumber(['id','item']);
+        Route::post('/{id}/payments', 'payment')->whereNumber('id');
+        Route::post('/{id}/{action}', 'transition')->whereNumber('id')->where('action', 'submit|return|approve|void');
+    });
+
     Route::get('/', function () {
         return redirect('/dashboard');
     });
 
+    Route::get('/attachments/{id}/download', [AttachmentController::class, 'download']);
+    Route::get('/design-system', fn () => view('design-system'));
+    Route::get('/search', [SearchController::class, 'index']);
+    Route::get('/reports/export/{report}/{format}', [ReportExportController::class, 'export']);
     Route::get('/dashboard', [DashboardController::class, 'index']);
 
     Route::get('/master', function () {
@@ -123,26 +180,26 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/servers/{id}', [ServerController::class, 'update'])->name('masters.servers.update');
         Route::delete('/servers/{id}', [ServerController::class, 'destroy'])->name('masters.servers.destroy');
 
-        Route::get('/currencies', [\App\Http\Controllers\CurrencyController::class, 'index'])->name('masters.currencies.index');
-        Route::post('/currencies', [\App\Http\Controllers\CurrencyController::class, 'store'])->name('masters.currencies.store');
-        Route::put('/currencies/{id}', [\App\Http\Controllers\CurrencyController::class, 'update'])->name('masters.currencies.update');
-        Route::delete('/currencies/{id}', [\App\Http\Controllers\CurrencyController::class, 'destroy'])->name('masters.currencies.destroy');
-        Route::post('/currencies/sync-rates', [\App\Http\Controllers\CurrencyController::class, 'syncRates'])->name('masters.currencies.sync_rates');
-        Route::get('/currencies/{code}/history', [\App\Http\Controllers\CurrencyController::class, 'history'])->name('masters.currencies.history');
+        Route::get('/currencies', [CurrencyController::class, 'index'])->name('masters.currencies.index');
+        Route::post('/currencies', [CurrencyController::class, 'store'])->name('masters.currencies.store');
+        Route::put('/currencies/{id}', [CurrencyController::class, 'update'])->name('masters.currencies.update');
+        Route::delete('/currencies/{id}', [CurrencyController::class, 'destroy'])->name('masters.currencies.destroy');
+        Route::post('/currencies/sync-rates', [CurrencyController::class, 'syncRates'])->name('masters.currencies.sync_rates');
+        Route::get('/currencies/{code}/history', [CurrencyController::class, 'history'])->name('masters.currencies.history');
 
-        Route::get('/tax-types', [\App\Http\Controllers\TaxTypeController::class, 'index'])->name('masters.tax_types.index');
-        Route::post('/tax-types', [\App\Http\Controllers\TaxTypeController::class, 'store'])->name('masters.tax_types.store');
-        Route::put('/tax-types/{id}', [\App\Http\Controllers\TaxTypeController::class, 'update'])->name('masters.tax_types.update');
-        Route::delete('/tax-types/{id}', [\App\Http\Controllers\TaxTypeController::class, 'destroy'])->name('masters.tax_types.destroy');
-        Route::post('/tax-types/calculate', [\App\Http\Controllers\TaxTypeController::class, 'calculate'])->name('masters.tax_types.calculate');
+        Route::get('/tax-types', [TaxTypeController::class, 'index'])->name('masters.tax_types.index');
+        Route::post('/tax-types', [TaxTypeController::class, 'store'])->name('masters.tax_types.store');
+        Route::put('/tax-types/{id}', [TaxTypeController::class, 'update'])->name('masters.tax_types.update');
+        Route::delete('/tax-types/{id}', [TaxTypeController::class, 'destroy'])->name('masters.tax_types.destroy');
+        Route::post('/tax-types/calculate', [TaxTypeController::class, 'calculate'])->name('masters.tax_types.calculate');
 
-        Route::get('/accounts', [\App\Http\Controllers\AccountController::class, 'index'])->name('masters.accounts.index');
-        Route::post('/accounts', [\App\Http\Controllers\AccountController::class, 'store'])->name('masters.accounts.store');
+        Route::get('/accounts', [AccountController::class, 'index'])->name('masters.accounts.index');
+        Route::post('/accounts', [AccountController::class, 'store'])->name('masters.accounts.store');
 
-        Route::get('/salary-components', [\App\Http\Controllers\SalaryComponentController::class, 'index'])->name('masters.salary_components.index');
-        Route::post('/salary-components', [\App\Http\Controllers\SalaryComponentController::class, 'store'])->name('masters.salary_components.store');
-        Route::put('/salary-components/{id}', [\App\Http\Controllers\SalaryComponentController::class, 'update'])->name('masters.salary_components.update');
-        Route::delete('/salary-components/{id}', [\App\Http\Controllers\SalaryComponentController::class, 'destroy'])->name('masters.salary_components.destroy');
+        Route::get('/salary-components', [SalaryComponentController::class, 'index'])->name('masters.salary_components.index');
+        Route::post('/salary-components', [SalaryComponentController::class, 'store'])->name('masters.salary_components.store');
+        Route::put('/salary-components/{id}', [SalaryComponentController::class, 'update'])->name('masters.salary_components.update');
+        Route::delete('/salary-components/{id}', [SalaryComponentController::class, 'destroy'])->name('masters.salary_components.destroy');
 
         Route::get('/users', [UserController::class, 'index'])->name('masters.users.index');
         Route::post('/users', [UserController::class, 'store'])->name('masters.users.store');
@@ -151,44 +208,52 @@ Route::middleware(['auth'])->group(function () {
         Route::patch('/users/{id}/toggle-status', [UserController::class, 'toggleStatus'])->name('masters.users.toggle_status');
     });
 
+    Route::put('/master/accounts/{id}', [AccountController::class, 'update']);
+    Route::post('/payables/purchase-orders/{id}/approve', [PurchaseOrderController::class, 'approve']);
+    Route::post('/payables/vendor-bills/{id}/payments', [VendorBillController::class, 'recordPayment']);
+    Route::post('/treasury/bank-reconciliation/import', [BankReconciliationController::class, 'import']);
+    Route::post('/treasury/bank-reconciliation/{id}/match', [BankReconciliationController::class, 'match']);
+    Route::delete('/treasury/bank-reconciliation/{id}/match', [BankReconciliationController::class, 'unmatch']);
+
     // Financial Years & Fiscal Period Locking
     Route::prefix('settings')->group(function () {
-        Route::get('/financial-years', [\App\Http\Controllers\FinancialYearController::class, 'index']);
-        Route::post('/financial-years', [\App\Http\Controllers\FinancialYearController::class, 'store']);
-        Route::put('/fiscal-periods/{id}/status', [\App\Http\Controllers\FinancialYearController::class, 'updatePeriodStatus']);
+        Route::get('/financial-years', [FinancialYearController::class, 'index']);
+        Route::post('/financial-years/{id}/close', [FinancialYearController::class, 'close']);
+        Route::post('/financial-years', [FinancialYearController::class, 'store']);
+        Route::put('/fiscal-periods/{id}/status', [FinancialYearController::class, 'updatePeriodStatus']);
     });
 
     // Accounts Payable (Purchase Orders & Vendor Bills)
     Route::prefix('payables')->group(function () {
-        Route::get('/purchase-orders', [\App\Http\Controllers\PurchaseOrderController::class, 'index']);
-        Route::post('/purchase-orders', [\App\Http\Controllers\PurchaseOrderController::class, 'store']);
-        Route::get('/vendor-bills', [\App\Http\Controllers\VendorBillController::class, 'index']);
-        Route::post('/vendor-bills', [\App\Http\Controllers\VendorBillController::class, 'store']);
+        Route::get('/purchase-orders', [PurchaseOrderController::class, 'index']);
+        Route::post('/purchase-orders', [PurchaseOrderController::class, 'store']);
+        Route::get('/vendor-bills', [VendorBillController::class, 'index']);
+        Route::post('/vendor-bills', [VendorBillController::class, 'store']);
     });
 
     // Bank Reconciliation & Treasury
     Route::prefix('treasury')->group(function () {
-        Route::get('/bank-reconciliation', [\App\Http\Controllers\BankReconciliationController::class, 'index']);
-        Route::post('/bank-reconciliation/auto-match', [\App\Http\Controllers\BankReconciliationController::class, 'autoMatch']);
+        Route::get('/bank-reconciliation', [BankReconciliationController::class, 'index']);
+        Route::post('/bank-reconciliation/auto-match', [BankReconciliationController::class, 'autoMatch']);
     });
 
     // Fixed Assets & Depreciation
     Route::prefix('assets')->group(function () {
-        Route::get('/fixed-assets', [\App\Http\Controllers\FixedAssetController::class, 'index']);
-        Route::post('/fixed-assets', [\App\Http\Controllers\FixedAssetController::class, 'store']);
-        Route::post('/fixed-assets/{id}/depreciate', [\App\Http\Controllers\FixedAssetController::class, 'runDepreciation']);
+        Route::get('/fixed-assets', [FixedAssetController::class, 'index']);
+        Route::post('/fixed-assets', [FixedAssetController::class, 'store']);
+        Route::post('/fixed-assets/{id}/depreciate', [FixedAssetController::class, 'runDepreciation']);
     });
-
 
     Route::get('/projects', [ProjectController::class, 'index']);
     Route::post('/projects', [ProjectController::class, 'store']);
     Route::get('/projects/{id}', [ProjectController::class, 'show']);
     Route::put('/projects/{id}', [ProjectController::class, 'update']);
 
-    Route::get('/employees', [\App\Http\Controllers\EmployeeController::class, 'webIndex'])->name('employees.index');
-    Route::get('/employees/{id}', [\App\Http\Controllers\EmployeeController::class, 'show'])->name('employees.show');
-    Route::post('/employees/{id}/salary', [\App\Http\Controllers\EmployeeController::class, 'updateSalary'])->name('employees.update_salary');
-    Route::get('/employees/{id}/salary-preview', [\App\Http\Controllers\EmployeeController::class, 'salaryPreview'])->name('employees.salary_preview');
+    Route::get('/employees', [EmployeeController::class, 'webIndex'])->name('employees.index');
+    Route::get('/employees/{id}', [EmployeeController::class, 'show'])->name('employees.show');
+    Route::post('/employees/{id}/sync-party', [EmployeeController::class, 'syncParty'])->whereNumber('id')->name('employees.sync_party');
+    Route::post('/employees/{id}/salary', [EmployeeController::class, 'updateSalary'])->name('employees.update_salary');
+    Route::get('/employees/{id}/salary-preview', [EmployeeController::class, 'salaryPreview'])->name('employees.salary_preview');
 
     // Profile
     Route::get('/profile', [ProfileController::class, 'index']);
@@ -230,6 +295,9 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/projects/{id}/milestones/{milestoneId}/skip', [ProjectController::class, 'skipMilestone']);
     Route::post('/projects/{id}/milestones/{milestoneId}/invoice', [ProjectController::class, 'invoiceMilestone']);
 
+    Route::put('/projects/{id}/milestones/{milestoneId}', [ProjectController::class, 'updateMilestone']);
+    Route::delete('/projects/{id}/milestones/{milestoneId}', [ProjectController::class, 'destroyMilestone']);
+
     // Project Documents
     Route::post('/projects/{id}/documents', [ProjectDocumentController::class, 'store']);
     Route::put('/documents/{id}', [ProjectDocumentController::class, 'update']);
@@ -251,6 +319,9 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/budgets/{id}', [BudgetController::class, 'destroy']);
 
     Route::get('/invoices', [InvoiceController::class, 'index']);
+    Route::get('/invoices/{id}/edit', [InvoiceController::class, 'edit']);
+    Route::put('/invoices/{id}', [InvoiceController::class, 'store']);
+    Route::post('/invoices/{id}/duplicate', [InvoiceController::class, 'duplicate']);
     Route::post('/invoices', [InvoiceController::class, 'store']);
     Route::patch('/invoices/{id}/status', [InvoiceController::class, 'updateStatus']);
     Route::delete('/invoices/{id}', [InvoiceController::class, 'destroy']);
@@ -265,6 +336,8 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/loans', [LoanController::class, 'store']);
 
     Route::get('/loans/{id}', [LoanController::class, 'show']);
+    Route::post('/loans/{id}/funding-links', [\App\Http\Controllers\LoanFlowController::class, 'store']);
+    Route::delete('/loans/{id}/funding-links/{linkId}', [\App\Http\Controllers\LoanFlowController::class, 'destroy']);
     Route::put('/loans/{id}', [LoanController::class, 'update']);
     Route::post('/loans/{id}/activate', [LoanController::class, 'activate']);
     Route::post('/loans/{id}/status', [LoanController::class, 'updateStatus']);
@@ -277,74 +350,58 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/loans/{id}/settle-fully', [LoanController::class, 'settleFully']);
     Route::delete('/loans/{id}', [LoanController::class, 'destroy']);
     // Reminders Engine
-    Route::get('/reminders', [\App\Http\Controllers\ReminderController::class, 'index']);
-    Route::post('/reminders', [\App\Http\Controllers\ReminderController::class, 'store']);
-    Route::post('/reminders/{id}/status', [\App\Http\Controllers\ReminderController::class, 'updateStatus']);
-    Route::delete('/reminders/{id}', [\App\Http\Controllers\ReminderController::class, 'destroy']);
+    Route::get('/reminders', [ReminderController::class, 'index']);
+    Route::post('/reminders', [ReminderController::class, 'store']);
+    Route::post('/reminders/{id}/status', [ReminderController::class, 'updateStatus']);
+    Route::delete('/reminders/{id}', [ReminderController::class, 'destroy']);
 
     // Approval Inbox
-    Route::get('/approvals', [\App\Http\Controllers\ApprovalController::class, 'index']);
-    Route::post('/approvals/{type}/{id}/approve', [\App\Http\Controllers\ApprovalController::class, 'approve']);
-    Route::post('/approvals/{type}/{id}/reject', [\App\Http\Controllers\ApprovalController::class, 'reject']);
+    Route::get('/approvals', [ApprovalController::class, 'index']);
+    Route::post('/approvals/{type}/{id}/approve', [ApprovalController::class, 'approve']);
+    Route::post('/approvals/{type}/{id}/reject', [ApprovalController::class, 'reject']);
 
     // Cheques Tracking
-    Route::get('/cheques', [\App\Http\Controllers\ChequeController::class, 'index']);
-    Route::post('/cheques', [\App\Http\Controllers\ChequeController::class, 'store']);
-    Route::post('/cheques/{id}/status', [\App\Http\Controllers\ChequeController::class, 'updateStatus']);
-    Route::delete('/cheques/{id}', [\App\Http\Controllers\ChequeController::class, 'destroy']);
+    Route::get('/cheques', [ChequeController::class, 'index']);
+    Route::post('/cheques', [ChequeController::class, 'store']);
+    Route::post('/cheques/{id}/status', [ChequeController::class, 'updateStatus']);
+    Route::delete('/cheques/{id}', [ChequeController::class, 'destroy']);
 
     // Audit Logs
-    Route::get('/activity-logs', [\App\Http\Controllers\ActivityLogController::class, 'index']);
+    Route::get('/activity-logs', [ActivityLogController::class, 'index']);
 
     // Journal Entry Manual Post
-    Route::post('/journal-entries', [\App\Http\Controllers\JournalEntryController::class, 'store']);
+    Route::post('/journal-entries', [JournalEntryController::class, 'store']);
 
     Route::prefix('reports')->group(function () {
-        Route::get('/', [\App\Http\Controllers\ReportController::class, 'index'])->name('reports.index');
-        Route::get('/pnl', [\App\Http\Controllers\ReportController::class, 'pnl'])->name('reports.pnl');
-        Route::get('/expenses', [\App\Http\Controllers\ReportController::class, 'expenses'])->name('reports.expenses');
-        Route::get('/commissions', [\App\Http\Controllers\ReportController::class, 'commissions'])->name('reports.commissions');
-        Route::get('/cost-allocations', [\App\Http\Controllers\ReportController::class, 'costAllocations'])->name('reports.cost_allocations');
-        Route::get('/project-status', [\App\Http\Controllers\ReportController::class, 'projectStatus'])->name('reports.project_status');
-        Route::get('/client-health', [\App\Http\Controllers\ReportController::class, 'clientHealth'])->name('reports.client_health');
-        Route::get('/balance-sheet', [\App\Http\Controllers\ReportController::class, 'balanceSheet'])->name('reports.balance_sheet');
-        Route::get('/cash-flow', [\App\Http\Controllers\ReportController::class, 'cashFlow'])->name('reports.cash_flow');
-        Route::get('/ar-aging', [\App\Http\Controllers\ReportController::class, 'arAging'])->name('reports.ar_aging');
-        Route::get('/project-profitability', [\App\Http\Controllers\ReportController::class, 'projectProfitability'])->name('reports.project_profitability');
-        Route::get('/client-statement', [\App\Http\Controllers\ReportController::class, 'clientStatement'])->name('reports.client_statement');
-        Route::get('/bank-reconciliation', [\App\Http\Controllers\ReportController::class, 'bankReconciliation'])->name('reports.bank_reconciliation');
-        Route::get('/expense-trend', [\App\Http\Controllers\ReportController::class, 'expenseTrend'])->name('reports.expense_trend');
-        Route::get('/party-ledger', [\App\Http\Controllers\ReportController::class, 'partyLedger'])->name('reports.party_ledger');
-        Route::post('/party-ledger/settlement', [\App\Http\Controllers\ReportController::class, 'recordPartySettlement'])->name('reports.party_settlement');
+        Route::get('/', [ReportController::class, 'index'])->name('reports.index');
+        Route::get('/pnl', [ReportController::class, 'pnl'])->name('reports.pnl');
+        Route::get('/expenses', [ReportController::class, 'expenses'])->name('reports.expenses');
+        Route::get('/commissions', [ReportController::class, 'commissions'])->name('reports.commissions');
+        Route::get('/cost-allocations', [ReportController::class, 'costAllocations'])->name('reports.cost_allocations');
+        Route::get('/project-status', [ReportController::class, 'projectStatus'])->name('reports.project_status');
+        Route::get('/client-health', [ReportController::class, 'clientHealth'])->name('reports.client_health');
+        Route::get('/balance-sheet', [ReportController::class, 'balanceSheet'])->name('reports.balance_sheet');
+        Route::get('/cash-flow', [ReportController::class, 'cashFlow'])->name('reports.cash_flow');
+        Route::get('/ar-aging', [ReportController::class, 'arAging'])->name('reports.ar_aging');
+        Route::get('/project-profitability', [ReportController::class, 'projectProfitability'])->name('reports.project_profitability');
+        Route::get('/client-statement', [ReportController::class, 'clientStatement'])->name('reports.client_statement');
+        Route::get('/bank-reconciliation', [ReportController::class, 'bankReconciliation'])->name('reports.bank_reconciliation');
+        Route::get('/expense-trend', [ReportController::class, 'expenseTrend'])->name('reports.expense_trend');
+        Route::get('/party-ledger', [ReportController::class, 'partyLedger'])->name('reports.party_ledger');
+        Route::post('/party-ledger/settlement', [ReportController::class, 'recordPartySettlement'])->name('reports.party_settlement');
     });
-
 
     // Cost Allocations & Integrations
     Route::prefix('api')->group(function () {
-        Route::get('/employees', [\App\Http\Controllers\EmployeeController::class, 'index']);
-        
-        Route::get('/cost-allocations', [\App\Http\Controllers\CostAllocationController::class, 'index']);
-        Route::post('/cost-allocations', [\App\Http\Controllers\CostAllocationController::class, 'store']);
-        Route::delete('/cost-allocations/{costAllocation}', [\App\Http\Controllers\CostAllocationController::class, 'destroy']);
-        
-        Route::post('/api-integrations', [\App\Http\Controllers\ApiIntegrationController::class, 'store']);
-        Route::post('/api-integrations/{apiIntegration}/sync', [\App\Http\Controllers\ApiIntegrationController::class, 'sync']);
+        Route::get('/employees', [EmployeeController::class, 'index']);
+
+        Route::get('/cost-allocations', [CostAllocationController::class, 'index']);
+        Route::post('/cost-allocations', [CostAllocationController::class, 'store']);
+        Route::put('/cost-allocations/{costAllocation}', [CostAllocationController::class, 'update']);
+        Route::delete('/cost-allocations/{costAllocation}', [CostAllocationController::class, 'destroy']);
+
+        Route::post('/api-integrations', [ApiIntegrationController::class, 'store']);
+        Route::post('/api-integrations/{apiIntegration}/sync', [ApiIntegrationController::class, 'sync']);
     });
 
-    // Run Migrations Route (Production Utility)
-    Route::get('/run-migrations', function () {
-        \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
-        return response()->json([
-            'status' => 'success',
-            'output' => \Illuminate\Support\Facades\Artisan::output()
-        ]);
-    });
-});
-
-Route::get('/migrate', function () {
-    \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
-    return response()->json([
-        'status' => 'success',
-        'output' => \Illuminate\Support\Facades\Artisan::output()
-    ]);
 });

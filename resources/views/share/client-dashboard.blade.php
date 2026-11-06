@@ -36,7 +36,7 @@
                 {{ $realizationPct }}%
             </div>
             <div style="background:var(--bg-page); height:8px; border-radius:10px; overflow:hidden; border:1px solid var(--border-light);">
-                <div style="width:{{ $realizationPct }}%; background:linear-gradient(90deg, #10b981, #059669); height:100%; border-radius:10px; transition:width 1s ease;"></div>
+                <div style="width:{{ $realizationPct }}%; background:var(--bg-card); height:100%; border-radius:10px; transition:width 1s ease;"></div>
             </div>
         </div>
     </div>
@@ -44,7 +44,7 @@
 
 <!-- 3 KPI Metric Cards -->
 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
-    <div class="portal-card" style="margin:0; background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white;">
+    <div class="portal-card" style="margin:0; background:var(--bg-card); color: white;">
         <div style="display:flex; justify-content:space-between; align-items:center;">
             <span style="font-size: 0.8rem; text-transform: uppercase; font-weight:700; opacity:0.9; letter-spacing:0.5px;">Total Portfolio Invoiced</span>
             <ion-icon name="document-text-outline" style="font-size:1.4rem; opacity:0.85;"></ion-icon>
@@ -55,7 +55,7 @@
         <div style="font-size:0.75rem; opacity:0.85; margin-top:0.3rem;">Total billed across all projects</div>
     </div>
 
-    <div class="portal-card" style="margin:0; background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white;">
+    <div class="portal-card" style="margin:0; background:var(--bg-card); color: white;">
         <div style="display:flex; justify-content:space-between; align-items:center;">
             <span style="font-size: 0.8rem; text-transform: uppercase; font-weight:700; opacity:0.9; letter-spacing:0.5px;">Total Paid Settled</span>
             <ion-icon name="checkmark-done-circle-outline" style="font-size:1.4rem; opacity:0.85;"></ion-icon>
@@ -66,7 +66,7 @@
         <div style="font-size:0.75rem; opacity:0.85; margin-top:0.3rem;">Total payments received</div>
     </div>
 
-    <div class="portal-card" style="margin:0; background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%); color: white;">
+    <div class="portal-card" style="margin:0; background:var(--bg-card); color: white;">
         <div style="display:flex; justify-content:space-between; align-items:center;">
             <span style="font-size: 0.8rem; text-transform: uppercase; font-weight:700; opacity:0.9; letter-spacing:0.5px;">Total Outstanding Balance</span>
             <ion-icon name="alert-circle-outline" style="font-size:1.4rem; opacity:0.85;"></ion-icon>
@@ -143,7 +143,7 @@
                         <span style="color:var(--text-heading);">{{ $projPct }}% Paid</span>
                     </div>
                     <div style="background:var(--bg-card); height:7px; border-radius:10px; overflow:hidden; border:1px solid var(--border-light); margin-bottom:0.75rem;">
-                        <div style="width:{{ $projPct }}%; background:linear-gradient(90deg, #10b981, #059669); height:100%; border-radius:10px;"></div>
+                        <div style="width:{{ $projPct }}%; background:var(--bg-card); height:100%; border-radius:10px;"></div>
                     </div>
 
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; font-size: 0.9rem;">

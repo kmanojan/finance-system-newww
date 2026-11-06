@@ -72,7 +72,7 @@
 <div id="content-overview" class="share-tab-content">
     <!-- 4 KPI Metric Cards -->
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1.25rem; margin-bottom: 2rem;">
-        <div class="portal-card" style="margin:0; background: linear-gradient(135deg, #0284c7 0%, #06b6d4 100%); color: white;">
+        <div class="portal-card" style="margin:0; background:var(--bg-card); color: white;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <span style="font-size: 0.8rem; text-transform: uppercase; font-weight:700; opacity:0.9;">Project Budget</span>
                 <ion-icon name="wallet-outline" style="font-size:1.4rem; opacity:0.85;"></ion-icon>
@@ -83,7 +83,7 @@
             <div style="font-size:0.75rem; opacity:0.85; margin-top:0.3rem;">Contract Budget + Approved CRs</div>
         </div>
 
-        <div class="portal-card" style="margin:0; background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white;">
+        <div class="portal-card" style="margin:0; background:var(--bg-card); color: white;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <span style="font-size: 0.8rem; text-transform: uppercase; font-weight:700; opacity:0.9;">Total Invoiced</span>
                 <ion-icon name="document-text-outline" style="font-size:1.4rem; opacity:0.85;"></ion-icon>
@@ -94,7 +94,7 @@
             <div style="font-size:0.75rem; opacity:0.85; margin-top:0.3rem;">Total billed to date</div>
         </div>
 
-        <div class="portal-card" style="margin:0; background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white;">
+        <div class="portal-card" style="margin:0; background:var(--bg-card); color: white;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <span style="font-size: 0.8rem; text-transform: uppercase; font-weight:700; opacity:0.9;">Payments Settled</span>
                 <ion-icon name="checkmark-done-circle-outline" style="font-size:1.4rem; opacity:0.85;"></ion-icon>
@@ -105,7 +105,7 @@
             <div style="font-size:0.75rem; opacity:0.85; margin-top:0.3rem;">Total payments received</div>
         </div>
 
-        <div class="portal-card" style="margin:0; background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%); color: white;">
+        <div class="portal-card" style="margin:0; background:var(--bg-card); color: white;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <span style="font-size: 0.8rem; text-transform: uppercase; font-weight:700; opacity:0.9;">Outstanding Balance</span>
                 <ion-icon name="alert-circle-outline" style="font-size:1.4rem; opacity:0.85;"></ion-icon>
@@ -128,7 +128,7 @@
             <span style="color:var(--success);">{{ $collectedPct }}% Settled</span>
         </div>
         <div style="background:var(--bg-page); height:12px; border-radius:10px; overflow:hidden; border:1px solid var(--border-light); margin-bottom:1.5rem;">
-            <div style="width:{{ $collectedPct }}%; background:linear-gradient(90deg, #10b981, #059669); height:100%; border-radius:10px; transition:width 1s ease;"></div>
+            <div style="width:{{ $collectedPct }}%; background:var(--bg-card); height:100%; border-radius:10px; transition:width 1s ease;"></div>
         </div>
 
         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:1.25rem; font-size:0.9rem;">
@@ -184,7 +184,7 @@
                             <td style="padding: 0.85rem 0.6rem; font-weight: 700; color:var(--text-heading); font-size:0.9rem;">
                                 {{ $inv->invoice_no }}
                                 @if(!empty($inv->is_cr))
-                                    <span class="metric-pill" style="background:#fef3c7; color:#b45309; font-size:0.7rem; padding:0.15rem 0.5rem; margin-left:0.3rem;" title="Change Request Invoice">
+                                    <span class="metric-pill" style="background:#fef3c7; color:#b45309; font-size:0.75rem; padding:0.15rem 0.5rem; margin-left:0.3rem;" title="Change Request Invoice">
                                         <ion-icon name="git-pull-request-outline"></ion-icon> CR
                                     </span>
                                 @endif
@@ -205,11 +205,11 @@
                             </td>
                             <td style="padding: 0.85rem 0.6rem; text-align: right;">
                                 <div style="display:inline-flex; gap:0.4rem; justify-content:flex-end;">
-                                    <a href="/invoices/{{ $inv->id }}/view" target="_blank" class="btn btn-outline" style="padding:0.35rem 0.75rem; font-size:0.8rem; text-decoration: none; border-radius:6px; font-weight:600; display: inline-flex; align-items: center; gap: 0.3rem;">
+                                    <a href="/share/{{ $link->token }}/invoices/{{ $inv->id }}/view" target="_blank" class="btn btn-outline" style="padding:0.35rem 0.75rem; font-size:0.8rem; text-decoration: none; border-radius:6px; font-weight:600; display: inline-flex; align-items: center; gap: 0.3rem;">
                                         <ion-icon name="eye-outline"></ion-icon> View
                                     </a>
                                     @if($link->allow_downloads)
-                                        <a href="/invoices/{{ $inv->id }}/pdf" target="_blank" class="btn btn-primary-gradient" style="padding:0.35rem 0.75rem; font-size:0.8rem; text-decoration: none; border-radius:6px; font-weight:600; display: inline-flex; align-items: center; gap: 0.3rem;">
+                                        <a href="/share/{{ $link->token }}/invoices/{{ $inv->id }}/pdf" target="_blank" class="btn btn-primary-gradient" style="padding:0.35rem 0.75rem; font-size:0.8rem; text-decoration: none; border-radius:6px; font-weight:600; display: inline-flex; align-items: center; gap: 0.3rem;">
                                             <ion-icon name="download-outline"></ion-icon> PDF
                                         </a>
                                     @endif
@@ -300,17 +300,17 @@
                         @foreach($documents as $doc)
                         <tr style="border-bottom: 1px solid var(--border-light);">
                             <td style="padding: 0.85rem 0.6rem; font-weight: 700; color:var(--text-heading); font-size:0.9rem;">
-                                {{ $doc->title }}
+                                {{ $doc->name }}
                             </td>
                             <td style="padding: 0.85rem 0.6rem; font-size:0.85rem;">
-                                <span class="metric-pill" style="background:#e0f2fe; color:#0369a1;">{{ ucfirst($doc->category ?? 'General') }}</span>
+                                <span class="metric-pill" style="background:#e0f2fe; color:#0369a1;">{{ ucfirst($doc->type ?? 'General') }}</span>
                             </td>
                             <td style="padding: 0.85rem 0.6rem; font-size:0.88rem; color:var(--text-muted);">
                                 {{ \Carbon\Carbon::parse($doc->created_at)->format('Y-m-d') }}
                             </td>
                             <td style="padding: 0.85rem 0.6rem; text-align: right;">
-                                @if($doc->file_path)
-                                    <a href="/storage/{{ $doc->file_path }}" target="_blank" class="btn btn-outline" style="padding:0.3rem 0.75rem; font-size:0.8rem; text-decoration: none; border-radius:6px; font-weight:600; display: inline-flex; align-items: center; gap: 0.3rem;">
+                                @if($link->allow_downloads && ($doc->file_path || $doc->url))
+                                    <a href="/share/{{ $link->token }}/documents/{{ $doc->id }}" target="_blank" class="btn btn-outline" style="padding:0.3rem 0.75rem; font-size:0.8rem; text-decoration: none; border-radius:6px; font-weight:600; display: inline-flex; align-items: center; gap: 0.3rem;">
                                         <ion-icon name="download-outline"></ion-icon> View Document
                                     </a>
                                 @else

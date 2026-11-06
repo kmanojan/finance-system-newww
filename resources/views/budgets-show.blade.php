@@ -2,14 +2,7 @@
 @section('title', 'Budget Details')
 
 @section('secondary-sidebar')
-<aside class="sidebar-secondary" id="sidebarSecondary">
-    <h2 class="sidebar-title">Ledger</h2>
-    <nav class="nav-links">
-        <a href="/transactions" class="nav-link {{ request()->is('transactions') ? 'active' : '' }}">All Transactions</a>
-        <a href="/journal-entries" class="nav-link {{ request()->is('journal-entries') ? 'active' : '' }}">Journal Entries</a>
-        <a href="/budgets" class="nav-link active">Budgets</a>
-    </nav>
-</aside>
+@include('navigation.ledger')
 @endsection
 
 @section('content')

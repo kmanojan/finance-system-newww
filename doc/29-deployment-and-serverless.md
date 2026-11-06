@@ -129,8 +129,7 @@ For serverless scaling:
         "PHP_VERSION": "8.3",
         "LOG_CHANNEL": "stderr",
         "APP_ENV": "production",
-        "APP_DEBUG": "true",
-        "APP_KEY": "base64:...",
+        "APP_DEBUG": "false",
         "VIEW_COMPILED_PATH": "/tmp/storage/framework/views"
     }
 }
@@ -149,8 +148,8 @@ When deploying to **Vercel Serverless**, you **do NOT need to run `php artisan o
    - Vercel injects environment variables dynamically into `$_ENV` and `$_SERVER` at runtime. Running `config:cache` during build can freeze stale environment variables or cause runtime path resolution issues.
    - Blade templates are automatically compiled and stored in `/tmp/storage/framework/views`.
 
-2. **Automatic Schema Migrations**:
-   - [`AppServiceProvider.php`](../app/Providers/AppServiceProvider.php) contains an automatic migration check that detects missing columns (such as `loan_code`, `maturity_date`, `deleted_at`) and triggers `migrate --force` automatically on the first request after deployment.
+2. **Explicit Schema Migrations**:
+   - Schema changes are applied explicitly before releasing application code. HTTP requests never run migrations. For the legacy Supabase installation, use the reviewed release SQL in `database/releases/` after taking its protected snapshot; do not blindly replay historical migrations against imported tables.
 
 3. **Standard Deployment**:
    ```bash
@@ -190,8 +189,14 @@ php artisan up
 | Command | Vercel Serverless | Traditional VPS | Description |
 | :--- | :---: | :---: | :--- |
 | `git push origin main` | **Required** | Optional | Triggers automated deployment. |
-| `php artisan migrate --force` | Auto-handled (or run locally) | **Required** | Applies pending database schema migrations. |
+| `php artisan migrate --force` | Explicit release step (or reviewed Supabase SQL) | **Required** | Applies pending database schema migrations. |
 | `php artisan optimize` | **Do NOT run** | **Recommended** | Caches configuration, routes, and compiled classes. |
 | `php artisan optimize:clear` | Auto-handled in `/tmp` | **Recommended** | Clears all caches before rebuilding. |
 | `php artisan view:clear` | Auto-handled in `/tmp` | As needed | Clears compiled Blade templates. |
 
+
+## Durable private documents
+
+On Vercel, `DOCUMENTS_DISK` defaults to `database-documents`. New loan/project attachments and payroll receipts are stored in the protected `private_document_files` PostgreSQL table, survive redeployments, and are downloaded only through authenticated application routes. Base64 file contents count toward database storage usage. Local development continues to use private filesystem storage. No public storage URLs are generated. Older files are not automatically recovered from expired serverless temporary disks.
+
+`APP_KEY` is provided by the existing Vercel secret environment variable; it is not embedded in the deployment configuration. Production debug output is disabled.

@@ -3,3 +3,9 @@
 .gitignore
 node_modules
 vendor
+
+graphify-out
+.taste-skill
+tests
+doc
+.github

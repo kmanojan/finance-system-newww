@@ -2,9 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\ActivityLogService;
+use App\Services\FinancialReportingService;
+use App\Services\PeriodLockService;
+use App\Services\TransactionPostingService;
 use Illuminate\Http\Request;
-use App\Models\Transaction;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\ValidationException;
 
 class TransactionController extends Controller
 {
@@ -25,24 +30,24 @@ class TransactionController extends Controller
             ->orderBy('transactions.id', 'desc');
 
         if ($request->filled('tag_id')) {
-            $query->join('taggables', function($join) use ($request) {
+            $query->join('taggables', function ($join) use ($request) {
                 $join->on('transactions.id', '=', 'taggables.taggable_id')
-                     ->where('taggables.taggable_type', '=', 'transaction')
-                     ->where('taggables.tag_id', '=', $request->tag_id);
+                    ->where('taggables.taggable_type', '=', 'transaction')
+                    ->where('taggables.tag_id', '=', $request->tag_id);
             });
         }
 
         $startDate = $request->input('start_date') ?: $request->input('from');
         $endDate = $request->input('end_date') ?: $request->input('to');
 
-        if (!empty($startDate)) {
+        if (! empty($startDate)) {
             $query->where('transactions.transaction_date', '>=', $startDate);
         }
-        
-        if (!empty($endDate)) {
+
+        if (! empty($endDate)) {
             $query->where('transactions.transaction_date', '<=', $endDate);
         }
-        
+
         if ($request->filled('type') && in_array($request->type, ['income', 'expense'])) {
             $query->where('transactions.type', '=', $request->type);
         }
@@ -64,24 +69,27 @@ class TransactionController extends Controller
         }
 
         if ($request->filled('search')) {
-            $search = '%' . $request->input('search') . '%';
-            $query->where(function($q) use ($search) {
+            $search = '%'.$request->input('search').'%';
+            $query->where(function ($q) use ($search) {
                 $q->where('transactions.description', 'LIKE', $search)
-                  ->orWhere('transactions.reference_no', 'LIKE', $search)
-                  ->orWhere('categories.name', 'LIKE', $search)
-                  ->orWhere('bank_accounts.bank_name', 'LIKE', $search)
-                  ->orWhere('bank_accounts.account_no', 'LIKE', $search);
+                    ->orWhere('transactions.reference_no', 'LIKE', $search)
+                    ->orWhere('categories.name', 'LIKE', $search)
+                    ->orWhere('bank_accounts.bank_name', 'LIKE', $search)
+                    ->orWhere('bank_accounts.account_no', 'LIKE', $search);
             });
         }
 
         // Calculate KPI summary figures on complete filtered set
-        $allFiltered = (clone $query)->get();
-        $totalIncome = $allFiltered->where('type', 'income')->sum('amount');
-        $totalExpense = $allFiltered->where('type', 'expense')->sum('amount');
+        $summary = (clone $query)->reorder()->where('transactions.payment_status', 'completed')->select('transactions.type', 'transactions.currency', 'transactions.transaction_date', DB::raw('SUM(transactions.amount) as total'))->groupBy('transactions.type', 'transactions.currency', 'transactions.transaction_date')->get();
+        foreach ($summary as $row) {
+            $row->base_amount = FinancialReportingService::convert($row->total, $row->currency, $row->transaction_date);
+        }
+        $totalIncome = $summary->where('type', 'income')->sum('base_amount');
+        $totalExpense = $summary->where('type', 'expense')->sum('base_amount');
         $netCashFlow = $totalIncome - $totalExpense;
-        $incomeCount = $allFiltered->where('type', 'income')->count();
-        $expenseCount = $allFiltered->where('type', 'expense')->count();
-        $totalCount = $allFiltered->count();
+        $incomeCount = (clone $query)->where('transactions.type', 'income')->count();
+        $expenseCount = (clone $query)->where('transactions.type', 'expense')->count();
+        $totalCount = $incomeCount + $expenseCount;
 
         // Paginate transactions
         $transactions = $query->paginate(20)->withQueryString();
@@ -107,12 +115,12 @@ class TransactionController extends Controller
         }
 
         return view('transactions', compact(
-            'transactions', 
-            'categories', 
-            'companies', 
-            'departments', 
-            'budgetItems', 
-            'tags', 
+            'transactions',
+            'categories',
+            'companies',
+            'departments',
+            'budgetItems',
+            'tags',
             'parties',
             'bankAccounts',
             'totalIncome',
@@ -126,15 +134,20 @@ class TransactionController extends Controller
 
     public function store(Request $request)
     {
-        $data = $request->except('_token', 'budget_item_id', 'tag_ids');
+        $data = $this->validatedData($request);
+        PeriodLockService::checkLockedDate($data['transaction_date'], DB::table('departments')->where('id', $data['department_id'] ?? DB::table('departments')->value('id'))->value('company_id'));
         $data['created_at'] = now();
         $data['updated_at'] = now();
         // default missing fields
-        if(empty($data['currency'])) $data['currency'] = DB::table('companies')->value('base_currency') ?? 'LKR';
-        if(empty($data['department_id'])) $data['department_id'] = DB::table('departments')->value('id') ?: null;
+        if (empty($data['currency'])) {
+            $data['currency'] = DB::table('companies')->value('base_currency') ?? 'LKR';
+        }
+        if (empty($data['department_id'])) {
+            $data['department_id'] = DB::table('departments')->value('id') ?: null;
+        }
 
         if ($request->filled('bank_account_id')) {
-            $data['bank_account_id'] = (int)$request->input('bank_account_id');
+            $data['bank_account_id'] = (int) $request->input('bank_account_id');
         } else {
             $data['bank_account_id'] = null;
         }
@@ -147,18 +160,18 @@ class TransactionController extends Controller
                 ->where('budget_items.id', $itemId)
                 ->select('budget_items.name as item_name', 'budget_groups.name as group_name', 'budgets.name as budget_name')
                 ->first();
-                
+
             if ($budgetItem) {
-                $data['description'] = $data['description'] . " ({$budgetItem->budget_name} > {$budgetItem->group_name} > {$budgetItem->item_name})";
+                $data['description'] = $data['description']." ({$budgetItem->budget_name} > {$budgetItem->group_name} > {$budgetItem->item_name})";
             }
         }
-        
-        $transactionId = DB::table('transactions')->insertGetId($data);
+
+        $transactionId = TransactionPostingService::create($data);
 
         if ($request->filled('budget_item_id')) {
             DB::table('budget_transactions')->insert([
                 'budget_item_id' => $request->budget_item_id,
-                'transaction_id' => $transactionId
+                'transaction_id' => $transactionId,
             ]);
         }
 
@@ -168,15 +181,15 @@ class TransactionController extends Controller
                 $taggables[] = [
                     'tag_id' => $tagId,
                     'taggable_id' => $transactionId,
-                    'taggable_type' => 'transaction'
+                    'taggable_type' => 'transaction',
                 ];
             }
-            if (!empty($taggables)) {
+            if (! empty($taggables)) {
                 DB::table('taggables')->insert($taggables);
             }
         }
 
-        \App\Services\ActivityLogService::logCreate('Transaction', $transactionId, [
+        ActivityLogService::logCreate('Transaction', $transactionId, [
             'type' => $data['type'] ?? null,
             'amount' => $data['amount'] ?? null,
             'description' => $data['description'] ?? null,
@@ -187,7 +200,7 @@ class TransactionController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Transaction created successfully!',
-                'transaction_id' => $transactionId
+                'transaction_id' => $transactionId,
             ]);
         }
 
@@ -197,29 +210,79 @@ class TransactionController extends Controller
     public function update(Request $request, $id)
     {
         $oldTx = DB::table('transactions')->where('id', $id)->first();
-        $data = $request->only(['amount', 'description', 'category_id', 'type', 'payment_method', 'transaction_date', 'reference_no', 'department_id', 'bank_account_id']);
+        $this->assertEditable($oldTx);
+        $data = $this->validatedData($request, true);
+        PeriodLockService::checkLockedDate($data['transaction_date'] ?? $oldTx->transaction_date, DB::table('departments')->where('id', $data['department_id'] ?? $oldTx->department_id)->value('company_id'));
         $data['updated_at'] = now();
-        
+
         if ($request->filled('bank_account_id')) {
-            $data['bank_account_id'] = (int)$request->input('bank_account_id');
+            $data['bank_account_id'] = (int) $request->input('bank_account_id');
         } else {
             $data['bank_account_id'] = null;
         }
 
+        TransactionPostingService::reverse($oldTx);
         DB::table('transactions')->where('id', $id)->update($data);
+        TransactionPostingService::post(DB::table('transactions')->find($id));
 
-        \App\Services\ActivityLogService::logUpdate('Transaction', $id, $oldTx, $data);
-        
+        ActivityLogService::logUpdate('Transaction', $id, $oldTx, $data);
+
         return back()->with('success', 'Transaction updated successfully!');
     }
 
     public function destroy($id)
     {
         $oldTx = DB::table('transactions')->where('id', $id)->first();
+        $this->assertEditable($oldTx);
+        DB::table('budget_transactions')->where('transaction_id', $id)->delete();
+        DB::table('taggables')->where('taggable_type', 'transaction')->where('taggable_id', $id)->delete();
+        TransactionPostingService::reverse($oldTx);
         DB::table('transactions')->where('id', $id)->delete();
 
-        \App\Services\ActivityLogService::logDelete('Transaction', $id, $oldTx);
+        ActivityLogService::logDelete('Transaction', $id, $oldTx);
 
         return back()->with('success', 'Transaction deleted successfully!');
+    }
+
+    private function validatedData(Request $request, bool $updating = false): array
+    {
+        $required = $updating ? 'sometimes' : 'required';
+        $data = $request->validate([
+            'amount' => "$required|numeric|gt:0|max:9999999999999",
+            'type' => "$required|in:income,expense",
+            'transaction_date' => "$required|date_format:Y-m-d",
+            'category_id' => "$required|exists:categories,id",
+            'description' => 'nullable|string|max:5000', 'currency' => 'nullable|string|size:3',
+            'department_id' => 'nullable|exists:departments,id', 'bank_account_id' => 'nullable|exists:bank_accounts,id',
+            'project_id' => 'nullable|exists:projects,id', 'party_id' => 'nullable|exists:parties,id',
+            'payment_method' => 'nullable|string|max:50', 'reference_no' => 'nullable|string|max:255',
+            'payment_status' => 'nullable|in:pending,completed', 'due_date' => 'nullable|date_format:Y-m-d',
+            'budget_item_id' => 'nullable|exists:budget_items,id', 'tag_ids' => 'nullable|array',
+            'tag_ids.*' => 'integer|exists:tags,id',
+        ]);
+        unset($data['budget_item_id'], $data['tag_ids']);
+        if (isset($data['type'],$data['category_id']) && DB::table('categories')->where('id', $data['category_id'])->value('type') !== $data['type']) {
+            throw ValidationException::withMessages(['category_id' => 'Choose a category matching the income or expense type.']);
+        }
+        if (! empty($data['bank_account_id']) && ! empty($data['currency'])) {
+            $bank = DB::table('bank_accounts')->find($data['bank_account_id']);
+            if ($bank->currency !== $data['currency']) {
+                throw ValidationException::withMessages(['bank_account_id' => 'Bank account and transaction currencies must match.']);
+            }
+        }
+
+        return $data;
+    }
+
+    private function assertEditable($transaction): void
+    {
+        if ($transaction && Schema::hasTable('payroll_payments')) {
+            abort_if(DB::table('payroll_payments')->where('transaction_id', $transaction->id)->orWhere('reversal_transaction_id', $transaction->id)->exists(), 422, 'Payroll transactions must be reversed from Payroll to preserve payment allocations.');
+        }
+        abort_unless($transaction, 404);
+        PeriodLockService::checkLockedDate($transaction->transaction_date, DB::table('departments')->where('id', $transaction->department_id)->value('company_id'));
+        if ($transaction->reconciled || $transaction->project_id || ! empty($transaction->loan_id) || str_starts_with($transaction->reference_no ?? '', 'LOAN-')) {
+            throw ValidationException::withMessages(['transaction' => 'This transaction is linked or reconciled. Correct it through its source document.']);
+        }
     }
 }

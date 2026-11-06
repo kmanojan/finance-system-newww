@@ -28,7 +28,7 @@ class FixedAssetController extends Controller
             'category' => 'required|string|max:100',
             'purchase_date' => 'required|date',
             'purchase_cost' => 'required|numeric|min:0',
-            'salvage_value' => 'nullable|numeric|min:0',
+            'salvage_value' => 'nullable|numeric|min:0|lte:purchase_cost',
             'lifespan_years' => 'required|integer|min:1',
             'depreciation_method' => 'required|in:straight_line,reducing_balance',
         ]);
@@ -48,6 +48,7 @@ class FixedAssetController extends Controller
 
     public function runDepreciation(Request $request, $id)
     {
+        $request->validate(['posting_date' => 'nullable|date_format:Y-m-d']);
         $asset = FixedAsset::findOrFail($id);
         $postingDate = $request->input('posting_date', date('Y-m-d'));
 

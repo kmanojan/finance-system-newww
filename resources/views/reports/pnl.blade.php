@@ -3,6 +3,7 @@
 @section('report-title', 'Profit & Loss Statement')
 
 @section('report-content')
+@if($unpostedCount > 0)<div class="ds-notice error">{{ $unpostedCount }} historical records have no journal posting. This report includes posted journals only. Reconcile and migrate those records before using it for financial statements.</div>@endif
 <header class="page-header" style="margin-bottom: 1.5rem;">
     <div class="header-titles">
         <h1 style="font-size:1.75rem; font-weight:800; color:var(--text-heading); margin:0;">Profit & Loss Statement</h1>

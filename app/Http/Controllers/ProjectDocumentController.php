@@ -26,16 +26,16 @@ class ProjectDocumentController extends Controller
 
         $filePath = null;
         if ($request->source_type === 'file' && $request->hasFile('file')) {
-            $filePath = $request->file('file')->store('attachments/projects', 'public');
-            
+            $filePath = $request->file('file')->store('attachments/projects', config('filesystems.documents_disk', 'local'));
+
             // Reusing polymorphic attachments pattern
             DB::table('attachments')->insert([
                 'model_id' => $projectId,
                 'model_type' => 'ProjectDocument', // Custom model type to distinguish
                 'file_name' => $request->file('file')->getClientOriginalName(),
                 'file_path' => $filePath,
-                'uploaded_by' => auth()->user() ? auth()->user()->name : null,
-                'created_at' => now()
+                'uploaded_by' => auth()->id(),
+                'created_at' => now(),
             ]);
         }
 
@@ -63,7 +63,7 @@ class ProjectDocumentController extends Controller
     public function update(Request $request, $id)
     {
         $document = DB::table('project_documents')->where('id', $id)->first();
-        if (!$document) {
+        if (! $document) {
             return back()->with('error', 'Document not found.');
         }
 
@@ -97,15 +97,15 @@ class ProjectDocumentController extends Controller
 
         // Handle file update
         if ($request->source_type === 'file' && $request->hasFile('file')) {
-            $data['file_path'] = $request->file('file')->store('attachments/projects', 'public');
-            
+            $data['file_path'] = $request->file('file')->store('attachments/projects', config('filesystems.documents_disk', 'local'));
+
             DB::table('attachments')->insert([
                 'model_id' => $document->project_id,
                 'model_type' => 'ProjectDocument',
                 'file_name' => $request->file('file')->getClientOriginalName(),
                 'file_path' => $data['file_path'],
-                'uploaded_by' => auth()->user() ? auth()->user()->name : null,
-                'created_at' => now()
+                'uploaded_by' => auth()->id(),
+                'created_at' => now(),
             ]);
         } elseif ($request->source_type === 'link') {
             $data['file_path'] = null; // Clear file path if switched to link
@@ -119,7 +119,7 @@ class ProjectDocumentController extends Controller
     public function destroy($id)
     {
         $document = DB::table('project_documents')->where('id', $id)->first();
-        if (!$document) {
+        if (! $document) {
             return back()->with('error', 'Document not found.');
         }
 
@@ -131,16 +131,18 @@ class ProjectDocumentController extends Controller
     public function download($id)
     {
         $document = DB::table('project_documents')->where('id', $id)->first();
-        if (!$document || !$document->file_path || $document->deleted_at) {
+        if (! $document || ! $document->file_path || $document->deleted_at) {
             abort(404);
         }
 
-        $path = storage_path('app/public/' . $document->file_path);
-        
-        if (!file_exists($path)) {
-            abort(404);
+        $disk = Storage::disk(config('filesystems.documents_disk', 'local'));
+        if ($disk->exists($document->file_path)) {
+            return $disk->download($document->file_path);
         }
+        // Legacy files remain readable through this authenticated route during storage migration.
+        abort_unless(Storage::disk('public')->exists($document->file_path), 404);
 
-        return response()->download($path);
+        return Storage::disk('public')->download($document->file_path);
+
     }
 }

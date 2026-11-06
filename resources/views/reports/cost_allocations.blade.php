@@ -41,13 +41,8 @@
             </div>
 
             <div style="flex: 1.2; min-width: 180px;">
-                <label class="form-label" style="font-size: 0.8rem; margin-bottom: 0.25rem;">Employee</label>
-                <select name="employee_id" class="form-control" style="padding: 0.5rem; font-size: 0.85rem;">
-                    <option value="">All Employees</option>
-                    @foreach($employees as $e)
-                        <option value="{{ $e->id }}" {{ $employeeId == $e->id ? 'selected' : '' }}>{{ $e->full_name }}</option>
-                    @endforeach
-                </select>
+                <label for="report_employee_id" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.25rem;">Employee</label>
+                <x-employee-selector name="employee_id" id="report_employee_id" :employees="$employees" :selected="$employeeId" placeholder="All employees" empty-label="All employees" />
             </div>
 
             <div style="display: flex; gap: 0.5rem; align-items: flex-end;">

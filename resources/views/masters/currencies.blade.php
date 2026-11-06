@@ -38,7 +38,7 @@
 
 <!-- Summary Cards -->
 <div class="metric-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:1.25rem; margin-bottom:1.5rem;">
-    <div class="metric-card" style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); padding: 1.25rem; border-radius: 12px; color: white;">
+    <div class="metric-card" style="background:var(--bg-card); padding: 1.25rem; border-radius: 12px; color: white;">
         <div style="display:flex; justify-content:space-between; align-items:center;">
             <h3 style="margin:0; font-size:0.8rem; font-weight:600; text-transform:uppercase; opacity:0.9;">System Base Currency</h3>
             <ion-icon name="cash-outline" style="font-size:1.3rem; opacity:0.85;"></ion-icon>
@@ -47,7 +47,7 @@
         <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">Main reference currency</div>
     </div>
 
-    <div class="metric-card" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); padding: 1.25rem; border-radius: 12px; color: white;">
+    <div class="metric-card" style="background:var(--bg-card); padding: 1.25rem; border-radius: 12px; color: white;">
         <div style="display:flex; justify-content:space-between; align-items:center;">
             <h3 style="margin:0; font-size:0.8rem; font-weight:600; text-transform:uppercase; opacity:0.9;">Active Currencies</h3>
             <ion-icon name="pricetags-outline" style="font-size:1.3rem; opacity:0.85;"></ion-icon>
@@ -56,7 +56,7 @@
         <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">Configured in system</div>
     </div>
 
-    <div class="metric-card" style="background: linear-gradient(135deg, #0284c7 0%, #06b6d4 100%); padding: 1.25rem; border-radius: 12px; color: white;">
+    <div class="metric-card" style="background:var(--bg-card); padding: 1.25rem; border-radius: 12px; color: white;">
         <div style="display:flex; justify-content:space-between; align-items:center;">
             <h3 style="margin:0; font-size:0.8rem; font-weight:600; text-transform:uppercase; opacity:0.9;">Rate Sync API</h3>
             <ion-icon name="cloud-download-outline" style="font-size:1.3rem; opacity:0.85;"></ion-icon>
@@ -65,7 +65,7 @@
         <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">Live free daily conversion</div>
     </div>
 
-    <div class="metric-card" style="background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%); padding: 1.25rem; border-radius: 12px; color: white;">
+    <div class="metric-card" style="background:var(--bg-card); padding: 1.25rem; border-radius: 12px; color: white;">
         <div style="display:flex; justify-content:space-between; align-items:center;">
             <h3 style="margin:0; font-size:0.8rem; font-weight:600; text-transform:uppercase; opacity:0.9;">History Entries</h3>
             <ion-icon name="time-outline" style="font-size:1.3rem; opacity:0.85;"></ion-icon>
@@ -100,7 +100,7 @@
                             {{ $item->code }}
                         </span>
                         @if($item->is_base)
-                            <span class="badge" style="background:rgba(16, 185, 129, 0.15); color:var(--success); font-size:0.7rem; font-weight:700; padding:0.15rem 0.4rem; border-radius:4px;">
+                            <span class="badge" style="background:rgba(16, 185, 129, 0.15); color:var(--success); font-size:0.75rem; font-weight:700; padding:0.15rem 0.4rem; border-radius:4px;">
                                 BASE CURRENCY
                             </span>
                         @endif

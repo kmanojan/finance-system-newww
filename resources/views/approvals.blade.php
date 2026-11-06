@@ -20,7 +20,7 @@
 @endif
 
 <div class="metric-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:1.25rem; margin-bottom:1.5rem;">
-    <div class="metric-card" style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); padding: 1.25rem; border-radius: 12px; color: white;">
+    <div class="metric-card" style="background:var(--bg-card); padding: 1.25rem; border-radius: 12px; color: white;">
         <div style="display:flex; justify-content:space-between; align-items:center;">
             <h3 style="margin:0; font-size:0.8rem; font-weight:600; text-transform:uppercase; opacity:0.9;">Total Pending Approvals</h3>
             <ion-icon name="checkbox-outline" style="font-size:1.3rem; opacity:0.85;"></ion-icon>
@@ -29,7 +29,7 @@
         <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">Requires admin confirmation</div>
     </div>
 
-    <div class="metric-card" style="background: linear-gradient(135deg, #0284c7 0%, #06b6d4 100%); padding: 1.25rem; border-radius: 12px; color: white;">
+    <div class="metric-card" style="background:var(--bg-card); padding: 1.25rem; border-radius: 12px; color: white;">
         <div style="display:flex; justify-content:space-between; align-items:center;">
             <h3 style="margin:0; font-size:0.8rem; font-weight:600; text-transform:uppercase; opacity:0.9;">Draft Invoices</h3>
             <ion-icon name="document-text-outline" style="font-size:1.3rem; opacity:0.85;"></ion-icon>
@@ -38,7 +38,7 @@
         <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">Scheduled & manual drafts</div>
     </div>
 
-    <div class="metric-card" style="background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%); padding: 1.25rem; border-radius: 12px; color: white;">
+    <div class="metric-card" style="background:var(--bg-card); padding: 1.25rem; border-radius: 12px; color: white;">
         <div style="display:flex; justify-content:space-between; align-items:center;">
             <h3 style="margin:0; font-size:0.8rem; font-weight:600; text-transform:uppercase; opacity:0.9;">Over-budget Allocations</h3>
             <ion-icon name="alert-circle-outline" style="font-size:1.3rem; opacity:0.85;"></ion-icon>

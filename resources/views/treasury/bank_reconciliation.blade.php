@@ -1,77 +1,14 @@
 @extends('layouts.app')
-@section('title', 'Treasury & Bank Reconciliation')
-
+@section('title','Bank reconciliation')
 @section('secondary-sidebar')
-<aside class="sidebar-secondary" id="sidebarSecondary">
-    <h2 class="sidebar-title">Treasury</h2>
-    <nav class="nav-links">
-        <a href="/treasury/bank-reconciliation" class="nav-link active">Bank Reconciliation (BRS)</a>
-    </nav>
-</aside>
+@include('operations._sidebar')
 @endsection
-
 @section('content')
-<header class="page-header" style="margin-bottom: 2rem;">
-    <div class="header-titles">
-        <h1>Bank Reconciliation & Treasury</h1>
-        <p class="subtitle">Import bank statements and auto-match cleared entries against General Ledger cash transactions.</p>
-    </div>
-</header>
-
-<div class="card" style="padding:1.5rem; margin-bottom:2rem;">
-    <form action="/treasury/bank-reconciliation/auto-match" method="POST" style="display:flex; align-items:flex-end; gap:1rem; flex-wrap:wrap;">
-        @csrf
-        <div style="flex:1; min-width:250px;">
-            <label class="form-label">Select Bank Account to Auto-Match *</label>
-            <select name="bank_account_id" class="form-control" required>
-                @foreach($bankAccounts as $acc)
-                    <option value="{{ $acc->id }}" {{ request('bank_account_id') == $acc->id ? 'selected' : '' }}>
-                        {{ $acc->bank_name }} - {{ $acc->account_no }} ({{ $acc->currency }})
-                    </option>
-                @endforeach
-            </select>
-        </div>
-        <button type="submit" class="btn btn-primary-gradient">
-            <ion-icon name="sync-outline"></ion-icon> Run Auto-Match Engine
-        </button>
-    </form>
-</div>
-
-<div class="card" style="padding:0; overflow-x:auto;">
-    <table class="data-table" style="width:100%; margin:0;">
-        <thead>
-            <tr>
-                <th>Statement Date</th>
-                <th>Bank Account</th>
-                <th>Description</th>
-                <th>Reference #</th>
-                <th>Amount</th>
-                <th>Match Status</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach($statements as $stmt)
-            <tr>
-                <td>{{ $stmt->statement_date ? $stmt->statement_date->format('Y-m-d') : '-' }}</td>
-                <td>{{ $stmt->bankAccount->bank_name ?? '-' }}</td>
-                <td>{{ $stmt->description }}</td>
-                <td><span class="font-medium">{{ $stmt->reference_no ?? '-' }}</span></td>
-                <td style="font-weight:600;">LKR {{ number_format($stmt->amount, 2) }}</td>
-                <td>
-                    @if($stmt->is_matched)
-                        <span class="badge" style="background:#dcfce7; color:#166534;">Matched</span>
-                    @else
-                        <span class="badge badge-draft">Unmatched</span>
-                    @endif
-                </td>
-            </tr>
-            @endforeach
-            @if($statements->isEmpty())
-            <tr>
-                <td colspan="6" style="text-align:center; padding:2rem; color:var(--text-muted);">No imported bank statements found.</td>
-            </tr>
-            @endif
-        </tbody>
-    </table>
-</div>
+<header class="page-header"><div><h1>Bank reconciliation</h1><p class="subtitle">Match statement rows to recorded bank movements.</p></div><button class="btn btn-primary" onclick="openModal('importModal')">Import statement</button></header>
+<div class="toolbar"><form method="GET" style="display:flex;gap:12px"><select class="form-control" name="bank_account_id" aria-label="Bank account"><option value="">All bank accounts</option>@foreach($bankAccounts as $bank)<option value="{{ $bank->id }}" @selected(request('bank_account_id')==$bank->id)>{{ $bank->bank_name }} · {{ $bank->account_no }}</option>@endforeach</select><button class="btn btn-outline">Filter</button></form>@if(request('bank_account_id'))<form method="POST" action="/treasury/bank-reconciliation/auto-match">@csrf<input type="hidden" name="bank_account_id" value="{{ request('bank_account_id') }}"><button class="btn btn-outline">Match unique candidates</button></form>@endif</div>
+<div class="data-table-container"><table class="data-table"><thead><tr><th>Date / bank</th><th>Description</th><th class="num">Amount</th><th>Status</th><th>Match</th></tr></thead><tbody>@forelse($statements as $statement)<tr><td data-label="Date / bank">{{ $statement->statement_date->format('Y-m-d') }}<br><span class="text-muted">{{ $statement->bankAccount?->bank_name }}</span></td><td data-label="Description">{{ $statement->description ?: $statement->reference_no ?: '—' }}</td><td data-label="Amount" class="num">{{ $statement->type==='credit' ? '+' : '−' }}{{ number_format($statement->amount,2) }}</td><td data-label="Status">{{ $statement->is_matched ? 'Matched' : 'Unmatched' }}</td><td>@if($statement->is_matched)<form action="/treasury/bank-reconciliation/{{ $statement->id }}/match" method="POST">@csrf @method('DELETE')<button class="btn btn-outline">Unmatch</button></form>@else<form action="/treasury/bank-reconciliation/{{ $statement->id }}/match" method="POST" style="display:flex;gap:8px">@csrf<select class="form-control" name="transaction_id" required aria-label="Match statement row"><option value="">Choose transaction</option>@foreach($transactions as $transaction)@if($transaction->bank_account_id==$statement->bank_account_id && round($transaction->amount,2)==round($statement->amount,2) && $transaction->type===($statement->type==='credit'?'income':'expense'))<option value="{{ $transaction->id }}">{{ $transaction->transaction_date }} · {{ $transaction->description }}</option>@endif
+@endforeach</select><button class="btn btn-outline">Match</button></form>@endif</td></tr>@empty<tr><td colspan="5">No statement rows. Import a bank statement to start reconciling.</td></tr>@endforelse</tbody></table></div>
+@endsection
+@section('modals')
+<div class="modal-backdrop" id="importModal"><div class="modal-card"><div class="modal-header"><h2 class="modal-title">Import statement</h2><button class="btn-close" onclick="closeModal('importModal')">×</button></div><form method="POST" action="/treasury/bank-reconciliation/import" enctype="multipart/form-data">@csrf<div class="modal-body ds-stack"><div><label class="form-label">Bank account</label><select class="form-control" name="bank_account_id" required>@foreach($bankAccounts as $bank)<option value="{{ $bank->id }}">{{ $bank->bank_name }} · {{ $bank->currency }} · {{ $bank->account_no }}</option>@endforeach</select></div><div><label class="form-label">Statement file</label><input class="form-control" name="statement" type="file" accept=".csv,.ofx,.qfx" required><p class="text-muted">CSV columns: date (YYYY-MM-DD), amount (positive), type (credit or debit), reference, description. OFX and QFX are also supported. Up to 5 MB.</p></div></div><div class="modal-footer"><button class="btn btn-primary">Import statement</button></div></form></div></div>
 @endsection

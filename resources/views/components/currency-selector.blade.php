@@ -94,7 +94,7 @@
                                     <span>{{ $curr->name }}</span>
                                     <span style="font-weight: 700; color: var(--text-muted); font-size: 0.8rem;">({{ $curr->symbol }})</span>
                                     @if($curr->is_base)
-                                        <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: var(--success); font-size: 0.65rem; font-weight: 700; padding: 0.05rem 0.35rem; border-radius: 4px;">BASE</span>
+                                        <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: var(--success); font-size:0.75rem; font-weight: 700; padding: 0.05rem 0.35rem; border-radius: 4px;">BASE</span>
                                     @endif
                                 </div>
                             </div>

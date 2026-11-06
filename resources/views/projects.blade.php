@@ -3,14 +3,13 @@
 @section('meta_description', 'Manage client projects, project milestones, direct and indirect cost allocations, and profitability analysis.')
 
 @section('secondary-sidebar')
-<aside class="sidebar-secondary" id="sidebarSecondary">
-    <h2 class="sidebar-title">Projects</h2>
+<x-secondary-sidebar title="Projects">
     <nav class="nav-links">
-        <a href="#" class="nav-link active">Active Projects</a>
-        <a href="#" class="nav-link">Completed</a>
-        <a href="#" class="nav-link">Timesheets</a>
+        <a href="/projects?status=active" class="nav-link {{ request('status') === 'active' ? 'active' : '' }}"><ion-icon name="briefcase-outline" aria-hidden="true"></ion-icon><span class="section-navigation-label">Active Projects</span></a>
+        <a href="/projects?status=completed" class="nav-link {{ request('status') === 'completed' ? 'active' : '' }}"><ion-icon name="checkmark-circle-outline" aria-hidden="true"></ion-icon><span class="section-navigation-label">Completed</span></a>
+        <a href="/projects" class="nav-link {{ !request('status') ? 'active' : '' }}"><ion-icon name="albums-outline" aria-hidden="true"></ion-icon><span class="section-navigation-label">All projects</span></a>
     </nav>
-</aside>
+</x-secondary-sidebar>
 @endsection
 
 @section('content')
@@ -33,7 +32,7 @@
     <div class="toolbar-right">
         <div class="search-input">
             <ion-icon name="search-outline"></ion-icon>
-            <input type="text" placeholder="Search by Project Title">
+            <input type="search" name="search" form="filterForm" value="{{ request('search') }}" aria-label="Search projects" placeholder="Search projects"><button class="btn btn-outline" type="submit" form="filterForm">Search</button>
         </div>
     </div>
 </div>
@@ -65,7 +64,7 @@
                 <td data-label="Project Name">
                     <a href="/projects/{{ $project->id }}" class="font-medium" style="color:var(--text-heading); text-decoration:none;">{{ $project->name }}</a>
                     @if(isset($project->milestones_due_today_count) && $project->milestones_due_today_count > 0)
-                        <span class="badge badge-danger" style="font-size:0.65rem; margin-left:6px;">Milestone Due Today</span>
+                        <span class="badge badge-danger" style="font-size:0.75rem; margin-left:6px;">Milestone Due Today</span>
                     @endif
                 </td>
                 <td data-label="Client"><span class="text-muted">{{ $project->client_name ?? '-' }}</span></td>
@@ -98,6 +97,7 @@
         </tbody>
     </table>
 </div>
+{{ $projects->links() }}
 @endif
 @endsection
 

@@ -1,6 +1,10 @@
 @extends('layouts.app')
 @section('title', $employee->full_name . ' - Salary Configuration')
 
+@section('secondary-sidebar')
+@include('navigation.people')
+@endsection
+
 @section('content')
 <script>
 function salaryCalculator(initialData) {
@@ -271,7 +275,8 @@ document.addEventListener('alpine:init', () => {
                 </div>
             </div>
         </div>
-        <div style="display:flex; gap:0.5rem;">
+        <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+            <x-employee-party-action :employee="$employee" />
             <button type="button" @click="submitForm()" :disabled="isSubmitting" class="btn btn-primary" style="display:flex; align-items:center; gap:0.5rem; padding:0.65rem 1.25rem; font-weight:600;">
                 <ion-icon :name="isSubmitting ? 'hourglass-outline' : 'save-outline'" style="font-size:1.15rem;"></ion-icon>
                 <span x-text="isSubmitting ? 'Saving Profile...' : 'Save Salary Profile'">Save Salary Profile</span>
@@ -465,7 +470,7 @@ document.addEventListener('alpine:init', () => {
                                             style="display:flex; justify-content:space-between; align-items:center; width:100%; padding:0.6rem 1rem; border:none; background:none; text-align:left; font-size:0.85rem; color:var(--text-heading); cursor:pointer;"
                                             onmouseover="this.style.background='var(--bg-page)'" onmouseout="this.style.background='none'">
                                         <span x-text="c.name" style="font-weight:600;"></span>
-                                        <span class="badge badge-info" style="font-size:0.65rem;" x-text="c.code"></span>
+                                        <span class="badge badge-info" style="font-size:0.75rem;" x-text="c.code"></span>
                                     </button>
                                 </template>
                             </div>
@@ -483,9 +488,9 @@ document.addEventListener('alpine:init', () => {
                                     <div>
                                         <div style="font-weight:600; color:var(--text-heading); font-size:0.92rem;" x-text="comp.name"></div>
                                         <div style="font-size:0.75rem; color:var(--text-muted); display:flex; gap:0.5rem; align-items:center; margin-top:2px;">
-                                            <span class="badge badge-info" style="font-size:0.65rem;" x-text="comp.code"></span>
+                                            <span class="badge badge-info" style="font-size:0.75rem;" x-text="comp.code"></span>
                                             <template x-if="comp.is_epf_eligible">
-                                                <span class="badge badge-warning" style="font-size:0.65rem;">EPF Eligible</span>
+                                                <span class="badge badge-warning" style="font-size:0.75rem;">EPF Eligible</span>
                                             </template>
                                             <template x-if="!comp.is_epf_eligible">
                                                 <span style="font-size:0.72rem; color:var(--text-muted);">Non-EPF</span>
@@ -565,7 +570,7 @@ document.addEventListener('alpine:init', () => {
                                             style="display:flex; justify-content:space-between; align-items:center; width:100%; padding:0.6rem 1rem; border:none; background:none; text-align:left; font-size:0.85rem; color:var(--text-heading); cursor:pointer;"
                                             onmouseover="this.style.background='var(--bg-page)'" onmouseout="this.style.background='none'">
                                         <span x-text="c.name" style="font-weight:600;"></span>
-                                        <span class="badge badge-info" style="font-size:0.65rem;" x-text="c.code"></span>
+                                        <span class="badge badge-info" style="font-size:0.75rem;" x-text="c.code"></span>
                                     </button>
                                 </template>
                             </div>
@@ -582,7 +587,7 @@ document.addEventListener('alpine:init', () => {
                                     <div>
                                         <div style="font-weight:600; color:var(--text-heading); font-size:0.92rem;" x-text="comp.name"></div>
                                         <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">
-                                            <span class="badge badge-info" style="font-size:0.65rem; margin-right:4px;" x-text="comp.code"></span>
+                                            <span class="badge badge-info" style="font-size:0.75rem; margin-right:4px;" x-text="comp.code"></span>
                                             <span x-text="comp.calc_type === 'percentage' ? comp.value + '% ' + (comp.calc_base === 'on_epf_base' ? 'of EPF Base' : 'of Basic') : 'Fixed Monthly Deduction'"></span>
                                         </div>
                                     </div>
@@ -625,7 +630,7 @@ document.addEventListener('alpine:init', () => {
                                     </template>
                                     <template x-if="comp.is_statutory">
                                         <div style="min-width:70px; text-align:center;">
-                                            <span class="badge badge-warning" style="font-size:0.7rem; padding:0.25rem 0.5rem;">Statutory</span>
+                                            <span class="badge badge-warning" style="font-size:0.75rem; padding:0.25rem 0.5rem;">Statutory</span>
                                         </div>
                                     </template>
                                 </div>
@@ -690,7 +695,7 @@ document.addEventListener('alpine:init', () => {
             <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:1.5rem; box-shadow:0 4px 12px rgba(0,0,0,0.05);">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; border-bottom:1px solid var(--border-light); pb:0.5rem;">
                     <h3 style="margin:0; font-size:1.05rem; font-weight:700; color:var(--text-heading);">Live Salary Breakdown</h3>
-                    <span class="badge badge-info" style="font-size:0.7rem;">Interactive Preview</span>
+                    <span class="badge badge-info" style="font-size:0.75rem;">Interactive Preview</span>
                 </div>
 
                 <div style="display:flex; flex-direction:column; gap:0.6rem; font-size:0.85rem;">
@@ -766,7 +771,7 @@ document.addEventListener('alpine:init', () => {
                     <div style="background:rgba(139, 92, 246, 0.12); border:1px solid rgba(139, 92, 246, 0.3); border-radius:8px; padding:0.85rem 1rem; margin-top:0.5rem;">
                         <div style="font-size:0.75rem; color:var(--primary); font-weight:600; text-transform:uppercase;">Total Cost to Company (CTC)</div>
                         <div class="tabular-nums" style="font-size:1.35rem; font-weight:800; color:var(--primary); margin-top:0.25rem;" x-text="'LKR ' + formatNumber(ctc)"></div>
-                        <div style="font-size:0.7rem; color:var(--text-muted); margin-top:0.25rem;">Gross + 15% Statutory Employer Contributions</div>
+                        <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.25rem;">Gross + 15% Statutory Employer Contributions</div>
                     </div>
                 </div>
 
@@ -788,7 +793,7 @@ document.addEventListener('alpine:init', () => {
                     <div style="background:var(--bg-page); padding:0.5rem 0.75rem; border-radius:6px; display:flex; justify-content:space-between; align-items:center; font-size:0.8rem;">
                         <div>
                             <div style="font-weight:600; color:var(--text-heading);">{{ $cost->project->name ?? 'General Project' }}</div>
-                            <div style="color:var(--text-muted); font-size:0.7rem;">{{ \Carbon\Carbon::parse($cost->period_start)->format('M Y') }}</div>
+                            <div style="color:var(--text-muted); font-size:0.75rem;">{{ \Carbon\Carbon::parse($cost->period_start)->format('M Y') }}</div>
                         </div>
                         <div class="tabular-nums" style="font-weight:700; color:var(--text-main);">
                             {{ number_format($cost->amount, 2) }} {{ $cost->currency }}

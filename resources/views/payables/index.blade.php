@@ -2,14 +2,8 @@
 @section('title', 'Accounts Payable & Vendor Bills')
 
 @section('secondary-sidebar')
-<aside class="sidebar-secondary" id="sidebarSecondary">
-    <h2 class="sidebar-title">Payables & AP</h2>
-    <nav class="nav-links">
-        <a href="/invoices" class="nav-link">Client Invoices (AR)</a>
-        <a href="/payables/vendor-bills" class="nav-link active">Vendor Bills (AP)</a>
-        <a href="/payables/purchase-orders" class="nav-link">Purchase Orders</a>
-    </nav>
-</aside>
+@include('navigation.payables')
+@endsection
 
 @section('content')
 <header class="page-header" style="margin-bottom: 2rem;">
@@ -25,11 +19,11 @@
 <div class="summary-cards" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:1.5rem; margin-bottom:2rem;">
     <div class="card" style="padding:1.5rem; border-left:4px solid var(--primary);">
         <div style="color:var(--text-muted); font-size:0.85rem; font-weight:600; text-transform:uppercase;">Total Payable</div>
-        <div style="font-size:1.8rem; font-weight:700; color:var(--text-heading); margin-top:0.5rem;">LKR {{ number_format($bills->sum('amount'), 2) }}</div>
+        <div style="font-size:1.8rem; font-weight:700; color:var(--text-heading); margin-top:0.5rem;">LKR {{ number_format($bills->sum(fn($bill) => \App\Services\FinancialReportingService::convert(max(0,$bill->amount-$bill->paid_amount),$bill->currency,date('Y-m-d'))), 2) }}</div>
     </div>
     <div class="card" style="padding:1.5rem; border-left:4px solid var(--warning);">
         <div style="color:var(--text-muted); font-size:0.85rem; font-weight:600; text-transform:uppercase;">Pending Bills</div>
-        <div style="font-size:1.8rem; font-weight:700; color:var(--text-heading); margin-top:0.5rem;">{{ $bills->where('status', 'pending')->count() }}</div>
+        <div style="font-size:1.8rem; font-weight:700; color:var(--text-heading); margin-top:0.5rem;">{{ $bills->where('status', '!=', 'paid')->count() }}</div>
     </div>
     <div class="card" style="padding:1.5rem; border-left:4px solid var(--success);">
         <div style="color:var(--text-muted); font-size:0.85rem; font-weight:600; text-transform:uppercase;">Paid Bills</div>
@@ -47,7 +41,7 @@
                 <th>Issue Date</th>
                 <th>Due Date</th>
                 <th>Amount</th>
-                <th>Status</th>
+                <th>Status</th><th>Outstanding / action</th>
             </tr>
         </thead>
         <tbody>
@@ -66,11 +60,13 @@
                         <span class="badge badge-draft">Pending</span>
                     @endif
                 </td>
+                <td class="num">{{ $bill->currency }} {{ number_format(max(0,$bill->amount-$bill->paid_amount),2) }}
+                @if($bill->status !== 'paid')<button class="btn btn-outline" onclick="openModal('bill-payment-{{ $bill->id }}')">Record payment</button>@endif</td>
             </tr>
             @endforeach
             @if($bills->isEmpty())
             <tr>
-                <td colspan="7" style="text-align:center; padding:2rem; color:var(--text-muted);">No vendor bills recorded yet.</td>
+                <td colspan="8" style="text-align:center; padding:2rem; color:var(--text-muted);">No vendor bills recorded yet.</td>
             </tr>
             @endif
         </tbody>
@@ -87,6 +83,8 @@
         <form action="/payables/vendor-bills" method="POST">
             @csrf
             <div class="modal-body">
+                <div class="form-group"><label class="form-label">Currency</label><x-currency-selector name="currency" :selected="$baseCurrency" /></div>
+                <div class="form-group"><label class="form-label">Approved purchase order (optional)</label><select name="po_id" class="form-control"><option value="">No purchase order</option>@foreach(\App\Models\PurchaseOrder::where('status','approved')->get() as $po)<option value="{{ $po->id }}">{{ $po->po_number }} · {{ $po->currency }} {{ number_format($po->total_amount,2) }}</option>@endforeach</select></div>
                 <div class="form-row">
                     <div class="form-col">
                         <label class="form-label">Bill Number *</label>
@@ -135,4 +133,10 @@
         </form>
     </div>
 </div>
+@endsection
+
+@section('modals')
+@foreach($bills->where('status','!=','paid') as $bill)
+<div class="modal-backdrop" id="bill-payment-{{ $bill->id }}"><div class="modal-card"><div class="modal-header"><h2 class="modal-title">Pay {{ $bill->bill_number }}</h2><button class="btn-close" onclick="closeModal('bill-payment-{{ $bill->id }}')">×</button></div><form method="POST" action="/payables/vendor-bills/{{ $bill->id }}/payments">@csrf<div class="modal-body ds-stack"><p>Outstanding: {{ $bill->currency }} {{ number_format($bill->amount-$bill->paid_amount,2) }}</p><div><label class="form-label">Amount</label><input class="form-control" name="amount" type="number" step="0.01" min="0.01" max="{{ $bill->amount-$bill->paid_amount }}" value="{{ $bill->amount-$bill->paid_amount }}" required></div><div><label class="form-label">Bank account</label><select class="form-control" name="bank_account_id" required><option value="">Choose bank account</option>@foreach($bankAccounts->where('currency',$bill->currency) as $bank)<option value="{{ $bank->id }}">{{ $bank->bank_name }} · {{ $bank->account_no }}</option>@endforeach</select></div><div><label class="form-label">Payment date</label><input class="form-control" type="date" name="payment_date" value="{{ date('Y-m-d') }}" required></div><div><label class="form-label">Reference</label><input class="form-control" name="reference_no"></div></div><div class="modal-footer"><button class="btn btn-primary">Record payment</button></div></form></div></div>
+@endforeach
 @endsection

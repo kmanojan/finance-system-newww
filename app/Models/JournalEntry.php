@@ -10,6 +10,8 @@ class JournalEntry extends Model
     public $timestamps = false;
 
     protected $fillable = [
+        'entry_no',
+        'status',
         'reference_id',
         'reference_type',
         'entry_date',

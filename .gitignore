@@ -26,3 +26,11 @@ Homestead.json
 Homestead.yaml
 Thumbs.db
 dist
+# Local visual review output
+/.taste-skill/after/
+/.taste-skill/before/
+/.taste-skill/all-screens/
+/.taste-skill/final/
+/graphify-out/cache/ast/
+/graphify-out/backups/
+/graphify-out/20??-??-??/

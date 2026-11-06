@@ -3,20 +3,7 @@
 @section('meta_description', 'Complete financial transaction ledger, audit trail, multi-currency revenue and expense movements.')
 
 @section('secondary-sidebar')
-<aside class="sidebar-secondary" id="sidebarSecondary">
-    <h2 class="sidebar-title">Ledger</h2>
-    <nav class="nav-links">
-        <a href="/transactions" class="nav-link {{ request()->is('transactions') ? 'active' : '' }}">
-            <ion-icon name="list-outline"></ion-icon> All Transactions
-        </a>
-        <a href="/journal-entries" class="nav-link {{ request()->is('journal-entries') ? 'active' : '' }}">
-            <ion-icon name="book-outline"></ion-icon> Journal Entries
-        </a>
-        <a href="/budgets" class="nav-link {{ request()->is('budgets') ? 'active' : '' }}">
-            <ion-icon name="calculator-outline"></ion-icon> Budgets
-        </a>
-    </nav>
-</aside>
+@include('navigation.ledger')
 @endsection
 
 @section('content')
@@ -115,7 +102,7 @@
     <div class="header-titles">
         <h1 style="font-size:1.65rem; font-weight:800; color:var(--text-heading); margin:0;">Ledger Transactions</h1>
         <p class="subtitle" style="margin-top:0.25rem; font-size:0.85rem; color:var(--text-muted);">
-            Real-time double-entry record of all revenue inflows, operational expenses, and ledger movements.
+            Cash receipts and payments, with links to their accounting entries.
         </p>
     </div>
     <button class="btn btn-primary-gradient btn-pill" onclick="openModal('createTxModal')">
@@ -123,53 +110,11 @@
     </button>
 </header>
 
-<!-- 3 KPI Stat Metric Cards -->
-<div class="metric-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:1rem; margin-bottom:1.25rem;">
-    <!-- Card 1: Total Inflow (Income) -->
-    <div class="metric-card" style="background:var(--bg-card); border:1px solid var(--border); padding:1.1rem 1.25rem; border-radius:10px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; color:var(--text-muted); font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">
-            <span>Total Inflow (Income)</span>
-            <ion-icon name="arrow-up-circle-outline" style="font-size:1.35rem; color:var(--success);"></ion-icon>
-        </div>
-        <div style="font-size:1.45rem; font-weight:800; color:var(--success); margin-top:0.35rem;">
-            + LKR {{ number_format($totalIncome, 2) }}
-        </div>
-        <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.2rem;">
-            {{ $incomeCount }} incoming revenue & disbursement entries
-        </div>
-    </div>
-
-    <!-- Card 2: Total Outflow (Expense) -->
-    <div class="metric-card" style="background:var(--bg-card); border:1px solid var(--border); padding:1.1rem 1.25rem; border-radius:10px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; color:var(--text-muted); font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">
-            <span>Total Outflow (Expense)</span>
-            <ion-icon name="arrow-down-circle-outline" style="font-size:1.35rem; color:var(--danger);"></ion-icon>
-        </div>
-        <div style="font-size:1.45rem; font-weight:800; color:var(--danger); margin-top:0.35rem;">
-            - LKR {{ number_format($totalExpense, 2) }}
-        </div>
-        <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.2rem;">
-            {{ $expenseCount }} operational expenses & settlements
-        </div>
-    </div>
-
-    <!-- Card 3: Net Cash Flow / Balance -->
-    <div class="metric-card" style="background:var(--bg-card); border:1px solid var(--border); padding:1.1rem 1.25rem; border-radius:10px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; color:var(--text-muted); font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">
-            <span>Net Cash Movement</span>
-            <ion-icon name="wallet-outline" style="font-size:1.35rem; color:var(--primary);"></ion-icon>
-        </div>
-        <div style="font-size:1.45rem; font-weight:800; color: {{ $netCashFlow >= 0 ? 'var(--text-heading)' : 'var(--danger)' }}; margin-top:0.35rem;">
-            {{ $netCashFlow >= 0 ? '+' : '' }}LKR {{ number_format($netCashFlow, 2) }}
-        </div>
-        <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.2rem;">
-            Net balance across {{ $totalCount }} transactions
-        </div>
-    </div>
-</div>
+<div class="transaction-totals"><div><span>Cash received</span><strong>{{ $baseCurrency }} {{ number_format($totalIncome,2) }}</strong></div><div><span>Cash spent</span><strong>{{ $baseCurrency }} {{ number_format($totalExpense,2) }}</strong></div><div><span>Net movement</span><strong>{{ $baseCurrency }} {{ number_format($netCashFlow,2) }}</strong></div></div>
 
 <!-- Advanced Multi-Criteria Filter Bar -->
-<div class="card" style="padding:1rem 1.25rem; margin-bottom:1.25rem; border:1px solid var(--border); border-radius:10px; background:var(--bg-card);">
+<details class="transaction-filters card" open style="padding:1rem 1.25rem; margin-bottom:1.25rem; border:1px solid var(--border); border-radius:10px; background:var(--bg-card);">
+<summary>Filter transactions</summary>
     @php 
         $currType = request('type', 'all'); 
         $queryParams = request()->except('type');
@@ -263,7 +208,7 @@
             </button>
         </div>
     </form>
-</div>
+</details>
 
 <!-- Transactions Data Table -->
 @if($transactions->isEmpty())
@@ -314,7 +259,7 @@
                             </span>
                         @endif
                         @if(!empty($tx->bank_name))
-                            <span class="badge" style="background:rgba(139,92,246,0.12); color:#8b5cf6; font-size:0.72rem; padding:0.15rem 0.5rem; border-radius:4px; font-weight:600; display:inline-flex; align-items:center; gap:0.25rem;">
+                            <span class="badge" style="background:rgba(139,92,246,0.12); color:var(--primary); font-size:0.72rem; padding:0.15rem 0.5rem; border-radius:4px; font-weight:600; display:inline-flex; align-items:center; gap:0.25rem;">
                                 <ion-icon name="card-outline"></ion-icon> {{ $tx->bank_name }} @if(!empty($tx->bank_account_no)) ({{ $tx->bank_account_no }}) @endif
                             </span>
                         @endif
@@ -419,7 +364,7 @@
                         <label class="form-label" style="font-weight:700;">Category *</label>
                         <select name="category_id" class="form-control" required>
                             @foreach($categories as $cat)
-                                <option value="{{ $cat->id }}">{{ $cat->name }} ({{ ucfirst($cat->type) }})</option>
+                                <option value="{{ $cat->id }}" data-type="{{ $cat->type }}">{{ $cat->name }} ({{ ucfirst($cat->type) }})</option>
                             @endforeach
                         </select>
                     </div>
@@ -514,7 +459,7 @@
                         <label class="form-label" style="font-weight:700;">Category *</label>
                         <select name="category_id" id="edit_category_id" class="form-control" required>
                             @foreach($categories as $cat)
-                                <option value="{{ $cat->id }}">{{ $cat->name }} ({{ ucfirst($cat->type) }})</option>
+                                <option value="{{ $cat->id }}" data-type="{{ $cat->type }}">{{ $cat->name }} ({{ ucfirst($cat->type) }})</option>
                             @endforeach
                         </select>
                     </div>
@@ -569,6 +514,7 @@ function openEditTxModal(tx) {
     document.getElementById('edit_transaction_date').value = tx.transaction_date || '';
     document.getElementById('edit_category_id').value = tx.category_id || '';
     document.getElementById('edit_type').value = tx.type || 'expense';
+    document.getElementById('edit_type').dispatchEvent(new Event('change'));
     document.getElementById('edit_payment_method').value = tx.payment_method || 'Normal';
     document.getElementById('edit_reference_no').value = tx.reference_no || '';
     

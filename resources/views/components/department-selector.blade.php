@@ -43,7 +43,7 @@
             <span id="display_{{ $modalId }}" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: {{ $selectedId ? '600' : '400' }}; color: {{ $selectedId ? 'var(--text-heading)' : 'var(--text-muted)' }}; font-size: 0.9rem;">
                 {{ $selectedName }}
             </span>
-            <span id="code_chip_{{ $modalId }}" class="dept-code-chip" style="display: {{ $selectedCode ? 'inline-block' : 'none' }}; font-size: 0.7rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: 4px; background: var(--primary-light); color: var(--primary); text-transform: uppercase;">
+            <span id="code_chip_{{ $modalId }}" class="dept-code-chip" style="display: {{ $selectedCode ? 'inline-block' : 'none' }}; font-size:0.75rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: 4px; background: var(--primary-light); color: var(--primary); text-transform: uppercase;">
                 {{ $selectedCode }}
             </span>
         </div>
@@ -132,7 +132,7 @@
                                 $html .= '<span style="font-weight: ' . ($isSelected || !$isChild ? '600' : '500') . '; font-size: 0.88rem; color: ' . $nameColor . '; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' . htmlspecialchars($node->name, ENT_QUOTES) . '</span>';
                                 
                                 if (!empty($node->code)) {
-                                    $html .= '<span style="font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.4rem; border-radius: 4px; background: ' . ($isSelected ? 'var(--primary)' : 'var(--bg-page)') . '; color: ' . ($isSelected ? '#ffffff' : 'var(--text-muted)') . '; border: 1px solid var(--border-light); text-transform: uppercase; flex-shrink: 0;">' . htmlspecialchars($node->code, ENT_QUOTES) . '</span>';
+                                    $html .= '<span style="font-size:0.75rem; font-weight: 700; padding: 0.15rem 0.4rem; border-radius: 4px; background: ' . ($isSelected ? 'var(--primary)' : 'var(--bg-page)') . '; color: ' . ($isSelected ? '#ffffff' : 'var(--text-muted)') . '; border: 1px solid var(--border-light); text-transform: uppercase; flex-shrink: 0;">' . htmlspecialchars($node->code, ENT_QUOTES) . '</span>';
                                 }
 
                                 if (!empty($node->children)) {

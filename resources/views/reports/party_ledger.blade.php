@@ -21,7 +21,7 @@
     width: 40px;
     height: 40px;
     border-radius: 10px;
-    background: linear-gradient(135deg, var(--primary) 0%, #4f46e5 100%);
+    background:var(--bg-card);
     color: white;
     font-weight: 800;
     font-size: 1.1rem;
@@ -31,7 +31,7 @@
     flex-shrink: 0;
 }
 .role-pill {
-    font-size: 0.7rem;
+    font-size:0.75rem;
     font-weight: 700;
     padding: 0.15rem 0.5rem;
     border-radius: 6px;
@@ -84,7 +84,7 @@
 </header>
 
 <!-- Consolidated Metric Cards Grid -->
-<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap:1.25rem; margin-bottom:1.75rem;">
+<div class="ds-summary-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap:1.25rem; margin-bottom:1.75rem;">
     <div class="party-kpi-card" style="border-left:4px solid #2563eb;">
         <div style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.05em;">Total Parties Enrolled</div>
         <div style="font-size:1.65rem; font-weight:800; color:var(--text-heading); margin-top:0.3rem;">{{ $partySummaries->count() }}</div>
@@ -202,7 +202,7 @@
                             <div style="font-size:0.72rem; color:var(--text-muted); font-weight:600;">({{ $ps->contract_orig_str }})</div>
                         @endif
                         @if($ps->unbilled_contract_value > 0)
-                            <div style="font-size:0.7rem; color:#d97706; font-weight:700; margin-top:0.15rem;">Unbilled: LKR {{ number_format($ps->unbilled_contract_value, 2) }}</div>
+                            <div style="font-size:0.75rem; color:#d97706; font-weight:700; margin-top:0.15rem;">Unbilled: LKR {{ number_format($ps->unbilled_contract_value, 2) }}</div>
                         @endif
                     @else
                         <span style="color:var(--text-muted);">-</span>
@@ -296,57 +296,17 @@
         <div class="modal-header" style="border-bottom: 1px solid var(--border); padding-bottom: 1rem;">
             <div>
                 <h3 class="modal-title" id="paymentModalPartyTitle" style="font-size: 1.25rem; font-weight: 800; color: var(--text-heading); margin: 0;">Record Party Settlement Payment</h3>
-                <p style="font-size:0.8rem; color:var(--text-muted); margin:0.2rem 0 0 0;">Record funds received or paid with multi-mode payment allocation</p>
+                <p style="font-size:0.8rem; color:var(--text-muted); margin:0.2rem 0 0 0;">Choose the document you are settling.</p>
             </div>
             <button type="button" class="btn-close" onclick="closeModal('recordPartyPaymentModal')">&times;</button>
         </div>
-        <form action="{{ route('reports.party_settlement') }}" method="POST">
-            @csrf
-            <input type="hidden" name="party_id" id="payment_modal_party_id">
-            
-            <div class="modal-body" style="padding: 1.25rem 0;">
-                <div class="form-group">
-                    <label class="form-label font-medium">Settlement Transaction Type *</label>
-                    <select name="settlement_type" id="payment_modal_settlement_type" class="form-control" required>
-                        <option value="receivable_collection">Client AR Collection (Received from Client)</option>
-                        <option value="vendor_bill_payment">Vendor AP Bill Payment (Paid to Vendor)</option>
-                        <option value="loan_repayment">Loan Facility Repayment / Interest Settlement</option>
-                        <option value="commission_payout">Partner Commission Payout</option>
-                    </select>
-                </div>
-
-                <div class="form-row" style="margin-top: 1.25rem;">
-                    <div class="form-col">
-                        <label class="form-label font-medium">Settlement Amount (LKR) *</label>
-                        <x-amount-input name="amount" id="payment_modal_amount" required="true" placeholder="0.00" />
-                    </div>
-                    <div class="form-col">
-                        <label class="form-label font-medium">Payment Date *</label>
-                        <input type="date" name="payment_date" class="form-control" value="{{ date('Y-m-d') }}" required>
-                    </div>
-                </div>
-
-                <div class="form-group" style="margin-top: 1.25rem;">
-                    <label class="form-label font-medium">Reference / Receipt Number</label>
-                    <input type="text" name="reference_no" class="form-control" placeholder="e.g. REC-2026-001 or SETTLE-99">
-                </div>
-
-                <!-- Reusable Multi Payment Modes Component -->
-                <x-payment-modes />
-
-                <div class="form-group" style="margin-top: 1.25rem;">
-                    <label class="form-label font-medium">Notes (Optional)</label>
-                    <textarea name="notes" class="form-control" rows="2" placeholder="Additional payment settlement notes..."></textarea>
-                </div>
-            </div>
-            
-            <div class="modal-footer" style="border-top:1px solid var(--border); padding-top:0.85rem; display:flex; justify-content:flex-end; gap:0.5rem;">
-                <button type="button" class="btn btn-outline" onclick="closeModal('recordPartyPaymentModal')">Cancel</button>
-                <button type="submit" class="btn btn-primary-gradient">
-                    <ion-icon name="checkmark-circle-outline" style="vertical-align:middle; margin-right:0.3rem;"></ion-icon> Save Settlement Payment
-                </button>
-            </div>
-        </form>
+        <div class="modal-body ds-stack">
+            <p>Select the source document to record a payment in its currency and preserve its allocation history.</p>
+            <a class="btn btn-outline" id="settleInvoices" href="/invoices">Client invoices and receipts</a>
+            <a class="btn btn-outline" id="settleVendors" href="/payables/vendor-bills">Vendor bill payments</a>
+            <a class="btn btn-outline" id="settleLoans" href="/loans">Loan repayments and interest</a>
+            <a class="btn btn-outline" href="/projects">Project commission payouts</a>
+        </div>
     </div>
 </div>
 
@@ -402,7 +362,7 @@ function openPartyLedgerModal(partyId) {
 
     let html = `
         <div style="background:var(--bg-page); border:1px solid var(--border); border-radius:14px; padding:1.25rem; margin-bottom:1.25rem;">
-            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:1.25rem; align-items:center;">
+            <div class="ds-summary-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:1.25rem; align-items:center;">
                 <div>
                     <div style="font-size:0.72rem; text-transform:uppercase; color:var(--text-muted); font-weight:700; letter-spacing:0.04em;">Invoiced / Borrowed Total</div>
                     <div style="font-size:1.3rem; font-weight:800; color:var(--text-heading); margin-top:0.2rem;">
@@ -483,7 +443,7 @@ function openPartyLedgerModal(partyId) {
                 <tr style="border-bottom: 1px solid var(--border-light);">
                     <td style="padding:0.85rem 1rem; font-weight:600; font-size:0.88rem;">${tx.date}</td>
                     <td style="padding:0.85rem 1rem;">
-                        <span style="font-size:0.7rem; font-weight:700; padding:0.15rem 0.45rem; border-radius:5px; ${typeBadgeStyle}">
+                        <span style="font-size:0.75rem; font-weight:700; padding:0.15rem 0.45rem; border-radius:5px; ${typeBadgeStyle}">
                             ${tx.type}
                         </span>
                     </td>
@@ -514,33 +474,10 @@ function openPartyLedgerModal(partyId) {
 function openPartyPaymentModal() {
     if (!currentModalParty) return;
 
-    document.getElementById('payment_modal_party_id').value = currentModalParty.id;
-    document.getElementById('paymentModalPartyTitle').innerText = 'Record Settlement Payment: ' + currentModalParty.name;
-    
-    // Auto select settlement type based on party roles
-    const selectType = document.getElementById('payment_modal_settlement_type');
-    if (currentModalParty.types.includes('partner')) {
-        selectType.value = 'commission_payout';
-    } else if (currentModalParty.types.includes('vendor')) {
-        selectType.value = 'vendor_bill_payment';
-    } else if (currentModalParty.types.includes('lender') || currentModalParty.types.includes('director') || currentModalParty.types.includes('bank')) {
-        selectType.value = 'loan_repayment';
-    } else {
-        selectType.value = 'receivable_collection';
-    }
-
-    // Auto fill net balance amount
-    const absBal = Math.abs(currentModalParty.net_balance);
-    const amountVal = currentModalParty.net_balance < 0 ? (currentModalParty.total_payables || absBal) : (currentModalParty.ar_balance || absBal);
-    
-    const amtInput = document.getElementById('payment_modal_amount');
-    if (amtInput) {
-        amtInput.value = amountVal > 0 ? amountVal : '';
-        const hiddenAmt = amtInput.nextElementSibling;
-        if (hiddenAmt) hiddenAmt.value = amountVal > 0 ? amountVal : '';
-        if (typeof formatAmountBlur === 'function') formatAmountBlur(amtInput);
-    }
-
+    document.getElementById('paymentModalPartyTitle').textContent = 'Settle: ' + currentModalParty.name;
+    document.getElementById('settleInvoices').href = '/invoices?client_id=' + currentModalParty.id;
+    document.getElementById('settleVendors').href = '/payables/vendor-bills?vendor_id=' + currentModalParty.id;
+    document.getElementById('settleLoans').href = '/loans?party_id=' + currentModalParty.id;
     openModal('recordPartyPaymentModal');
 }
 

@@ -2,12 +2,20 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\ActivityLogService;
+use App\Services\LedgerPostingService;
+use App\Services\LoanBalanceService;
+use App\Services\LoanFlowService;
+use App\Services\PeriodLockService;
+use App\Services\TransactionPostingService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\Paginator;
-use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 class LoanController extends Controller
 {
@@ -22,27 +30,27 @@ class LoanController extends Controller
         $startDate = $request->input('start_date') ?: $request->input('from');
         $endDate = $request->input('end_date') ?: $request->input('to');
 
-        if (!empty($startDate)) {
-            $query->where(function($q) use ($startDate) {
+        if (! empty($startDate)) {
+            $query->where(function ($q) use ($startDate) {
                 $q->where('claimed_date', '>=', $startDate)
-                  ->orWhere('start_date', '>=', $startDate);
+                    ->orWhere('start_date', '>=', $startDate);
             });
         }
-        if (!empty($endDate)) {
-            $query->where(function($q) use ($endDate) {
+        if (! empty($endDate)) {
+            $query->where(function ($q) use ($endDate) {
                 $q->where('claimed_date', '<=', $endDate)
-                  ->orWhere('start_date', '<=', $endDate);
+                    ->orWhere('start_date', '<=', $endDate);
             });
         }
         if ($request->filled('status') && $request->input('status') !== 'all') {
             $query->where('status', '=', $request->input('status'));
         }
         if ($request->filled('search')) {
-            $search = '%' . $request->input('search') . '%';
+            $search = '%'.$request->input('search').'%';
             $hasLoanCode = Schema::hasColumn('loans', 'loan_code');
-            $query->where(function($q) use ($search, $hasLoanCode) {
+            $query->where(function ($q) use ($search, $hasLoanCode) {
                 $q->where('lender_name', 'LIKE', $search)
-                  ->orWhere('purpose', 'LIKE', $search);
+                    ->orWhere('purpose', 'LIKE', $search);
                 if ($hasLoanCode) {
                     $q->orWhere('loan_code', 'LIKE', $search);
                 }
@@ -50,100 +58,32 @@ class LoanController extends Controller
         }
 
         $loans = $query->get();
-        
+
         $totalBorrowed = 0;
         $totalPrincipalRepaid = 0;
         $totalOutstandingPrincipal = 0;
         $totalInterestPaid = 0;
         $thisMonthPayable = 0;
         $totalOutstandingInterest = 0;
-        
+
         foreach ($loans as $loan) {
-            // Calculate repayments and draws
-            $repayments = DB::table('loan_principal_records')
-                            ->where('loan_id', $loan->id)
-                            ->where('record_type', 'repayment')
-                            ->sum('amount');
-            $draws = DB::table('loan_principal_records')
-                            ->where('loan_id', $loan->id)
-                            ->where('record_type', 'draw')
-                            ->sum('amount');
-            
-            $outstandingPrincipal = max(0, $loan->principal_amount + $draws - $repayments);
-            $loan->outstanding_principal = $outstandingPrincipal;
-            $loan->principal_repaid = $repayments;
-            
-            // Total borrowed and interest paid apply to all loans
-            $totalBorrowed += $loan->principal_amount + $draws;
-            $totalPrincipalRepaid += $repayments;
-            
-            $interestPaid = DB::table('loan_interest_schedule')
-                                    ->where('loan_id', $loan->id)
-                                    ->sum('paid_amount');
-
-            // For settled loans without schedules or with partial schedule recording
-            if ($loan->status === 'settled') {
-                $contractedInterest = 0;
-                if ($loan->interest_method === 'fixed_amount' && !empty($loan->interest_amount)) {
-                    $term = !empty($loan->term_months) ? (int)$loan->term_months : 1;
-                    $contractedInterest = $term * $loan->interest_amount;
-                } elseif (!empty($loan->total_interest)) {
-                    $contractedInterest = $loan->total_interest;
-                } elseif ($loan->interest_method === 'percentage_rate' && !empty($loan->interest_rate)) {
-                    $term = !empty($loan->term_months) ? (int)$loan->term_months : 1;
-                    $contractedInterest = $term * ($loan->principal_amount * ($loan->interest_rate / 100));
-                }
-                $schedTotal = DB::table('loan_interest_schedule')->where('loan_id', $loan->id)->sum('interest_amount');
-                if ($schedTotal > 0) {
-                    $contractedInterest = max($contractedInterest, $schedTotal);
-                }
-                if ($contractedInterest > 0 && $interestPaid < $contractedInterest) {
-                    $interestPaid = $contractedInterest;
-                }
+            $schedules = DB::table('loan_interest_schedule')->where('loan_id', $loan->id)->get();
+            $balance = LoanBalanceService::calculate($loan, $schedules);
+            foreach ($balance as $field => $value) {
+                $loan->$field = $value;
+            }
+            $outstandingPrincipal = $balance['outstanding_principal'];
+            $loanPendingInterest = $balance['pending_interest'];
+            $totalBorrowed += $balance['total_borrowed'];
+            $totalPrincipalRepaid += $balance['principal_repaid'];
+            $totalInterestPaid += $balance['interest_paid'];
+            if ($loan->status === 'active') {
+                $thisMonthPayable += $schedules->whereIn('status', ['pending', 'partially_paid', 'overdue'])
+                    ->filter(fn ($row) => Carbon::parse($row->due_date)->isCurrentMonth())
+                    ->sum(fn ($row) => max(0, $row->interest_amount - ($row->paid_amount ?? 0)));
             }
 
-            $totalInterestPaid += $interestPaid;
-            $loan->interest_paid = $interestPaid;
-            
-            // Pending interest due calculation
-            $pendingSchedules = DB::table('loan_interest_schedule')
-                                    ->where('loan_id', $loan->id)
-                                    ->whereIn('status', ['pending', 'partially_paid', 'overdue'])
-                                    ->get();
-                                    
-            $loanPendingInterest = 0;
-            foreach($pendingSchedules as $sched) {
-                $dueAmt = max(0, $sched->interest_amount - ($sched->paid_amount ?? 0));
-                $loanPendingInterest += $dueAmt;
-                
-                if ($loan->status === 'active' && \Carbon\Carbon::parse($sched->due_date)->isCurrentMonth()) {
-                    $thisMonthPayable += $dueAmt;
-                }
-            }
-
-            // Fallback for loans without generated schedule rows yet (e.g. pending loans)
-            if ($loanPendingInterest == 0 && DB::table('loan_interest_schedule')->where('loan_id', $loan->id)->count() == 0) {
-                if ($loan->interest_method === 'no_interest') {
-                    $loanPendingInterest = 0;
-                } elseif (!empty($loan->is_upfront_interest)) {
-                    $term = !empty($loan->term_months) ? (int)$loan->term_months : 1;
-                    if ($term > 1) {
-                        $loanPendingInterest = ($term - 1) * ($loan->interest_amount ?? 0);
-                    } else {
-                        $loanPendingInterest = 0;
-                    }
-                } elseif ($loan->interest_method === 'fixed_amount' && !empty($loan->interest_amount)) {
-                    $loanPendingInterest = $loan->interest_amount;
-                } elseif (!empty($loan->total_interest)) {
-                    $loanPendingInterest = $loan->total_interest;
-                }
-            }
-
-            $loan->pending_interest = $loanPendingInterest;
-            $loan->total_outstanding = $outstandingPrincipal + $loanPendingInterest;
-            $loan->total_paid = $loan->principal_repaid + $loan->interest_paid;
-
-            $loan->net_disbursed = !empty($loan->is_upfront_interest ?? null) 
+            $loan->net_disbursed = ! empty($loan->is_upfront_interest ?? null)
                 ? max(0, ($loan->principal_amount ?? 0) - (($loan->upfront_interest_amount ?? null) ?: ($loan->interest_amount ?? 0)))
                 : ($loan->principal_amount ?? 0);
 
@@ -154,7 +94,7 @@ class LoanController extends Controller
                 ->first();
             $loan->settled_date = $settledRecord ? $settledRecord->record_date : ($loan->status === 'settled' ? date('Y-m-d', strtotime($loan->updated_at)) : null);
 
-            if ($loan->status === 'active' || $loan->status === 'pending') {
+            if (in_array($loan->status, ['active', 'pending', 'defaulted'])) {
                 $totalOutstandingPrincipal += $outstandingPrincipal;
                 $totalOutstandingInterest += $loanPendingInterest;
 
@@ -164,13 +104,13 @@ class LoanController extends Controller
                     ->whereIn('status', ['pending', 'partially_paid'])
                     ->orderBy('due_date', 'asc')
                     ->first();
-                    
+
                 $loan->next_due_date = $nextDue ? $nextDue->due_date : (($loan->maturity_date ?? null) ?: 'N/A');
             } else {
                 $loan->next_due_date = 'N/A';
             }
             // Attach linked bank account details
-            if (!empty($loan->bank_account_id)) {
+            if (! empty($loan->bank_account_id)) {
                 $bank = DB::table('bank_accounts')->where('id', $loan->bank_account_id)->first();
                 $loan->bank_name = $bank ? $bank->bank_name : null;
                 $loan->account_no = $bank ? $bank->account_no : null;
@@ -179,13 +119,13 @@ class LoanController extends Controller
                 $loan->account_no = null;
             }
         }
-        
-        $totalWantToPaid = $totalOutstandingPrincipal + $totalOutstandingInterest;
+
+        $totalWantToPaid = $loans->whereIn('status', ['active', 'pending', 'defaulted'])->sum('total_outstanding');
         $totalPaidAll = $totalPrincipalRepaid + $totalInterestPaid;
         $totalLoansCount = $loans->count();
         $activeLoansCount = $loans->where('status', 'active')->count();
         $settledLoansCount = $loans->where('status', 'settled')->count();
-        
+
         $parties = DB::table('parties')->orderBy('name')->get();
 
         // Load Bank Accounts with live balances
@@ -206,23 +146,22 @@ class LoanController extends Controller
         ]);
 
         return view('loans', compact(
-            'loans', 
+            'loans',
             'parties',
             'bankAccounts',
-            'totalBorrowed', 
-            'totalPrincipalRepaid', 
+            'totalBorrowed',
+            'totalPrincipalRepaid',
             'totalInterestPaid',
             'totalPaidAll',
             'totalOutstandingPrincipal',
             'totalOutstandingInterest',
-            'totalWantToPaid', 
+            'totalWantToPaid',
             'thisMonthPayable',
             'totalLoansCount',
             'activeLoansCount',
             'settledLoansCount'
         ));
     }
-
 
     public function schedules(Request $request)
     {
@@ -244,7 +183,7 @@ class LoanController extends Controller
         if ($request->filled('status') && $request->input('status') !== 'all') {
             if ($request->input('status') === 'overdue') {
                 $query->where('loan_interest_schedule.due_date', '<', now()->format('Y-m-d'))
-                      ->whereIn('loan_interest_schedule.status', ['pending', 'partially_paid']);
+                    ->whereIn('loan_interest_schedule.status', ['pending', 'partially_paid']);
             } else {
                 $query->where('loan_interest_schedule.status', $request->input('status'));
             }
@@ -313,21 +252,21 @@ class LoanController extends Controller
             ->select(
                 'loan_interest_schedule.id',
                 'loan_interest_schedule.loan_id',
-                DB::raw("COALESCE(loan_interest_schedule.paid_date, loan_interest_schedule.due_date) as date"),
+                DB::raw('COALESCE(loan_interest_schedule.paid_date, loan_interest_schedule.due_date) as date'),
                 DB::raw("'interest' as category"),
                 'loan_interest_schedule.paid_amount as amount',
                 DB::raw("'Normal' as payment_mode"),
-                DB::raw("NULL as reference_no"),
+                DB::raw('NULL as reference_no'),
                 DB::raw("'Interest Settlement' as notes"),
                 'loans.lender_name',
                 'loans.currency'
             );
 
         if ($request->filled('start_date')) {
-            $queryInterest->where(DB::raw("COALESCE(loan_interest_schedule.paid_date, loan_interest_schedule.due_date)"), '>=', $request->input('start_date'));
+            $queryInterest->where(DB::raw('COALESCE(loan_interest_schedule.paid_date, loan_interest_schedule.due_date)'), '>=', $request->input('start_date'));
         }
         if ($request->filled('end_date')) {
-            $queryInterest->where(DB::raw("COALESCE(loan_interest_schedule.paid_date, loan_interest_schedule.due_date)"), '<=', $request->input('end_date'));
+            $queryInterest->where(DB::raw('COALESCE(loan_interest_schedule.paid_date, loan_interest_schedule.due_date)'), '<=', $request->input('end_date'));
         }
 
         $interestRecords = $queryInterest->get();
@@ -341,7 +280,7 @@ class LoanController extends Controller
             $loanTotals[$l->id] = [
                 'principal_paid' => $pPaid,
                 'interest_paid' => $iPaid,
-                'total_paid' => $pPaid + $iPaid
+                'total_paid' => $pPaid + $iPaid,
             ];
         }
 
@@ -389,7 +328,10 @@ class LoanController extends Controller
 
     public function store(Request $request)
     {
-        $data = $request->except(['_token', 'attachments', 'custom_dates', 'custom_amounts']);
+        $this->validateTerms($request);
+        $data = $request->only(['loan_type', 'party_id', 'lender_name', 'principal_amount', 'currency', 'purpose', 'claimed_date', 'term_months', 'interest_method', 'interest_amount', 'interest_rate', 'rate_basis', 'total_interest', 'due_day', 'frequency', 'guarantor', 'collateral', 'status', 'maturity_date', 'bank_account_id', 'reminder_days', 'loan_code', 'is_upfront_interest', 'upfront_interest_amount']);
+        $data['loan_type'] = $request->input('loan_type') ?: LoanBalanceService::INTEREST_SEPARATE;
+        $data['status'] = 'pending';
         $data['created_at'] = now();
         $data['updated_at'] = now();
 
@@ -402,7 +344,7 @@ class LoanController extends Controller
                 }
             }
         }
-        
+
         if (($data['interest_method'] ?? null) === 'no_interest') {
             $data['interest_amount'] = 0;
             $data['total_interest'] = 0;
@@ -420,7 +362,7 @@ class LoanController extends Controller
             }
         }
 
-        if (!empty($data['maturity_date']) && !empty($data['claimed_date'])) {
+        if (! empty($data['maturity_date']) && ! empty($data['claimed_date'])) {
             $d1 = Carbon::parse($data['claimed_date']);
             $d2 = Carbon::parse($data['maturity_date']);
             $diffMonths = $d1->diffInMonths($d2);
@@ -432,7 +374,7 @@ class LoanController extends Controller
         }
 
         if ($request->filled('bank_account_id')) {
-            $data['bank_account_id'] = (int)$request->input('bank_account_id');
+            $data['bank_account_id'] = (int) $request->input('bank_account_id');
         } else {
             $data['bank_account_id'] = null;
         }
@@ -441,53 +383,44 @@ class LoanController extends Controller
             $data['reminder_days'] = 3;
         }
 
-        if (empty($data['due_day']) && !empty($data['claimed_date'])) {
+        if (empty($data['due_day']) && ! empty($data['claimed_date'])) {
             $data['due_day'] = Carbon::parse($data['claimed_date'])->day;
         }
 
         if (empty($data['loan_code'])) {
             $lastLoan = DB::table('loans')->orderBy('id', 'desc')->first();
             $nextId = ($lastLoan ? $lastLoan->id : 0) + 1;
-            $data['loan_code'] = 'LN-' . str_pad($nextId, 4, '0', STR_PAD_LEFT);
+            $data['loan_code'] = 'LN-'.str_pad($nextId, 4, '0', STR_PAD_LEFT);
         }
 
-        if(empty($data['status'])) $data['status'] = 'pending';
+        if (empty($data['status'])) {
+            $data['status'] = 'pending';
+        }
 
         $loanId = DB::table('loans')->insertGetId($data);
 
         // Ensure loan_code is set
         $currentCode = DB::table('loans')->where('id', $loanId)->value('loan_code');
         if (empty($currentCode)) {
-            DB::table('loans')->where('id', $loanId)->update(['loan_code' => 'LN-' . str_pad($loanId, 4, '0', STR_PAD_LEFT)]);
+            DB::table('loans')->where('id', $loanId)->update(['loan_code' => 'LN-'.str_pad($loanId, 4, '0', STR_PAD_LEFT)]);
         }
 
-        \App\Services\ActivityLogService::logCreate('Loan', $loanId, [
+        ActivityLogService::logCreate('Loan', $loanId, [
             'lender_name' => $data['lender_name'] ?? null,
             'loan_code' => $data['loan_code'] ?? null,
             'principal_amount' => $data['principal_amount'] ?? null,
             'purpose' => $data['purpose'] ?? null,
         ]);
 
-        if ($request->hasFile('attachments')) {
-            foreach ($request->file('attachments') as $file) {
-                $path = $file->store('attachments/loans', 'public');
-                DB::table('attachments')->insert([
-                    'model_id' => $loanId,
-                    'model_type' => 'Loan',
-                    'file_name' => $file->getClientOriginalName(),
-                    'file_path' => $path,
-                    'created_at' => now()
-                ]);
-            }
-        }
+        $this->storeAttachments($request, (int) $loanId);
 
         // For custom schedule, we save the schedule immediately during store
         if ($data['interest_method'] === 'custom_schedule') {
             $customDates = $request->input('custom_dates', []);
             $customAmounts = $request->input('custom_amounts', []);
             $inserts = [];
-            for($i = 0; $i < count($customDates); $i++) {
-                if(!empty($customDates[$i]) && !empty($customAmounts[$i])) {
+            for ($i = 0; $i < count($customDates); $i++) {
+                if (! empty($customDates[$i]) && ! empty($customAmounts[$i])) {
                     $inserts[] = [
                         'loan_id' => $loanId,
                         'due_date' => $customDates[$i],
@@ -497,7 +430,7 @@ class LoanController extends Controller
                     ];
                 }
             }
-            if (!empty($inserts)) {
+            if (! empty($inserts)) {
                 DB::table('loan_interest_schedule')->insert($inserts);
             }
         }
@@ -516,9 +449,29 @@ class LoanController extends Controller
     public function update(Request $request, $id)
     {
         $loan = DB::table('loans')->where('id', $id)->first();
-        if (!$loan) abort(404);
+        if (! $loan) {
+            abort(404);
+        }
 
-        $data = $request->except(['_token', '_method', 'attachments', 'custom_dates', 'custom_amounts']);
+        $this->validateAttachments($request);
+
+        if ($loan->status !== 'pending') {
+            $financial = ['principal_amount', 'currency', 'claimed_date', 'interest_method', 'interest_rate', 'interest_amount', 'bank_account_id', 'term_months', 'frequency', 'total_interest', 'upfront_interest_amount', 'is_upfront_interest', 'due_day'];
+            foreach ($financial as $field) {
+                if ($request->has($field) && (string) $request->input($field) !== (string) $loan->$field && (! is_numeric($loan->$field) || (float) $request->input($field) !== (float) $loan->$field)) {
+                    throw ValidationException::withMessages([$field => 'Activated financial terms are locked. Record a draw, repayment, or settlement instead.']);
+                }
+            }
+            $metadata = $request->validate(['loan_type' => 'sometimes|required|in:interest_separate,principal_and_interest', 'purpose' => 'nullable|string|max:5000', 'guarantor' => 'nullable|string|max:255', 'collateral' => 'nullable|string|max:5000']);
+            DB::table('loans')->where('id', $id)->update($metadata + ['updated_at' => now()]);
+            ActivityLogService::logUpdate('Loan', $id, (array) $loan, $metadata);
+            $this->storeAttachments($request, (int) $id);
+
+            return back()->with('success', 'Loan details updated. Posted financial terms are preserved.');
+        }
+        $this->validateTerms($request);
+        $data = $request->only(['loan_type', 'party_id', 'lender_name', 'principal_amount', 'currency', 'purpose', 'claimed_date', 'term_months', 'interest_method', 'interest_amount', 'interest_rate', 'rate_basis', 'total_interest', 'due_day', 'frequency', 'guarantor', 'collateral', 'status', 'maturity_date', 'bank_account_id', 'reminder_days', 'loan_code', 'is_upfront_interest', 'upfront_interest_amount']);
+        $data['status'] = 'pending';
         $data['updated_at'] = now();
 
         if ($request->filled('party_id')) {
@@ -548,7 +501,7 @@ class LoanController extends Controller
             }
         }
 
-        if (!empty($data['maturity_date']) && !empty($data['claimed_date'])) {
+        if (! empty($data['maturity_date']) && ! empty($data['claimed_date'])) {
             $d1 = Carbon::parse($data['claimed_date']);
             $d2 = Carbon::parse($data['maturity_date']);
             $diffMonths = $d1->diffInMonths($d2);
@@ -560,7 +513,7 @@ class LoanController extends Controller
         }
 
         if ($request->filled('bank_account_id')) {
-            $data['bank_account_id'] = (int)$request->input('bank_account_id');
+            $data['bank_account_id'] = (int) $request->input('bank_account_id');
         } else {
             $data['bank_account_id'] = null;
         }
@@ -569,107 +522,22 @@ class LoanController extends Controller
             $data['reminder_days'] = 3;
         }
 
-        if (empty($data['due_day']) && !empty($data['claimed_date'])) {
+        if (empty($data['due_day']) && ! empty($data['claimed_date'])) {
             $data['due_day'] = Carbon::parse($data['claimed_date'])->day;
         }
 
-        $oldPrincipal = $loan->principal_amount;
-        $oldClaimedDate = $loan->claimed_date;
-        $oldBankAccountId = $loan->bank_account_id ?? null;
-
         DB::table('loans')->where('id', $id)->update($data);
 
-        \App\Services\ActivityLogService::logUpdate('Loan', $id, (array) $loan, $data);
+        ActivityLogService::logUpdate('Loan', $id, (array) $loan, $data);
 
-        if ($request->hasFile('attachments')) {
-            foreach ($request->file('attachments') as $file) {
-                $path = $file->store('attachments/loans', 'public');
-                DB::table('attachments')->insert([
-                    'model_id' => $id,
-                    'model_type' => 'Loan',
-                    'file_name' => $file->getClientOriginalName(),
-                    'file_path' => $path,
-                    'created_at' => now()
-                ]);
+        $this->storeAttachments($request, (int) $id);
+
+        // Pending loans have no posted movements. Only their custom schedule is editable here.
+        DB::table('loan_interest_schedule')->where('loan_id', $id)->delete();
+        if (($data['interest_method'] ?? $loan->interest_method) === 'custom_schedule') {
+            foreach ($request->input('custom_dates', []) as $index => $date) {
+                DB::table('loan_interest_schedule')->insert(['loan_id' => $id, 'due_date' => $date, 'interest_amount' => $request->input('custom_amounts.'.$index), 'status' => 'pending', 'created_at' => now()]);
             }
-        }
-
-        $hasPaidSchedules = DB::table('loan_interest_schedule')
-            ->where('loan_id', $id)
-            ->where(function($q) {
-                $q->where('status', 'paid')
-                  ->orWhere('paid_amount', '>', 0);
-            })
-            ->exists();
-
-        $updatedLoan = (array) DB::table('loans')->where('id', $id)->first();
-
-        $paidCount = DB::table('loan_interest_schedule')
-            ->where('loan_id', $id)
-            ->where(function($q) {
-                $q->where('status', 'paid')
-                  ->orWhere('paid_amount', '>', 0);
-            })
-            ->count();
-
-        if ($paidCount === 0 && $updatedLoan['status'] === 'active') {
-            DB::table('loan_interest_schedule')->where('loan_id', $id)->delete();
-            if ($updatedLoan['interest_method'] === 'custom_schedule') {
-                $customDates = $request->input('custom_dates', []);
-                $customAmounts = $request->input('custom_amounts', []);
-                $inserts = [];
-                for($i = 0; $i < count($customDates); $i++) {
-                    if(!empty($customDates[$i]) && !empty($customAmounts[$i])) {
-                        $inserts[] = [
-                            'loan_id' => $id,
-                            'due_date' => $customDates[$i],
-                            'interest_amount' => $customAmounts[$i],
-                            'status' => 'pending',
-                            'created_at' => now(),
-                        ];
-                    }
-                }
-                if (!empty($inserts)) {
-                    DB::table('loan_interest_schedule')->insert($inserts);
-                }
-            } else {
-                $this->generateInterestSchedule($id, $updatedLoan['claimed_date'] ?: now()->format('Y-m-d'), $updatedLoan);
-            }
-        } elseif ($paidCount > 0 && $updatedLoan['status'] === 'active') {
-            if ($updatedLoan['interest_method'] !== 'custom_schedule') {
-                $lastPaid = DB::table('loan_interest_schedule')
-                    ->where('loan_id', $id)
-                    ->where(function($q) {
-                        $q->where('status', 'paid')
-                          ->orWhere('paid_amount', '>', 0);
-                    })
-                    ->orderBy('due_date', 'desc')
-                    ->first();
-
-                $startFrom = $lastPaid ? Carbon::parse($lastPaid->due_date)->addDay()->format('Y-m-d') : null;
-
-                DB::table('loan_interest_schedule')
-                    ->where('loan_id', $id)
-                    ->where('status', '!=', 'paid')
-                    ->where('paid_amount', '<=', 0)
-                    ->delete();
-
-                $this->generateInterestSchedule($id, $updatedLoan['claimed_date'] ?: now()->format('Y-m-d'), $updatedLoan, $startFrom);
-            }
-        }
-
-        // Sync initial disbursement transaction if active and amounts or bank account changed
-        if ($loan->status === 'active') {
-            DB::table('transactions')
-                ->where('reference_no', "LOAN-ACT-{$id}")
-                ->update([
-                    'bank_account_id' => $updatedLoan['bank_account_id'] ?? null,
-                    'amount' => $updatedLoan['principal_amount'],
-                    'currency' => $updatedLoan['currency'],
-                    'transaction_date' => $updatedLoan['claimed_date'] ?: now()->format('Y-m-d'),
-                    'description' => "Loan Disbursement from {$updatedLoan['lender_name']}" . ($updatedLoan['purpose'] ? " ({$updatedLoan['purpose']})" : ""),
-                    'updated_at' => now()
-                ]);
         }
 
         $this->syncLoanMaturityReminder($id);
@@ -679,26 +547,30 @@ class LoanController extends Controller
 
     private function generateInterestSchedule($loanId, $startDate, $loanData, $startFromDate = null)
     {
-        if ($loanData['interest_method'] === 'no_interest') return;
+        if ($loanData['interest_method'] === 'no_interest') {
+            return;
+        }
 
-        $termMonths = !empty($loanData['term_months']) ? (int)$loanData['term_months'] : 1;
+        $termMonths = ! empty($loanData['term_months']) ? (int) $loanData['term_months'] : 1;
         $claimedCarbon = Carbon::parse($startDate);
-        $dueDay = !empty($loanData['due_day']) ? (int)$loanData['due_day'] : $claimedCarbon->day;
-        $isUpfront = !empty($loanData['is_upfront_interest']);
-        $upfrontAmount = !empty($loanData['upfront_interest_amount']) ? (float)$loanData['upfront_interest_amount'] : null;
+        $dueDay = ! empty($loanData['due_day']) ? (int) $loanData['due_day'] : $claimedCarbon->day;
+        $isUpfront = ! empty($loanData['is_upfront_interest']);
+        $upfrontAmount = ! empty($loanData['upfront_interest_amount']) ? (float) $loanData['upfront_interest_amount'] : null;
 
         $inserts = [];
-        $outstanding = (float)($loanData['principal_amount'] ?? 0);
+        $outstanding = (float) ($loanData['principal_amount'] ?? 0);
 
-        $computePeriodicInterest = function() use ($loanData, $outstanding, $termMonths) {
+        $computePeriodicInterest = function () use ($loanData, $outstanding, $termMonths) {
             if ($loanData['interest_method'] === 'fixed_amount') {
-                return (float)($loanData['interest_amount'] ?? 0);
+                return (float) ($loanData['interest_amount'] ?? 0);
             } elseif ($loanData['interest_method'] === 'percentage_rate') {
-                return $outstanding * ((float)($loanData['interest_rate'] ?? 0) / 100);
-            } elseif ($loanData['interest_method'] === 'equal_installments') {
-                $totalToPay = (float)($loanData['total_interest'] ?? 0);
+                return $outstanding * ((float) ($loanData['interest_rate'] ?? 0) / 100);
+            } elseif (in_array($loanData['interest_method'], ['equal_installments', 'total_interest'])) {
+                $totalToPay = (float) ($loanData['total_interest'] ?? 0);
+
                 return $totalToPay / max(1, $termMonths);
             }
+
             return 0;
         };
 
@@ -764,7 +636,7 @@ class LoanController extends Controller
             }
         }
 
-        if (!empty($inserts)) {
+        if (! empty($inserts)) {
             DB::table('loan_interest_schedule')->insert($inserts);
         }
     }
@@ -772,24 +644,24 @@ class LoanController extends Controller
     public function show($id)
     {
         $loan = DB::table('loans')->where('id', $id)->first();
-        if (!$loan) abort(404);
+        if (! $loan) {
+            abort(404);
+        }
 
         $schedules = DB::table('loan_interest_schedule')
-                        ->where('loan_id', $id)
-                        ->orderBy('due_date', 'asc')
-                        ->get();
-                        
-        $principalRecords = DB::table('loan_principal_records')
-                                ->where('loan_id', $id)
-                                ->orderBy('record_date', 'desc')
-                                ->get();
-                                
-        $repayments = $principalRecords->where('record_type', 'repayment')->sum('amount');
-        $draws = $principalRecords->where('record_type', 'draw')->sum('amount');
-        $outstanding = $loan->principal_amount + $draws - $repayments;
-        $loan->outstanding_principal = $outstanding;
+            ->where('loan_id', $id)
+            ->orderBy('due_date', 'asc')
+            ->get();
 
-        $loan->net_disbursed = !empty($loan->is_upfront_interest ?? null) 
+        $principalRecords = DB::table('loan_principal_records')
+            ->where('loan_id', $id)
+            ->orderBy('record_date', 'desc')
+            ->get();
+
+        $balance = LoanBalanceService::calculate($loan, $schedules, $principalRecords);
+        $loan->outstanding_principal = $balance['outstanding_principal'];
+
+        $loan->net_disbursed = ! empty($loan->is_upfront_interest ?? null)
             ? max(0, ($loan->principal_amount ?? 0) - (($loan->upfront_interest_amount ?? null) ?: ($loan->interest_amount ?? 0)))
             : ($loan->principal_amount ?? 0);
 
@@ -797,10 +669,10 @@ class LoanController extends Controller
         $loan->settled_date = $settledRecord ? $settledRecord->record_date : ($loan->status === 'settled' ? date('Y-m-d', strtotime($loan->updated_at)) : null);
 
         $attachments = DB::table('attachments')
-                        ->where('model_type', 'Loan')
-                        ->where('model_id', $id)
-                        ->get();
-                        
+            ->where('model_type', 'Loan')
+            ->where('model_id', $id)
+            ->get();
+
         $parties = DB::table('parties')->orderBy('name')->get();
 
         // Load Bank Accounts with live balances
@@ -810,33 +682,38 @@ class LoanController extends Controller
             $outflow = DB::table('transactions')->where('bank_account_id', $acc->id)->where('type', 'expense')->sum('amount');
             $acc->current_balance = ($acc->opening_balance ?? 0) + $inflow - $outflow;
         }
-        $linkedBankAccount = !empty($loan->bank_account_id) ? $bankAccounts->firstWhere('id', $loan->bank_account_id) : null;
-                        
-        return view('loans-show', compact('loan', 'schedules', 'principalRecords', 'attachments', 'parties', 'bankAccounts', 'linkedBankAccount'));
+        $linkedBankAccount = ! empty($loan->bank_account_id) ? $bankAccounts->firstWhere('id', $loan->bank_account_id) : null;
+
+        $loanFlow = LoanFlowService::graph((int) $id);
+        $fundingLoans = DB::table('loans')->where('id', '!=', $id)->where('currency', $loan->currency)
+            ->whereIn('status', ['active', 'defaulted', 'settled', 'closed'])->orderByDesc('claimed_date')->get();
+
+        return view('loans-show', compact('loan', 'balance', 'schedules', 'principalRecords', 'attachments', 'parties', 'bankAccounts', 'linkedBankAccount', 'loanFlow', 'fundingLoans'));
     }
 
     public function activate($id)
     {
-        $loan = DB::table('loans')->where('id', $id)->first();
-        if ($loan && $loan->status === 'pending') {
+        $loan = DB::table('loans')->where('id', $id)->lockForUpdate()->first();
+        abort_unless($loan, 404);
+        if ($loan->status === 'pending') {
             DB::table('loans')->where('id', $id)->update(['status' => 'active']);
-            
+
             // convert to array for generateInterestSchedule
             $loanData = (array) $loan;
             if ($loanData['interest_method'] !== 'custom_schedule') {
                 $this->generateInterestSchedule($id, $loan->claimed_date ?: now()->format('Y-m-d'), $loanData);
             }
-            
+
             // Auto-post Income Transaction for Loan Disbursement
             $catId = $this->getCategoryId('Loan Disbursement', 'income');
-            
-            $isUpfront = !empty($loan->is_upfront_interest);
+
+            $isUpfront = ! empty($loan->is_upfront_interest);
             $upfrontAmt = $isUpfront ? ($loan->upfront_interest_amount ?: $loan->interest_amount) : 0;
             $disbursedAmount = ($isUpfront && $upfrontAmt > 0) ? max(0, $loan->principal_amount - $upfrontAmt) : $loan->principal_amount;
 
             $desc = "Loan Disbursement from {$loan->lender_name}";
             if ($isUpfront && $upfrontAmt > 0) {
-                $desc .= " (Net received: " . number_format($disbursedAmount, 2) . ", deducted " . number_format($upfrontAmt, 2) . " for upfront interest on " . number_format($loan->principal_amount, 2) . " principal)";
+                $desc .= ' (Net received: '.number_format($disbursedAmount, 2).', deducted '.number_format($upfrontAmt, 2).' for upfront interest on '.number_format($loan->principal_amount, 2).' principal)';
                 if ($loan->purpose) {
                     $desc .= " - {$loan->purpose}";
                 }
@@ -844,7 +721,7 @@ class LoanController extends Controller
                 $desc .= " ({$loan->purpose})";
             }
 
-            DB::table('transactions')->insert([
+            TransactionPostingService::create([
                 'type' => 'income',
                 'category_id' => $catId,
                 'department_id' => $this->getDepartmentId(),
@@ -856,31 +733,38 @@ class LoanController extends Controller
                 'reference_no' => "LOAN-ACT-{$loan->id}",
                 'payment_method' => 'Normal',
                 'created_at' => now(),
-                'updated_at' => now()
+                'updated_at' => now(),
             ]);
 
+            if ($upfrontAmt > 0) {
+                LedgerPostingService::postJournal($loan->claimed_date ?: date('Y-m-d'), 'Interest withheld on loan '.$loan->id, [['account_code' => '5200', 'debit' => $upfrontAmt, 'currency' => $loan->currency], ['account_code' => '2200', 'credit' => $upfrontAmt, 'currency' => $loan->currency]], $loan->id, 'LoanWithheldInterest');
+            }
             $this->syncLoanMaturityReminder($id);
 
             return back()->with('success', 'Loan activated, interest schedule generated, and disbursement posted to bank account ledger!');
         }
+
         return back()->with('error', 'Loan cannot be activated.');
     }
 
     public function syncLoanMaturityReminder($loanId)
     {
         $loan = DB::table('loans')->where('id', $loanId)->first();
-        if (!$loan || empty($loan->maturity_date)) {
+        if (! $loan || empty($loan->maturity_date)) {
             if (Schema::hasTable('reminders')) {
                 DB::table('reminders')
                     ->where('type', 'loan')
                     ->where('reference_id', $loanId)
                     ->delete();
             }
+
             return;
         }
-        if (!Schema::hasTable('reminders')) return;
+        if (! Schema::hasTable('reminders')) {
+            return;
+        }
 
-        $remTitle = "Loan Principal Repayment Due: {$loan->lender_name} ({$loan->currency} " . number_format($loan->principal_amount, 2) . ")";
+        $remTitle = "Loan Principal Repayment Due: {$loan->lender_name} ({$loan->currency} ".number_format($loan->principal_amount, 2).')';
         $existing = DB::table('reminders')
             ->where('type', 'loan')
             ->where('reference_id', $loanId)
@@ -894,7 +778,7 @@ class LoanController extends Controller
                 'due_date' => $loan->maturity_date,
                 'notify_before_days' => $loan->reminder_days ?? 3,
                 'status' => $status,
-                'notes' => "Full principal repayment of {$loan->currency} " . number_format($loan->principal_amount, 2) . " due for {$loan->lender_name}",
+                'notes' => "Full principal repayment of {$loan->currency} ".number_format($loan->principal_amount, 2)." due for {$loan->lender_name}",
                 'updated_at' => now(),
             ]);
         } else {
@@ -906,7 +790,7 @@ class LoanController extends Controller
                 'due_date' => $loan->maturity_date,
                 'notify_before_days' => $loan->reminder_days ?? 3,
                 'status' => $status,
-                'notes' => "Full principal repayment of {$loan->currency} " . number_format($loan->principal_amount, 2) . " due for {$loan->lender_name}",
+                'notes' => "Full principal repayment of {$loan->currency} ".number_format($loan->principal_amount, 2)." due for {$loan->lender_name}",
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -915,50 +799,112 @@ class LoanController extends Controller
 
     public function updateStatus(Request $request, $id)
     {
-        $newStatus = $request->input('status');
-        DB::table('loans')->where('id', $id)->update([
-            'status' => $newStatus,
-            'updated_at' => now()
-        ]);
-
-        if ($newStatus === 'active') {
-            $loan = DB::table('loans')->where('id', $id)->first();
-            $hasSchedule = DB::table('loan_interest_schedule')->where('loan_id', $id)->exists();
-            if (!$hasSchedule && $loan && $loan->interest_method !== 'custom_schedule') {
-                $this->generateInterestSchedule($id, $loan->claimed_date ?: now()->format('Y-m-d'), (array)$loan);
+        $request->validate(['status' => 'required|in:active,settled,defaulted']);
+        $loan = DB::table('loans')->where('id', $id)->lockForUpdate()->first();
+        abort_unless($loan, 404);
+        $status = $request->status;
+        if ($status === 'active' && $loan->status === 'pending') {
+            return $this->activate($id);
+        }
+        if ($status === 'settled') {
+            $principal = $loan->principal_amount + DB::table('loan_principal_records')->where('loan_id', $id)->where('record_type', 'draw')->sum('amount') - DB::table('loan_principal_records')->where('loan_id', $id)->where('record_type', 'repayment')->sum('amount');
+            $interest = DB::table('loan_interest_schedule')->where('loan_id', $id)->whereNotIn('status', ['paid', 'skipped'])->sum(DB::raw('interest_amount - paid_amount'));
+            if ($principal > 0.005 || $interest > 0.005) {
+                throw ValidationException::withMessages(['status' => 'Use full settlement to record outstanding principal and interest before closing this loan.']);
             }
         }
-
+        abort_unless(in_array($loan->status, ['active', 'defaulted']) && $loan->status !== $status, 422);
+        DB::table('loans')->where('id', $id)->update(['status' => $status, 'updated_at' => now()]);
+        ActivityLogService::logUpdate('Loan', $id, ['status' => $loan->status], ['status' => $status]);
         $this->syncLoanMaturityReminder($id);
 
-        return back()->with('success', 'Loan status updated successfully.');
+        return back()->with('success', 'Loan status updated.');
+    }
+
+    private function validateAttachments(Request $request): void
+    {
+        $request->validate([
+            'attachments' => 'nullable|array',
+            'attachments.*' => 'required|file|max:10240|mimes:pdf,jpg,jpeg,png,webp,doc,docx',
+        ]);
+    }
+
+    private function storeAttachments(Request $request, int $loanId): void
+    {
+        $disk = Storage::disk(config('filesystems.documents_disk', 'local'));
+        $stored = [];
+        try {
+            foreach ($request->file('attachments', []) as $file) {
+                $path = $disk->putFile('attachments/loans', $file);
+                if (! $path) {
+                    abort(503, 'The attachments could not be saved. Please try again.');
+                }
+                $stored[] = $path;
+                DB::table('attachments')->insert([
+                    'model_id' => $loanId,
+                    'model_type' => 'Loan',
+                    'file_name' => $file->getClientOriginalName(),
+                    'file_path' => $path,
+                    'created_at' => now(),
+                ]);
+            }
+        } catch (\Throwable $error) {
+            $disk->delete($stored);
+            throw $error;
+        }
+    }
+
+    private function validateTerms(Request $request): void
+    {
+        $this->validateAttachments($request);
+        $request->validate([
+            'lender_name' => 'required_without:party_id|nullable|string|max:255', 'party_id' => 'nullable|exists:parties,id',
+            'principal_amount' => 'required|numeric|gt:0', 'currency' => 'required|string|size:3', 'claimed_date' => 'required|date_format:Y-m-d',
+            'loan_type' => 'sometimes|required|in:interest_separate,principal_and_interest',
+            'interest_method' => 'required|in:no_interest,fixed_amount,percentage_rate,total_interest,equal_installments,custom_schedule',
+            'interest_amount' => 'nullable|numeric|min:0', 'interest_rate' => 'nullable|numeric|min:0', 'total_interest' => 'nullable|numeric|min:0',
+            'upfront_interest_amount' => 'nullable|numeric|min:0|lt:principal_amount', 'term_months' => 'nullable|integer|min:1|max:600',
+            'due_day' => 'nullable|integer|min:1|max:31', 'maturity_date' => 'nullable|date_format:Y-m-d|after_or_equal:claimed_date',
+            'bank_account_id' => 'nullable|exists:bank_accounts,id', 'custom_dates' => 'nullable|array', 'custom_dates.*' => 'required|date_format:Y-m-d',
+            'custom_amounts' => 'nullable|array', 'custom_amounts.*' => 'required|numeric|gt:0',
+        ]);
+        if (count($request->input('custom_dates', [])) !== count($request->input('custom_amounts', []))) {
+            throw ValidationException::withMessages(['custom_dates' => 'Provide an amount for each custom schedule date.']);
+        }
     }
 
     public function settleInterestPeriod(Request $request, $id, $scheduleId)
     {
+        $request->validate(['paid_amount' => 'required|numeric|gt:0', 'paid_date' => 'nullable|date_format:Y-m-d']);
+        PeriodLockService::checkLockedDate($request->paid_date ?: date('Y-m-d'));
+        $period = DB::table('loan_interest_schedule')->where('id', $scheduleId)->where('loan_id', $id)->lockForUpdate()->first();
+        abort_unless($period, 404);
+        if (round($request->paid_amount + $period->paid_amount, 2) > round($period->interest_amount, 2)) {
+            throw ValidationException::withMessages(['paid_amount' => 'Payment cannot exceed the outstanding interest.']);
+        }
         $paidAmount = floatval($request->input('paid_amount'));
         $paidDate = $request->input('paid_date') ?: now()->format('Y-m-d');
-        
+
         $schedule = DB::table('loan_interest_schedule')->where('id', $scheduleId)->first();
         $loan = DB::table('loans')->where('id', $id)->first();
         $bankAccountId = $request->input('bank_account_id') ?: ($loan->bank_account_id ?? null);
-        
+
         $newPaidTotal = ($schedule->paid_amount ?? 0) + $paidAmount;
         $status = 'partially_paid';
         if ($newPaidTotal >= $schedule->interest_amount) {
             $status = 'paid';
         }
-        
+
         DB::table('loan_interest_schedule')->where('id', $scheduleId)->update([
             'paid_amount' => $newPaidTotal,
             'paid_date' => $paidDate,
-            'status' => $status
+            'status' => $status,
         ]);
 
         // Auto-post Expense Transaction for Interest Payment
         if ($paidAmount > 0) {
             $catId = $this->getCategoryId('Interest Expense', 'expense');
-            DB::table('transactions')->insert([
+            TransactionPostingService::create([
                 'type' => 'expense',
                 'category_id' => $catId,
                 'department_id' => $this->getDepartmentId(),
@@ -970,16 +916,17 @@ class LoanController extends Controller
                 'reference_no' => "LOAN-INT-{$loan->id}-{$scheduleId}",
                 'payment_method' => 'Normal',
                 'created_at' => now(),
-                'updated_at' => now()
+                'updated_at' => now(),
             ]);
         }
-        
+
         return back()->with('success', 'Interest settled and posted to ledger.');
     }
 
     public function markInterestNotNeeded($id, $scheduleId)
     {
         DB::table('loan_interest_schedule')->where('id', $scheduleId)->update(['status' => 'skipped']);
+
         return back()->with('success', 'Interest period skipped.');
     }
 
@@ -1005,7 +952,7 @@ class LoanController extends Controller
     {
         $request->validate([
             'due_date' => 'required|date',
-            'interest_amount' => 'required|numeric|min:0'
+            'interest_amount' => 'required|numeric|min:0',
         ]);
 
         DB::table('loan_interest_schedule')->insert([
@@ -1015,7 +962,7 @@ class LoanController extends Controller
             'paid_amount' => 0.00,
             'status' => 'pending',
             'created_at' => now(),
-            'updated_at' => now()
+            'updated_at' => now(),
         ]);
 
         return back()->with('success', 'Additional interest schedule added successfully.');
@@ -1023,13 +970,21 @@ class LoanController extends Controller
 
     public function recordPrincipalRepayment(Request $request, $id)
     {
+        $request->validate(['source_loan_id' => 'nullable|integer|exists:loans,id', 'amount' => 'required|numeric|min:0.01|decimal:0,2', 'record_date' => 'nullable|date_format:Y-m-d', 'bank_account_id' => 'nullable|exists:bank_accounts,id']);
+        PeriodLockService::checkLockedDate($request->record_date ?: date('Y-m-d'));
+        $current = DB::table('loans')->where('id', $id)->lockForUpdate()->first();
+        abort_unless($current && $current->status === 'active', 422);
+        $outstanding = $current->principal_amount + DB::table('loan_principal_records')->where('loan_id', $id)->where('record_type', 'draw')->sum('amount') - DB::table('loan_principal_records')->where('loan_id', $id)->where('record_type', 'repayment')->sum('amount');
+        if (round($request->amount, 2) > round($outstanding, 2)) {
+            throw ValidationException::withMessages(['amount' => 'Repayment cannot exceed the outstanding principal.']);
+        }
         $loan = DB::table('loans')->where('id', $id)->first();
         $amount = floatval($request->input('amount'));
         $recordDate = $request->input('record_date') ?: now()->format('Y-m-d');
         $pmMode = is_array($request->input('pm_mode')) ? current($request->input('pm_mode')) : ($request->input('pm_mode') ?: 'Normal');
         $bankAccountId = $request->input('bank_account_id') ?: ($loan->bank_account_id ?? null);
 
-        DB::table('loan_principal_records')->insert([
+        $recordId = DB::table('loan_principal_records')->insertGetId([
             'loan_id' => $id,
             'record_type' => 'repayment',
             'amount' => $amount,
@@ -1037,12 +992,16 @@ class LoanController extends Controller
             'payment_mode' => $pmMode,
             'reference_no' => is_array($request->input('pm_reference')) ? current($request->input('pm_reference')) : $request->input('pm_reference'),
             'notes' => $request->input('notes'),
-            'created_at' => now()
+            'created_at' => now(),
         ]);
-        
+
+        if ($request->filled('source_loan_id')) {
+            LoanFlowService::link((int) $id, $recordId, (int) $request->source_loan_id, $amount);
+        }
+
         $this->recalculateReducingBalance($id);
 
-        \App\Services\ActivityLogService::logCreate('LoanRepayment', $id, [
+        ActivityLogService::logCreate('LoanRepayment', $id, [
             'loan_id' => $id,
             'amount' => $amount,
             'record_date' => $recordDate,
@@ -1051,7 +1010,7 @@ class LoanController extends Controller
         // Auto-post Expense Transaction for Principal Repayment
         if ($amount > 0) {
             $catId = $this->getCategoryId('Loan Principal Repayment', 'expense');
-            DB::table('transactions')->insert([
+            TransactionPostingService::create([
                 'type' => 'expense',
                 'category_id' => $catId,
                 'department_id' => $this->getDepartmentId(),
@@ -1059,19 +1018,22 @@ class LoanController extends Controller
                 'amount' => $amount,
                 'currency' => $loan->currency,
                 'transaction_date' => $recordDate,
-                'description' => "Principal Repayment to {$loan->lender_name}" . ($request->input('notes') ? " ({$request->input('notes')})" : ""),
+                'description' => "Principal Repayment to {$loan->lender_name}".($request->input('notes') ? " ({$request->input('notes')})" : ''),
                 'reference_no' => "LOAN-PRIN-{$loan->id}",
                 'payment_method' => $pmMode ?: 'Normal',
                 'created_at' => now(),
-                'updated_at' => now()
+                'updated_at' => now(),
             ]);
         }
-        
+
         return back()->with('success', 'Principal repayment recorded and posted to ledger.');
     }
 
     public function addPrincipalDraw(Request $request, $id)
     {
+        $request->validate(['amount' => 'required|numeric|gt:0', 'record_date' => 'nullable|date_format:Y-m-d', 'bank_account_id' => 'nullable|exists:bank_accounts,id']);
+        PeriodLockService::checkLockedDate($request->record_date ?: date('Y-m-d'));
+        abort_unless(DB::table('loans')->where('id', $id)->where('status', 'active')->exists(), 422);
         $loan = DB::table('loans')->where('id', $id)->first();
         $amount = floatval($request->input('amount'));
         $recordDate = $request->input('record_date') ?: now()->format('Y-m-d');
@@ -1083,15 +1045,15 @@ class LoanController extends Controller
             'amount' => $amount,
             'record_date' => $recordDate,
             'notes' => $request->input('notes'),
-            'created_at' => now()
+            'created_at' => now(),
         ]);
-        
+
         $this->recalculateReducingBalance($id);
 
         // Auto-post Income Transaction for Additional Draw
         if ($amount > 0) {
             $catId = $this->getCategoryId('Loan Disbursement', 'income');
-            DB::table('transactions')->insert([
+            TransactionPostingService::create([
                 'type' => 'income',
                 'category_id' => $catId,
                 'department_id' => $this->getDepartmentId(),
@@ -1099,32 +1061,38 @@ class LoanController extends Controller
                 'amount' => $amount,
                 'currency' => $loan->currency,
                 'transaction_date' => $recordDate,
-                'description' => "Additional Loan Draw from {$loan->lender_name}" . ($request->input('notes') ? " ({$request->input('notes')})" : ""),
+                'description' => "Additional Loan Draw from {$loan->lender_name}".($request->input('notes') ? " ({$request->input('notes')})" : ''),
                 'reference_no' => "LOAN-DRAW-{$loan->id}",
                 'payment_method' => 'Normal',
                 'created_at' => now(),
-                'updated_at' => now()
+                'updated_at' => now(),
             ]);
         }
 
         return back()->with('success', 'Additional draw recorded and posted to ledger.');
     }
-    
+
     public function settleFully(Request $request, $id)
     {
-        $loan = DB::table('loans')->where('id', $id)->first();
+        $request->validate(['source_loan_id' => 'nullable|integer|exists:loans,id', 'settlement_date' => 'nullable|date_format:Y-m-d', 'paid_date' => 'nullable|date_format:Y-m-d', 'bank_account_id' => 'nullable|exists:bank_accounts,id']);
+        $loan = DB::table('loans')->where('id', $id)->lockForUpdate()->first();
+        abort_unless($loan && in_array($loan->status, ['active', 'defaulted']), 422);
         $repayments = DB::table('loan_principal_records')->where('loan_id', $id)->where('record_type', 'repayment')->sum('amount');
         $draws = DB::table('loan_principal_records')->where('loan_id', $id)->where('record_type', 'draw')->sum('amount');
-        
+
         $outstanding = $loan->principal_amount + $draws - $repayments;
         $settlementDate = $request->input('settlement_date') ?: ($request->input('paid_date') ?: now()->format('Y-m-d'));
         $paymentMethod = is_array($request->input('payment_method')) ? current($request->input('payment_method')) : ($request->input('payment_method') ?: 'Normal');
         $referenceNo = $request->input('reference_no') ?: "LOAN-SETTLE-{$loan->id}";
         $notes = $request->input('notes') ?: 'Full Principal Settlement';
         $bankAccountId = $request->input('bank_account_id') ?: ($loan->bank_account_id ?? null);
-        
+
+        if ($request->filled('source_loan_id') && $outstanding <= 0) {
+            throw ValidationException::withMessages(['source_loan_id' => 'There is no principal left to link. Record interest payments separately.']);
+        }
+        PeriodLockService::checkLockedDate($settlementDate);
         if ($outstanding > 0) {
-            DB::table('loan_principal_records')->insert([
+            $recordId = DB::table('loan_principal_records')->insertGetId([
                 'loan_id' => $id,
                 'record_type' => 'repayment',
                 'amount' => $outstanding,
@@ -1132,12 +1100,16 @@ class LoanController extends Controller
                 'payment_mode' => $paymentMethod,
                 'reference_no' => $referenceNo,
                 'notes' => $notes,
-                'created_at' => now()
+                'created_at' => now(),
             ]);
+
+            if ($request->filled('source_loan_id')) {
+                LoanFlowService::link((int) $id, $recordId, (int) $request->source_loan_id, (float) $outstanding);
+            }
 
             // Auto-post Expense Transaction for Full Principal Settlement
             $catId = $this->getCategoryId('Loan Principal Repayment', 'expense');
-            DB::table('transactions')->insert([
+            TransactionPostingService::create([
                 'type' => 'expense',
                 'category_id' => $catId,
                 'department_id' => $this->getDepartmentId(),
@@ -1149,10 +1121,10 @@ class LoanController extends Controller
                 'reference_no' => $referenceNo,
                 'payment_method' => $paymentMethod,
                 'created_at' => now(),
-                'updated_at' => now()
+                'updated_at' => now(),
             ]);
         }
-        
+
         // Also settle any remaining pending interest schedules for this loan
         $pendingInterestSchedules = DB::table('loan_interest_schedule')
             ->where('loan_id', $id)
@@ -1165,13 +1137,13 @@ class LoanController extends Controller
                 'paid_amount' => $sched->interest_amount,
                 'paid_date' => $settlementDate,
                 'status' => 'paid',
-                'updated_at' => now()
+                'updated_at' => now(),
             ]);
 
             if ($unpaidInt > 0) {
                 // Post transaction for interest payment
                 $intCatId = $this->getCategoryId('Interest Expense', 'expense');
-                DB::table('transactions')->insert([
+                TransactionPostingService::create([
                     'type' => 'expense',
                     'category_id' => $intCatId,
                     'department_id' => $this->getDepartmentId(),
@@ -1183,28 +1155,31 @@ class LoanController extends Controller
                     'reference_no' => "LOAN-INT-{$loan->id}-{$sched->id}",
                     'payment_method' => $paymentMethod,
                     'created_at' => now(),
-                    'updated_at' => now()
+                    'updated_at' => now(),
                 ]);
             }
         }
 
         DB::table('loans')->where('id', $id)->update(['status' => 'settled', 'updated_at' => now()]);
-        
-        return back()->with('success', 'Loan fully settled on ' . $settlementDate . ' and transaction posted to ledger!');
+
+        return back()->with('success', 'Loan fully settled on '.$settlementDate.' and transaction posted to ledger!');
     }
-    
+
     private function getCategoryId($name, $type)
     {
         $cat = DB::table('categories')->where('name', $name)->first();
-        if ($cat) return $cat->id;
+        if ($cat) {
+            return $cat->id;
+        }
 
         $companyId = DB::table('companies')->value('id') ?? 1;
+
         return DB::table('categories')->insertGetId([
             'company_id' => $companyId,
             'name' => $name,
             'type' => $type,
             'created_at' => now(),
-            'updated_at' => now()
+            'updated_at' => now(),
         ]);
     }
 
@@ -1212,18 +1187,20 @@ class LoanController extends Controller
     {
         return DB::table('departments')->value('id') ?? 1;
     }
-    
+
     private function recalculateReducingBalance($id)
     {
         $loan = DB::table('loans')->where('id', $id)->first();
-        if ($loan->interest_method !== 'percentage_rate' || $loan->rate_basis !== 'reducing') return;
-        
+        if ($loan->interest_method !== 'percentage_rate' || $loan->rate_basis !== 'reducing') {
+            return;
+        }
+
         $repayments = DB::table('loan_principal_records')->where('loan_id', $id)->where('record_type', 'repayment')->sum('amount');
         $draws = DB::table('loan_principal_records')->where('loan_id', $id)->where('record_type', 'draw')->sum('amount');
         $outstanding = $loan->principal_amount + $draws - $repayments;
-        
+
         $newInterestAmount = $outstanding * ($loan->interest_rate / 100);
-        
+
         // Update all future pending schedules
         DB::table('loan_interest_schedule')
             ->where('loan_id', $id)
@@ -1235,7 +1212,11 @@ class LoanController extends Controller
     public function destroy($id)
     {
         $oldLoan = DB::table('loans')->where('id', $id)->first();
-        DB::transaction(function() use ($id) {
+        abort_unless($oldLoan, 404);
+        if ($oldLoan->status !== 'pending') {
+            throw ValidationException::withMessages(['loan' => 'Activated loans cannot be deleted. Settle the facility to preserve financial history.']);
+        }
+        DB::transaction(function () use ($id) {
             // Delete associated interest schedule rows
             DB::table('loan_interest_schedule')->where('loan_id', $id)->delete();
 
@@ -1244,10 +1225,10 @@ class LoanController extends Controller
 
             // Delete associated reminders
             DB::table('reminders')
-                ->where(function($q) {
+                ->where(function ($q) {
                     $q->where('type', 'loan')
-                      ->orWhere('type', 'loan_interest')
-                      ->orWhere('reference_type', 'Loan');
+                        ->orWhere('type', 'loan_interest')
+                        ->orWhere('reference_type', 'Loan');
                 })
                 ->where('reference_id', $id)
                 ->delete();
@@ -1255,21 +1236,23 @@ class LoanController extends Controller
             // Delete associated attachments
             $attachments = DB::table('attachments')->where('model_type', 'Loan')->where('model_id', $id)->get();
             foreach ($attachments as $att) {
-                if (!empty($att->file_path) && \Illuminate\Support\Facades\Storage::disk('public')->exists($att->file_path)) {
-                    \Illuminate\Support\Facades\Storage::disk('public')->delete($att->file_path);
+                foreach (array_unique([config('filesystems.documents_disk', 'local'), 'public']) as $disk) {
+                    if (! empty($att->file_path) && Storage::disk($disk)->exists($att->file_path)) {
+                        Storage::disk($disk)->delete($att->file_path);
+                    }
                 }
             }
             DB::table('attachments')->where('model_type', 'Loan')->where('model_id', $id)->delete();
 
             // Delete associated auto-transactions
             DB::table('transactions')
-                ->where(function($q) use ($id) {
+                ->where(function ($q) use ($id) {
                     $q->where('reference_no', "LOAN-ACT-{$id}")
-                      ->orWhere('reference_no', "LOAN-PRIN-{$id}")
-                      ->orWhere('reference_no', "LOAN-DRAW-{$id}")
-                      ->orWhere('reference_no', "LOAN-SETTLE-{$id}")
-                      ->orWhere('reference_no', 'LIKE', "LOAN-INT-{$id}-%")
-                      ->orWhere('reference_no', 'LIKE', "LOAN-%-{$id}");
+                        ->orWhere('reference_no', "LOAN-PRIN-{$id}")
+                        ->orWhere('reference_no', "LOAN-DRAW-{$id}")
+                        ->orWhere('reference_no', "LOAN-SETTLE-{$id}")
+                        ->orWhere('reference_no', 'LIKE', "LOAN-INT-{$id}-%")
+                        ->orWhere('reference_no', 'LIKE', "LOAN-%-{$id}");
                 })
                 ->delete();
 
@@ -1284,18 +1267,18 @@ class LoanController extends Controller
     {
         $query = DB::table('loans');
         if ($request->filled('search')) {
-            $search = '%' . $request->input('search') . '%';
+            $search = '%'.$request->input('search').'%';
             $partyIds = DB::table('parties')->where('name', 'LIKE', $search)->pluck('id');
-            $query->where(function($q) use ($search, $partyIds) {
+            $query->where(function ($q) use ($search, $partyIds) {
                 $q->where('lender_name', 'LIKE', $search)
-                  ->orWhereIn('party_id', $partyIds);
+                    ->orWhereIn('party_id', $partyIds);
             });
         }
         $loans = $query->get();
 
         // Group loans by party_id or lender_name
-        $grouped = $loans->groupBy(function($item) {
-            return $item->party_id ? 'party_' . $item->party_id : 'lender_' . preg_replace('/[^a-z0-9]/i', '_', strtolower($item->lender_name));
+        $grouped = $loans->groupBy(function ($item) {
+            return $item->party_id ? 'party_'.$item->party_id : 'lender_'.preg_replace('/[^a-z0-9]/i', '_', strtolower($item->lender_name));
         });
 
         $allPartyReports = collect();
@@ -1306,99 +1289,24 @@ class LoanController extends Controller
 
             if ($partyId) {
                 $p = DB::table('parties')->where('id', $partyId)->first();
-                if ($p) $partyName = $p->name;
+                if ($p) {
+                    $partyName = $p->name;
+                }
             }
 
-            $totalBorrowed = 0;
-            $totalPrincipalRepaid = 0;
-            $totalInterestPaid = 0;
-            $totalPendingInterest = 0;
-            $activeCount = 0;
-            $settledCount = 0;
-            $pendingCount = 0;
+            $balances = $partyLoans->map(fn ($loan) => LoanBalanceService::calculate($loan));
+            $totalBorrowed = $balances->sum('total_borrowed');
+            $totalPrincipalRepaid = $balances->sum('principal_repaid');
+            $totalInterestPaid = $balances->sum('interest_paid');
+            $totalPendingInterest = $balances->sum('pending_interest');
+            $outstandingPrincipal = $balances->sum('outstanding_principal');
+            $totalPayables = $balances->sum('total_outstanding');
+            $totalPaids = $balances->sum('total_paid');
+            $activeCount = $partyLoans->where('status', 'active')->count();
+            $settledCount = $partyLoans->where('status', 'settled')->count();
+            $pendingCount = $partyLoans->where('status', 'pending')->count();
 
-            foreach ($partyLoans as $loan) {
-                if ($loan->status === 'active') $activeCount++;
-                elseif ($loan->status === 'settled') $settledCount++;
-                elseif ($loan->status === 'pending') $pendingCount++;
-
-                $repayments = DB::table('loan_principal_records')
-                    ->where('loan_id', $loan->id)
-                    ->where('record_type', 'repayment')
-                    ->sum('amount');
-                $draws = DB::table('loan_principal_records')
-                    ->where('loan_id', $loan->id)
-                    ->where('record_type', 'draw')
-                    ->sum('amount');
-
-                $totalBorrowed += ($loan->principal_amount + $draws);
-                $totalPrincipalRepaid += $repayments;
-
-                $interestPaid = DB::table('loan_interest_schedule')
-                    ->where('loan_id', $loan->id)
-                    ->sum('paid_amount');
-
-                // For settled loans without schedules or with partial schedule recording
-                if ($loan->status === 'settled') {
-                    $contractedInterest = 0;
-                    if ($loan->interest_method === 'fixed_amount' && !empty($loan->interest_amount)) {
-                        $term = !empty($loan->term_months) ? (int)$loan->term_months : 1;
-                        $contractedInterest = $term * $loan->interest_amount;
-                    } elseif (!empty($loan->total_interest)) {
-                        $contractedInterest = $loan->total_interest;
-                    } elseif ($loan->interest_method === 'percentage_rate' && !empty($loan->interest_rate)) {
-                        $term = !empty($loan->term_months) ? (int)$loan->term_months : 1;
-                        $contractedInterest = $term * ($loan->principal_amount * ($loan->interest_rate / 100));
-                    }
-                    $schedTotal = DB::table('loan_interest_schedule')->where('loan_id', $loan->id)->sum('interest_amount');
-                    if ($schedTotal > 0) {
-                        $contractedInterest = max($contractedInterest, $schedTotal);
-                    }
-                    if ($contractedInterest > 0 && $interestPaid < $contractedInterest) {
-                        $interestPaid = $contractedInterest;
-                    }
-                }
-
-                $totalInterestPaid += $interestPaid;
-
-                $loanPendingInt = 0;
-                if ($loan->status === 'active' || $loan->status === 'pending') {
-                    $pendingSchedules = DB::table('loan_interest_schedule')
-                        ->where('loan_id', $loan->id)
-                        ->whereIn('status', ['pending', 'partially_paid', 'overdue'])
-                        ->get();
-
-                    foreach ($pendingSchedules as $s) {
-                        $loanPendingInt += max(0, $s->interest_amount - ($s->paid_amount ?? 0));
-                    }
-
-                    // Fallback for loans without generated schedule rows yet (e.g. pending activation)
-                    if ($loanPendingInt == 0 && DB::table('loan_interest_schedule')->where('loan_id', $loan->id)->count() == 0) {
-                        if ($loan->interest_method === 'no_interest') {
-                            $loanPendingInt = 0;
-                        } elseif (!empty($loan->is_upfront_interest)) {
-                            $term = !empty($loan->term_months) ? (int)$loan->term_months : 1;
-                            if ($term > 1) {
-                                $loanPendingInt = ($term - 1) * ($loan->interest_amount ?? 0);
-                            } else {
-                                $loanPendingInt = 0;
-                            }
-                        } elseif ($loan->interest_method === 'fixed_amount' && !empty($loan->interest_amount)) {
-                            $term = !empty($loan->term_months) ? (int)$loan->term_months : 1;
-                            $loanPendingInt = $term * ($loan->interest_amount ?? 0);
-                        } elseif (!empty($loan->total_interest)) {
-                            $loanPendingInt = $loan->total_interest;
-                        }
-                    }
-                }
-                $totalPendingInterest += $loanPendingInt;
-            }
-
-            $outstandingPrincipal = max(0, $totalBorrowed - $totalPrincipalRepaid);
-            $totalPayables = $outstandingPrincipal + $totalPendingInterest;
-            $totalPaids = $totalPrincipalRepaid + $totalInterestPaid;
-
-            $allPartyReports->push((object)[
+            $allPartyReports->push((object) [
                 'key' => $key,
                 'party_id' => $partyId,
                 'lender_name' => $firstLoan->lender_name,
@@ -1451,79 +1359,14 @@ class LoanController extends Controller
 
         $facilities = [];
         foreach ($loans as $loan) {
-            $repayments = DB::table('loan_principal_records')
-                ->where('loan_id', $loan->id)
-                ->where('record_type', 'repayment')
-                ->sum('amount');
-            $draws = DB::table('loan_principal_records')
-                ->where('loan_id', $loan->id)
-                ->where('record_type', 'draw')
-                ->sum('amount');
+            $balance = LoanBalanceService::calculate($loan);
 
-            $outstandingPrincipal = max(0, $loan->principal_amount + $draws - $repayments);
-
-            $interestPaid = DB::table('loan_interest_schedule')
-                ->where('loan_id', $loan->id)
-                ->sum('paid_amount');
-
-            $pendingSchedules = DB::table('loan_interest_schedule')
-                ->where('loan_id', $loan->id)
-                ->whereIn('status', ['pending', 'partially_paid', 'overdue'])
-                ->get();
-
-            $loanPendingInterest = 0;
-            if ($loan->status === 'active' || $loan->status === 'pending') {
-                foreach ($pendingSchedules as $sched) {
-                    $loanPendingInterest += max(0, $sched->interest_amount - ($sched->paid_amount ?? 0));
-                }
-
-                if ($loanPendingInterest == 0 && DB::table('loan_interest_schedule')->where('loan_id', $loan->id)->count() == 0) {
-                    if ($loan->interest_method === 'no_interest') {
-                        $loanPendingInterest = 0;
-                    } elseif (!empty($loan->is_upfront_interest)) {
-                        $term = !empty($loan->term_months) ? (int)$loan->term_months : 1;
-                        $loanPendingInterest = $term > 1 ? ($term - 1) * ($loan->interest_amount ?? 0) : 0;
-                    } elseif ($loan->interest_method === 'fixed_amount' && !empty($loan->interest_amount)) {
-                        $term = !empty($loan->term_months) ? (int)$loan->term_months : 1;
-                        $loanPendingInterest = $term * ($loan->interest_amount ?? 0);
-                    } elseif (!empty($loan->total_interest)) {
-                        $loanPendingInterest = $loan->total_interest;
-                    }
-                }
-            }
-
-            if ($loan->status === 'settled') {
-                $contractedInterest = 0;
-                if ($loan->interest_method === 'fixed_amount' && !empty($loan->interest_amount)) {
-                    $term = !empty($loan->term_months) ? (int)$loan->term_months : 1;
-                    $contractedInterest = $term * $loan->interest_amount;
-                } elseif (!empty($loan->total_interest)) {
-                    $contractedInterest = $loan->total_interest;
-                } elseif ($loan->interest_method === 'percentage_rate' && !empty($loan->interest_rate)) {
-                    $term = !empty($loan->term_months) ? (int)$loan->term_months : 1;
-                    $contractedInterest = $term * ($loan->principal_amount * ($loan->interest_rate / 100));
-                }
-                $schedTotal = DB::table('loan_interest_schedule')->where('loan_id', $loan->id)->sum('interest_amount');
-                if ($schedTotal > 0) {
-                    $contractedInterest = max($contractedInterest, $schedTotal);
-                }
-                if ($contractedInterest > 0 && $interestPaid < $contractedInterest) {
-                    $interestPaid = $contractedInterest;
-                }
-            }
-
-            $facilities[] = [
+            $facilities[] = $balance + [
                 'id' => $loan->id,
-                'loan_code' => $loan->loan_code ?: ('LN-' . str_pad($loan->id, 4, '0', STR_PAD_LEFT)),
+                'loan_code' => $loan->loan_code ?: ('LN-'.str_pad($loan->id, 4, '0', STR_PAD_LEFT)),
                 'lender_name' => $loan->lender_name,
                 'status' => $loan->status,
-                'principal_amount' => (float)$loan->principal_amount,
-                'principal_repaid' => (float)$repayments,
-                'outstanding_principal' => (float)$outstandingPrincipal,
-                'interest_paid' => (float)$interestPaid,
-                'pending_interest' => (float)$loanPendingInterest,
-                'total_outstanding' => (float)($outstandingPrincipal + $loanPendingInterest),
-                'total_paid' => (float)($repayments + $interestPaid),
+                'principal_amount' => (float) $loan->principal_amount,
                 'claimed_date' => $loan->claimed_date,
                 'maturity_date' => $loan->maturity_date,
                 'term_months' => $loan->term_months,
@@ -1536,4 +1379,3 @@ class LoanController extends Controller
         return response()->json(['facilities' => $facilities]);
     }
 }
-

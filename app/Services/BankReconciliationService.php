@@ -14,19 +14,22 @@ class BankReconciliationService
     {
         $unmatched = BankStatementImport::where('bank_account_id', $bankAccountId)
             ->where('is_matched', false)
-            ->get();
+            ->lockForUpdate()->get();
 
         $matchedCount = 0;
 
         foreach ($unmatched as $statement) {
             $transaction = Transaction::where('bank_account_id', $bankAccountId)
                 ->where('amount', $statement->amount)
+                ->where('type', $statement->type === 'credit' ? 'income' : 'expense')
                 ->where('reconciled', false)
                 ->whereBetween('transaction_date', [
-                    date('Y-m-d', strtotime($statement->statement_date . ' -3 days')),
-                    date('Y-m-d', strtotime($statement->statement_date . ' +3 days'))
+                    date('Y-m-d', strtotime($statement->statement_date.' -3 days')),
+                    date('Y-m-d', strtotime($statement->statement_date.' +3 days')),
                 ])
-                ->first();
+                ->when($statement->reference_no, fn ($q) => $q->where('reference_no', $statement->reference_no))
+                ->limit(2)->lockForUpdate()->get();
+            $transaction = $transaction->count() === 1 ? $transaction->first() : null;
 
             if ($transaction) {
                 $statement->update([
@@ -34,7 +37,7 @@ class BankReconciliationService
                     'matched_transaction_id' => $transaction->id,
                 ]);
 
-                $transaction->update(['reconciled' => true]);
+                $transaction->update(['reconciled' => true, 'reconciled_at' => now()]);
                 $matchedCount++;
             }
         }

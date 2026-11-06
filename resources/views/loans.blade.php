@@ -3,23 +3,7 @@
 @section('meta_description', 'Track, manage, and settle company loan facilities, repayment schedules, interest calculations, and lender obligations.')
 
 @section('secondary-sidebar')
-<aside class="sidebar-secondary" id="sidebarSecondary">
-    <h2 class="sidebar-title">Loan Management</h2>
-    <nav class="nav-links">
-        <a href="/loans" class="nav-link {{ request()->is('loans') ? 'active' : '' }}">
-            <ion-icon name="cash-outline"></ion-icon> Active Loans
-        </a>
-        <a href="/loans/schedules" class="nav-link {{ request()->is('loans/schedules') ? 'active' : '' }}">
-            <ion-icon name="calendar-outline"></ion-icon> Schedules
-        </a>
-        <a href="/loans/settlements" class="nav-link {{ request()->is('loans/settlements') ? 'active' : '' }}">
-            <ion-icon name="checkmark-done-circle-outline"></ion-icon> Settlements
-        </a>
-        <a href="/loans/party-report" class="nav-link {{ request()->is('loans/party-report') ? 'active' : '' }}">
-            <ion-icon name="pie-chart-outline"></ion-icon> Party Payables & Paids
-        </a>
-    </nav>
-</aside>
+@include('navigation.loans')
 
 @endsection
 
@@ -261,7 +245,7 @@
     <div class="metric-card" style="background:var(--bg-card); border:1px solid var(--border); padding:1rem 1.15rem; border-radius:10px; display:flex; flex-direction:column; justify-content:space-between;">
         <div>
             <div style="display:flex; justify-content:space-between; align-items:center; color:var(--text-muted); font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">
-                <span>Outstanding Balance</span>
+                <span>Payable balance</span>
                 <ion-icon name="alert-circle-outline" style="font-size:1.2rem; color:var(--danger);"></ion-icon>
             </div>
             <div style="font-size:1.35rem; font-weight:800; color:var(--danger); margin-top:0.35rem;">
@@ -273,7 +257,7 @@
                 <strong style="color:var(--danger);">Loan:</strong> {{ number_format($totalOutstandingPrincipal, 2) }}
             </span>
             <span style="color:var(--text-muted);">
-                <strong style="color:#f59e0b;">Interest:</strong> {{ number_format($totalOutstandingInterest, 2) }}
+                <strong style="color:var(--text-muted);">Unpaid interest (included for type 2):</strong> {{ number_format($totalOutstandingInterest, 2) }}
             </span>
         </div>
     </div>
@@ -389,13 +373,13 @@
                         </a>
                         <!-- Status Badge -->
                         @if($loan->status === 'pending')
-                            <span class="badge" style="background:#fef3c7; color:#b45309; font-size:0.7rem; padding:0.15rem 0.5rem;">Pending</span>
+                            <span class="badge" style="background:#fef3c7; color:#b45309; font-size:0.75rem; padding:0.15rem 0.5rem;">Pending</span>
                         @elseif($loan->status === 'active')
-                            <span class="badge" style="background:var(--primary-light); color:var(--primary); font-size:0.7rem; padding:0.15rem 0.5rem;">Active</span>
+                            <span class="badge" style="background:var(--primary-light); color:var(--primary); font-size:0.75rem; padding:0.15rem 0.5rem;">Active</span>
                         @elseif($loan->status === 'settled')
-                            <span class="badge" style="background:#dcfce7; color:#166534; font-size:0.7rem; padding:0.15rem 0.5rem;">Settled</span>
+                            <span class="badge" style="background:#dcfce7; color:#166534; font-size:0.75rem; padding:0.15rem 0.5rem;">Settled</span>
                         @elseif($loan->status === 'closed')
-                            <span class="badge" style="background:#f1f5f9; color:#475569; font-size:0.7rem; padding:0.15rem 0.5rem;">Closed</span>
+                            <span class="badge" style="background:#f1f5f9; color:#475569; font-size:0.75rem; padding:0.15rem 0.5rem;">Closed</span>
                         @endif
                     </div>
                     <div style="font-size:0.78rem; color:var(--text-muted); margin-top:0.15rem;">
@@ -425,6 +409,7 @@
                     <div style="font-size:0.72rem; color:var(--text-muted); text-transform:uppercase; font-weight:600;">Outstanding Balance</div>
                     <div style="font-weight:800; font-size:0.95rem; color: {{ $loan->total_outstanding > 0 ? 'var(--danger)' : 'var(--success)' }};">
                         {{ $loan->currency }} {{ number_format($loan->total_outstanding, 2) }}
+                        <div class="text-muted" style="font-size:12px;font-weight:400;">{{ $loan->loan_type_label }}</div>
                     </div>
                 </div>
 
@@ -680,6 +665,7 @@
             @csrf
             @method('PUT')
             <div class="modal-body">
+                <x-loan-type-selector id="edit_loan_type" />
                 <div class="form-row" style="margin-bottom:1.25rem;">
                     <div class="form-col">
                         <label class="form-label" style="font-weight:700;">Loan Reference Code</label>
@@ -844,8 +830,7 @@
                 </div>
 
                 <div class="form-group" style="margin-top:1.25rem;">
-                    <label class="form-label">Add More Attachments</label>
-                    <input type="file" name="attachments[]" class="form-control" multiple>
+                    <x-loan-attachments label="Add More Attachments" />
                 </div>
             </div>
             <div class="modal-footer">
@@ -866,6 +851,7 @@
         <form action="/loans" method="POST" enctype="multipart/form-data">
             @csrf
             <div class="modal-body">
+                <x-loan-type-selector id="create_loan_type" />
                 <div class="form-row" style="margin-bottom:1.25rem;">
                     <div class="form-col">
                         <label class="form-label" style="font-weight:700;">Loan Reference Code</label>
@@ -1025,8 +1011,7 @@
                 </div>
 
                 <div class="form-group" style="margin-top:1.25rem;">
-                    <label class="form-label">Attachments (Optional)</label>
-                    <input type="file" name="attachments[]" class="form-control" multiple>
+                    <x-loan-attachments label="Attachments (Optional)" />
                 </div>
             </div>
             <div class="modal-footer">
@@ -1228,7 +1213,13 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function openEditLoanModal(loan) {
-    document.getElementById('editLoanForm').action = '/loans/' + loan.id;
+    const editForm = document.getElementById('editLoanForm');
+    editForm.action = '/loans/' + loan.id;
+    const editable = new Set(['_token', '_method', 'loan_type', 'purpose', 'guarantor', 'collateral', 'attachments[]']);
+    editForm.querySelectorAll('input, select, textarea').forEach(field => {
+        field.disabled = loan.status !== 'pending' && !editable.has(field.name);
+    });
+    editForm.querySelector('[name="attachments[]"]').value = '';
     
     const partyEl = document.getElementById('edit_party_id');
     if (partyEl) partyEl.value = loan.party_id || '';
@@ -1249,6 +1240,7 @@ function openEditLoanModal(loan) {
 
     setBankAccountSelectorValue('edit_bank_account_id', loan.bank_account_id || '');
     
+    document.getElementById('edit_loan_type').value = loan.loan_type || 'interest_separate';
     const method = loan.interest_method || 'fixed_amount';
     document.getElementById('edit_interest_method').value = method;
     

@@ -2,10 +2,15 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\ServiceProvider;
-use Illuminate\Support\Facades\View;
+use App\Filesystem\DatabaseDocumentAdapter;
+use Illuminate\Filesystem\FilesystemAdapter;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\View;
+use Illuminate\Support\ServiceProvider;
+use League\Flysystem\Filesystem;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -22,13 +27,19 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Storage::extend('database-documents', function ($app, $config) {
+            $adapter = new DatabaseDocumentAdapter;
+
+            return new FilesystemAdapter(new Filesystem($adapter), $adapter, $config);
+        });
+        View::share('baseCurrency', 'LKR');
         try {
             if (Schema::hasTable('companies')) {
                 $baseCurrency = DB::table('companies')->value('base_currency') ?? 'LKR';
                 View::share('baseCurrency', $baseCurrency);
             }
 
-            \Illuminate\Pagination\Paginator::defaultView('pagination.custom');
+            Paginator::defaultView('pagination.custom');
 
             View::composer('*', function ($view) {
                 try {
@@ -44,8 +55,8 @@ class AppServiceProvider extends ServiceProvider
                             ->get(['due_date', 'notify_before_days']);
 
                         foreach ($pendingReminders as $r) {
-                            $notifyDays = (int)($r->notify_before_days ?? 2);
-                            $notifyStartDate = date('Y-m-d', strtotime($r->due_date . " -{$notifyDays} days"));
+                            $notifyDays = (int) ($r->notify_before_days ?? 2);
+                            $notifyStartDate = date('Y-m-d', strtotime($r->due_date." -{$notifyDays} days"));
                             if ($today >= $notifyStartDate) {
                                 $hasReminders = true;
                                 break;
@@ -54,7 +65,7 @@ class AppServiceProvider extends ServiceProvider
                     }
 
                     // 2. Loan Interest Schedules: due today or overdue
-                    if (!$hasReminders && Schema::hasTable('loan_interest_schedule')) {
+                    if (! $hasReminders && Schema::hasTable('loan_interest_schedule')) {
                         $hasReminders = DB::table('loan_interest_schedule')
                             ->whereIn('status', ['pending', 'partially_paid', 'overdue'])
                             ->where('due_date', '<=', $today)
@@ -62,7 +73,7 @@ class AppServiceProvider extends ServiceProvider
                     }
 
                     // 3. Client Invoices: due today or overdue
-                    if (!$hasReminders && Schema::hasTable('invoices')) {
+                    if (! $hasReminders && Schema::hasTable('invoices')) {
                         $hasReminders = DB::table('invoices')
                             ->whereNotIn('status', ['paid', 'cancelled'])
                             ->whereNotNull('due_date')
@@ -71,16 +82,16 @@ class AppServiceProvider extends ServiceProvider
                     }
 
                     // 4. Payment Milestones: due today or overdue
-                    if (!$hasReminders && Schema::hasTable('payment_milestones')) {
+                    if (! $hasReminders && Schema::hasTable('payment_milestones')) {
                         $hasReminders = DB::table('payment_milestones')
-                            ->whereNotIn('status', ['paid', 'completed'])
+                            ->whereNotIn('status', ['paid', 'completed', 'skipped', 'invoiced'])
                             ->whereNotNull('due_date')
                             ->where('due_date', '<=', $today)
                             ->exists();
                     }
 
                     // 5. Cheques: due today or overdue
-                    if (!$hasReminders && Schema::hasTable('cheques')) {
+                    if (! $hasReminders && Schema::hasTable('cheques')) {
                         $hasReminders = DB::table('cheques')
                             ->whereIn('status', ['pending_deposit', 'received', 'issued'])
                             ->whereNotNull('cheque_date')
@@ -94,13 +105,6 @@ class AppServiceProvider extends ServiceProvider
                 }
             });
 
-            // Auto-run pending migrations in production / serverless environment if new columns are missing
-            if (
-                (Schema::hasTable('loans') && (!Schema::hasColumn('loans', 'maturity_date') || !Schema::hasColumn('loans', 'loan_code') || !Schema::hasColumn('loans', 'bank_account_id'))) ||
-                (Schema::hasTable('users') && !Schema::hasColumn('users', 'deleted_at'))
-            ) {
-                \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
-            }
         } catch (\Throwable $e) {
             // Ignore during migrations or when DB is not available
         }

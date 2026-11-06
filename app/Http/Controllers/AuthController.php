@@ -23,14 +23,14 @@ class AuthController extends Controller
 
         if (Auth::attempt($credentials, $remember)) {
             $user = Auth::user();
-            if (!$user->is_active) {
+            if (! $user->is_active) {
                 Auth::logout();
                 $request->session()->invalidate();
                 $request->session()->regenerateToken();
 
                 return back()->withErrors([
                     'email' => 'Your account has been deactivated. Please contact an administrator.',
-                ])->onlyInput('email');
+                ])->onlyInput('email', 'remember');
             }
 
             $request->session()->regenerate();
@@ -40,7 +40,7 @@ class AuthController extends Controller
 
         return back()->withErrors([
             'email' => 'The provided credentials do not match our records.',
-        ])->onlyInput('email');
+        ])->onlyInput('email', 'remember');
     }
 
     public function logout(Request $request)

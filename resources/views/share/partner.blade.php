@@ -3,7 +3,7 @@
 
 @section('content')
 <!-- Header Banner Card -->
-<div class="card" style="padding: 2rem; background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-page) 100%);">
+<div class="card" style="padding: 2rem; background:var(--bg-card);">
     <div style="font-size:0.8rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--primary); margin-bottom:0.4rem;">
         Partner Financial Portal
     </div>

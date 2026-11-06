@@ -103,7 +103,7 @@
 }
 .cal-day-equal-box.is-today {
     border: 2px solid var(--primary);
-    background: linear-gradient(135deg, rgba(37, 99, 235, 0.06) 0%, rgba(99, 102, 241, 0.09) 100%);
+    background:var(--bg-card);
 }
 .cal-day-equal-box.is-empty {
     border: 1px dashed var(--border-light);
@@ -294,7 +294,7 @@
                 <td style="padding:0.85rem 1rem; text-align:center; font-weight:600; color:{{ $isOverdue ? 'var(--danger)' : 'var(--text-heading)' }};">
                     {{ $item->due_date }}
                     @if($isOverdue)
-                        <span class="badge" style="background:#fee2e2; color:#b91c1c; font-size:0.65rem; padding:0.1rem 0.3rem; border-radius:3px; margin-left:0.2rem;">OVERDUE</span>
+                        <span class="badge" style="background:#fee2e2; color:#b91c1c; font-size:0.75rem; padding:0.1rem 0.3rem; border-radius:3px; margin-left:0.2rem;">OVERDUE</span>
                     @endif
                 </td>
                 <td style="padding:0.85rem 1rem; text-align:right; font-weight:700; color:var(--primary);">
@@ -474,13 +474,13 @@ function openDayEventsModal(dateStr, displayDate) {
                 <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem;">
                     <div style="flex:1;">
                         <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.35rem; flex-wrap:wrap;">
-                            <span class="badge" style="background:${badgeBg}; color:${badgeFg}; font-size:0.7rem; font-weight:800; padding:0.15rem 0.5rem; border-radius:6px; text-transform:uppercase;">
+                            <span class="badge" style="background:${badgeBg}; color:${badgeFg}; font-size:0.75rem; font-weight:800; padding:0.15rem 0.5rem; border-radius:6px; text-transform:uppercase;">
                                 ${typeLabel}
                             </span>
                             <span style="font-size:0.75rem; color:var(--text-muted); font-weight:600;">Due: ${r.due_date}</span>
                             @if(true)
-                            ${isOverdue ? '<span class="badge" style="background:#fee2e2; color:#b91c1c; font-size:0.65rem; padding:0.1rem 0.35rem; border-radius:4px; font-weight:700;">OVERDUE</span>' : ''}
-                            ${(r.status === 'completed' || r.status === 'settled') ? '<span class="badge" style="background:#dcfce7; color:#166534; font-size:0.65rem; padding:0.1rem 0.35rem; border-radius:4px; font-weight:700;">SETTLED</span>' : ''}
+                            ${isOverdue ? '<span class="badge" style="background:#fee2e2; color:#b91c1c; font-size:0.75rem; padding:0.1rem 0.35rem; border-radius:4px; font-weight:700;">OVERDUE</span>' : ''}
+                            ${(r.status === 'completed' || r.status === 'settled') ? '<span class="badge" style="background:#dcfce7; color:#166534; font-size:0.75rem; padding:0.1rem 0.35rem; border-radius:4px; font-weight:700;">SETTLED</span>' : ''}
                             @endif
                         </div>
                         <h4 style="margin:0 0 0.3rem 0; font-size:0.95rem; font-weight:700; color:var(--text-heading); line-height:1.3;">

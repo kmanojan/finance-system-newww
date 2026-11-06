@@ -2,14 +2,13 @@
 @section('title', 'User Profile & Settings')
 
 @section('secondary-sidebar')
-<aside class="sidebar-secondary" id="sidebarSecondary">
-    <h2 class="sidebar-title">Settings</h2>
+<x-secondary-sidebar title="Settings">
     <nav class="nav-links">
-        <a href="/profile?tab=general" class="nav-link {{ $tab === 'general' ? 'active' : '' }}">General Info</a>
-        <a href="/profile?tab=app" class="nav-link {{ $tab === 'app' ? 'active' : '' }}">Install App</a>
-        <a href="/profile?tab=config" class="nav-link {{ $tab === 'config' ? 'active' : '' }}">Configuration</a>
+        <a href="/profile?tab=general" class="nav-link {{ $tab === 'general' ? 'active' : '' }}"><ion-icon name="person-outline" aria-hidden="true"></ion-icon><span class="section-navigation-label">General Info</span></a>
+        <a href="/profile?tab=app" class="nav-link {{ $tab === 'app' ? 'active' : '' }}"><ion-icon name="phone-portrait-outline" aria-hidden="true"></ion-icon><span class="section-navigation-label">Install App</span></a>
+        <a href="/profile?tab=config" class="nav-link {{ $tab === 'config' ? 'active' : '' }}"><ion-icon name="settings-outline" aria-hidden="true"></ion-icon><span class="section-navigation-label">Configuration</span></a>
     </nav>
-</aside>
+</x-secondary-sidebar>
 @endsection
 
 @section('content')
@@ -48,7 +47,7 @@
 <div style="display: grid; grid-template-columns: 320px 1fr; gap: 1.5rem; align-items: start;">
     <!-- User Summary Card -->
     <div class="card" style="padding: 2rem; text-align: center;">
-        <div style="width: 88px; height: 88px; border-radius: 50%; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 2.2rem; margin: 0 auto 1.25rem; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);">
+        <div style="width: 88px; height: 88px; border-radius: 50%; background:var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 2.2rem; margin: 0 auto 1.25rem; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);">
             {{ strtoupper(substr($user->name ?? 'User', 0, 2)) }}
         </div>
         
@@ -194,7 +193,7 @@
 <div style="display: flex; flex-direction: column; gap: 1.5rem; max-width: 800px;">
     <div class="card" style="padding: 2rem;">
         <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-light); padding-bottom: 1.25rem;">
-            <div style="width: 52px; height: 52px; border-radius: 14px; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: white; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);">
+            <div style="width: 52px; height: 52px; border-radius: 14px; background:var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 1.8rem; box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);">
                 <ion-icon name="phone-portrait-outline"></ion-icon>
             </div>
             <div>

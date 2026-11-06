@@ -10,6 +10,8 @@ class CostAllocation extends Model
 {
     use HasFactory, SoftDeletes;
 
+    protected $attributes = ['status' => 'approved'];
+
     protected $fillable = [
         'project_id', 'type', 'employee_id', 'server_id',
         'cost_center_name', 'period_start', 'period_end',
@@ -18,8 +20,8 @@ class CostAllocation extends Model
 
     protected $casts = [
         'period_start' => 'date',
-        'period_end'   => 'date',
-        'amount'       => 'decimal:2',
+        'period_end' => 'date',
+        'amount' => 'decimal:2',
     ];
 
     public function project()

@@ -37,7 +37,7 @@ class QuickAddTransactionTest extends TestCase
 
     public function test_quick_add_transaction_via_json(): void
     {
-        $user = User::factory()->create(['is_active' => true]);
+        $user = User::factory()->create(['is_active' => true, 'role' => 'admin']);
         $cat = DB::table('categories')->first();
 
         $response = $this->actingAs($user)->postJson('/transactions', [
@@ -51,10 +51,10 @@ class QuickAddTransactionTest extends TestCase
         ]);
 
         $response->assertStatus(200)
-                 ->assertJson([
-                     'success' => true,
-                     'message' => 'Transaction created successfully!',
-                 ]);
+            ->assertJson([
+                'success' => true,
+                'message' => 'Transaction created successfully!',
+            ]);
 
         $this->assertDatabaseHas('transactions', [
             'description' => 'Office coffee supplies',

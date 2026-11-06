@@ -2,23 +2,7 @@
 @section('title', 'Loan Settlements Ledger')
 
 @section('secondary-sidebar')
-<aside class="sidebar-secondary" id="sidebarSecondary">
-    <h2 class="sidebar-title">Loan Management</h2>
-    <nav class="nav-links">
-        <a href="/loans" class="nav-link {{ request()->is('loans') ? 'active' : '' }}">
-            <ion-icon name="cash-outline"></ion-icon> Active Loans
-        </a>
-        <a href="/loans/schedules" class="nav-link {{ request()->is('loans/schedules') ? 'active' : '' }}">
-            <ion-icon name="calendar-outline"></ion-icon> Schedules
-        </a>
-        <a href="/loans/settlements" class="nav-link {{ request()->is('loans/settlements') ? 'active' : '' }}">
-            <ion-icon name="checkmark-done-circle-outline"></ion-icon> Settlements
-        </a>
-        <a href="/loans/party-report" class="nav-link {{ request()->is('loans/party-report') ? 'active' : '' }}">
-            <ion-icon name="pie-chart-outline"></ion-icon> Party Payables & Paids
-        </a>
-    </nav>
-</aside>
+@include('navigation.loans')
 
 @endsection
 
@@ -33,7 +17,7 @@
 <!-- KPI Stat Tiles -->
 <div class="metric-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:1.25rem; margin-bottom:1.5rem;">
     <!-- Tile 1: Total Paid To Date -->
-    <div class="metric-card" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); padding: 1.25rem; border-radius: 12px; color: white;">
+    <div class="metric-card" style="background:var(--bg-card); padding: 1.25rem; border-radius: 12px; color: white;">
         <div style="display:flex; justify-content:space-between; align-items:center;">
             <h3 style="margin:0; font-size:0.8rem; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; opacity:0.9;">Total Paid To Date (P+I)</h3>
             <ion-icon name="checkmark-done-circle-outline" style="font-size:1.3rem; opacity:0.85;"></ion-icon>
@@ -43,7 +27,7 @@
     </div>
 
     <!-- Tile 2: Total Principal Repaid -->
-    <div class="metric-card" style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); padding: 1.25rem; border-radius: 12px; color: white;">
+    <div class="metric-card" style="background:var(--bg-card); padding: 1.25rem; border-radius: 12px; color: white;">
         <div style="display:flex; justify-content:space-between; align-items:center;">
             <h3 style="margin:0; font-size:0.8rem; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; opacity:0.9;">Principal Repaid</h3>
             <ion-icon name="arrow-down-circle-outline" style="font-size:1.3rem; opacity:0.85;"></ion-icon>
@@ -53,7 +37,7 @@
     </div>
 
     <!-- Tile 3: Total Interest Paid -->
-    <div class="metric-card" style="background: linear-gradient(135deg, #0284c7 0%, #06b6d4 100%); padding: 1.25rem; border-radius: 12px; color: white;">
+    <div class="metric-card" style="background:var(--bg-card); padding: 1.25rem; border-radius: 12px; color: white;">
         <div style="display:flex; justify-content:space-between; align-items:center;">
             <h3 style="margin:0; font-size:0.8rem; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; opacity:0.9;">Interest Settled</h3>
             <ion-icon name="cash-outline" style="font-size:1.3rem; opacity:0.85;"></ion-icon>
@@ -63,7 +47,7 @@
     </div>
 
     <!-- Tile 4: Additional Draws -->
-    <div class="metric-card" style="background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%); padding: 1.25rem; border-radius: 12px; color: white;">
+    <div class="metric-card" style="background:var(--bg-card); padding: 1.25rem; border-radius: 12px; color: white;">
         <div style="display:flex; justify-content:space-between; align-items:center;">
             <h3 style="margin:0; font-size:0.8rem; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; opacity:0.9;">Additional Draws</h3>
             <ion-icon name="arrow-up-circle-outline" style="font-size:1.3rem; opacity:0.85;"></ion-icon>

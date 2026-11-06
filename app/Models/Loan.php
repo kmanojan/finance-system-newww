@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Loan extends Model
 {
     protected $fillable = [
+        'loan_type',
         'party_id',
         'lender_name',
         'principal_amount',

@@ -36,7 +36,7 @@
         </div>
         <div class="modal-body" style="padding:1.5rem;">
             <!-- Hero Profit Banner -->
-            <div style="background: linear-gradient(135deg, #0284c7 0%, #06b6d4 100%); color:white; padding:1.25rem; border-radius:12px; margin-bottom:1.5rem; display:flex; justify-content:space-between; align-items:center;">
+            <div style="background:var(--bg-card); color:var(--text-heading); padding:1.25rem; border-radius:12px; margin-bottom:1.5rem; display:flex; justify-content:space-between; align-items:center;">
                 <div>
                     <span style="font-size:0.85rem; opacity:0.9;">Total Company Profit</span>
                     <h2 style="font-size:1.8rem; font-weight:700; margin:0.2rem 0 0 0;">{{ $currency }} {{ number_format($companyProfit, 2) }}</h2>

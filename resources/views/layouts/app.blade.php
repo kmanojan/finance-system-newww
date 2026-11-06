@@ -1,9 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 
+
 <head>
+    <script>try { for (const panel of ['primary', 'secondary']) document.documentElement.classList.toggle(`${panel}-navigation-closed`, localStorage.getItem(`finance.nav.${panel}.closed`) === 'true'); } catch (_) {}</script>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     
     <!-- Page Title & Meta Tags -->
     <title>@yield('title', 'Finance System') - Apptimus</title>
@@ -51,7 +53,7 @@
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="https://cdn.ckeditor.com/ckeditor5/39.0.1/classic/ckeditor.js"></script>
     <script>
-        const savedTheme = localStorage.getItem('theme') || 'dark';
+        const savedTheme = localStorage.getItem('theme') || 'light';
         document.documentElement.setAttribute('data-theme', savedTheme);
     </script>
     <style>
@@ -110,9 +112,12 @@
         .modal-body { padding: 2rem; overflow-y: auto; flex: 1; }
         .modal-footer { padding: 1.5rem 2rem; border-top: 1px solid var(--border-light); display: flex; justify-content: flex-end; gap: 1rem; }
     </style>
+<link href="{{ asset('design-system.css') }}?v={{ filemtime(public_path('design-system.css')) }}" rel="stylesheet">
+    <script defer src="{{ asset('design-system.js') }}?v={{ filemtime(public_path('design-system.js')) }}"></script>
 </head>
 
-<body>
+<body data-workspace-role="{{ auth()->user()->role ?? 'viewer' }}">
+<a class="skip-link" href="#main-content">Skip to content</a>
 
     <!-- Backdrop Overlay for Mobile Drawers -->
     <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
@@ -138,24 +143,24 @@
     <div class="app-layout">
         <!-- Primary Navbar (Leftmost layer) -->
         <aside class="sidebar-primary" id="sidebarPrimary">
+            <button type="button" class="navigation-toggle primary-navigation-close" data-close-primary aria-controls="sidebarPrimary" aria-label="Close main navigation" title="Close main navigation"><ion-icon name="chevron-back-outline" aria-hidden="true"></ion-icon></button>
             <div class="sidebar-top">
-                <div class="logo">
-                    <span>F</span>
-                </div>
-                <nav class="nav-icons">
-                    <a href="/dashboard" class="nav-item {{ request()->is('dashboard*') || request()->is('/') ? 'active' : '' }}">
+                <a class="logo" href="/dashboard" aria-label="Apptimus Finance home" title="Apptimus Finance"><span>F</span></a>
+                <nav class="nav-icons" aria-label="Main navigation">
+                    <a href="/search" title="Search" class="nav-item {{ request()->is('search*') ? 'active' : '' }}"><ion-icon name="search-outline"></ion-icon><span>Search</span></a>
+                    <a href="/dashboard" title="Dashboard" class="nav-item {{ request()->is('dashboard*') || request()->is('/') ? 'active' : '' }}">
                         <ion-icon name="grid-outline"></ion-icon>
-                        <span>Dashboard</span>
+                        <span>Home</span>
                     </a>
-                    <a href="/master" class="nav-item {{ request()->is('master*') ? 'active' : '' }}">
+                    <a href="/master" title="Master data" class="nav-item {{ request()->is('master*', 'settings/financial-years*') ? 'active' : '' }}">
                         <ion-icon name="business-outline"></ion-icon>
                         <span>Master</span>
                     </a>
-                    <a href="/employees" class="nav-item {{ request()->is('employees*') ? 'active' : '' }}">
+                    <a href="/employees" title="Employees" class="nav-item {{ request()->is('employees*', 'payroll*') ? 'active' : '' }}">
                         <ion-icon name="people-outline"></ion-icon>
-                        <span>Employees</span>
+                        <span>People</span>
                     </a>
-                    <a href="/projects" class="nav-item {{ request()->is('projects*') ? 'active' : '' }}" style="position:relative;">
+                    <a href="/projects" title="Projects" class="nav-item {{ request()->is('projects*') ? 'active' : '' }}" style="position:relative;">
                         <ion-icon name="briefcase-outline"></ion-icon>
                         <span>Projects</span>
                         @php
@@ -165,36 +170,36 @@
                                 ->count();
                         @endphp
                         @if($globalMilestoneCount > 0)
-                            <div style="position:absolute; top:2px; right:2px; background:var(--danger); color:white; font-size:0.65rem; padding:0.1rem 0.35rem; border-radius:50%; font-weight:bold;">
+                            <div style="position:absolute; top:2px; right:2px; background:var(--danger); color:white; font-size:0.75rem; padding:0.1rem 0.35rem; border-radius:50%; font-weight:bold;">
                                 {{ $globalMilestoneCount }}
                             </div>
                         @endif
                     </a>
-                    <a href="/transactions" class="nav-item {{ request()->is('transactions*') ? 'active' : '' }}">
+                    <a href="/transactions" title="Ledger" class="nav-item {{ request()->is('transactions*', 'journal-entries*', 'budgets*') ? 'active' : '' }}">
                         <ion-icon name="cash-outline"></ion-icon>
                         <span>Ledger</span>
                     </a>
-                    <a href="/invoices" class="nav-item {{ request()->is('invoices*', 'payables*') ? 'active' : '' }}">
+                    <a href="/invoices" title="Invoices" class="nav-item {{ request()->is('invoices*', 'payables*') ? 'active' : '' }}">
                         <ion-icon name="document-text-outline"></ion-icon>
                         <span>Invoices</span>
                     </a>
-                    <a href="/loans" class="nav-item {{ request()->is('loans*') ? 'active' : '' }}">
+                    <a href="/loans" title="Loans" class="nav-item {{ request()->is('loans*') ? 'active' : '' }}">
                         <ion-icon name="card-outline"></ion-icon>
                         <span>Loans</span>
                     </a>
-                    <a href="/reminders" class="nav-item {{ request()->is('reminders*', 'approvals*', 'cheques*', 'activity-logs*', 'treasury*', 'assets*') ? 'active' : '' }}" style="position:relative;">
+                    <a href="/reminders" title="Operations" class="nav-item {{ request()->is('reminders*', 'approvals*', 'cheques*', 'activity-logs*', 'treasury*', 'assets*') ? 'active' : '' }}" style="position:relative;">
                         <ion-icon name="cog-outline"></ion-icon>
-                        <span>Operations</span>
+                        <span>Ops</span>
                         @if(!empty($hasActiveReminders))
                             <span class="notification-dot" style="position:absolute; top:6px; right:8px; width:8px; height:8px; background:#ef4444; border-radius:50%; box-shadow:0 0 0 2px var(--bg-card); display:inline-block;" title="Active Reminders Available"></span>
                         @endif
                     </a>
 
-                    <a href="/reports" class="nav-item {{ request()->is('reports*') ? 'active' : '' }}">
+                    <a href="/reports" title="Reports" class="nav-item {{ request()->is('reports*') ? 'active' : '' }}">
                         <ion-icon name="pie-chart-outline"></ion-icon>
                         <span>Reports</span>
                     </a>
-                    <a href="/share-links" class="nav-item {{ request()->is('share-links*') ? 'active' : '' }}">
+                    <a href="/share-links" title="Sharing" class="nav-item {{ request()->is('share-links*') ? 'active' : '' }}">
                         <ion-icon name="link-outline"></ion-icon>
                         <span>Sharing</span>
                     </a>
@@ -225,8 +230,20 @@
         @yield('secondary-sidebar')
 
         <!-- Main Content Area -->
-        <main class="main-content @if(!View::hasSection('secondary-sidebar')) full-width @endif">
+        <main id="main-content" class="main-content @if(!View::hasSection('secondary-sidebar')) full-width @endif">
+            <div class="navigation-reopen-controls">
+                <button type="button" class="navigation-reopen primary-navigation-reopen" data-open-primary aria-controls="sidebarPrimary" aria-expanded="false"><ion-icon name="menu-outline" aria-hidden="true"></ion-icon> Main menu</button>
+                @hasSection('secondary-sidebar')
+                <button type="button" class="navigation-reopen secondary-navigation-reopen" data-toggle-secondary aria-controls="sidebarSecondary" aria-expanded="false"><ion-icon name="list-outline" aria-hidden="true"></ion-icon> Section menu</button>
+                @endif
+            </div>
             <div class="content-card">
+                @if($errors->any())
+                <div class="ds-notice error" role="alert"><strong>Please check the following:</strong><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>
+                @endif
+                @if(auth()->check() && !in_array(auth()->user()->role,['admin','super_admin','manager','accountant']) && !request()->is('profile*'))
+                <div class="ds-notice">Read-only access · You can review records and export reports. An administrator can change your access.</div>
+                @endif
                 @yield('content')
             </div>
         </main>
@@ -238,7 +255,7 @@
             <ion-icon name="grid-outline"></ion-icon>
             <span>Home</span>
         </a>
-        <a href="/transactions" class="mobile-bottom-nav-item {{ request()->is('transactions*') ? 'active' : '' }}">
+        <a href="/transactions" class="mobile-bottom-nav-item {{ request()->is('transactions*', 'journal-entries*', 'budgets*') ? 'active' : '' }}">
             <ion-icon name="cash-outline"></ion-icon>
             <span>Ledger</span>
         </a>
@@ -268,7 +285,8 @@
 
     @yield('modals')
 
-    <script src="{{ asset('script.js') }}"></script>
+    <script src="{{ asset('script.js') }}?v={{ filemtime(public_path('script.js')) }}"></script>
+    <script src="{{ asset('navigation.js') }}?v={{ filemtime(public_path('navigation.js')) }}"></script>
     <script>
         // Modal Helpers
         function openModal(id) {

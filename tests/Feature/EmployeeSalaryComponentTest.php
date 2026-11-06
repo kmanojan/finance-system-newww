@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Employee;
 use App\Models\SalaryComponent;
 use App\Models\User;
+use Database\Seeders\SalaryComponentSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -15,12 +16,12 @@ class EmployeeSalaryComponentTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\Database\Seeders\SalaryComponentSeeder::class);
+        $this->seed(SalaryComponentSeeder::class);
     }
 
     public function test_salary_components_master_screen_accessible(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['role' => 'admin', 'is_active' => true]);
 
         $response = $this->actingAs($user)->get('/master/salary-components');
 
@@ -34,16 +35,16 @@ class EmployeeSalaryComponentTest extends TestCase
 
     public function test_employee_index_displays_salary_breakdown_columns_and_kpis(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['role' => 'admin', 'is_active' => true]);
         $employee = Employee::create([
-            'external_id'   => 99991,
+            'external_id' => 99991,
             'employee_code' => 'TEST-001',
-            'first_name'    => 'Saman',
-            'last_name'     => 'Perera',
-            'full_name'     => 'Saman Perera',
-            'status'        => 'active',
-            'basic_salary'  => 100000.00,
-            'currency'      => 'LKR',
+            'first_name' => 'Saman',
+            'last_name' => 'Perera',
+            'full_name' => 'Saman Perera',
+            'status' => 'active',
+            'basic_salary' => 100000.00,
+            'currency' => 'LKR',
         ]);
 
         $response = $this->actingAs($user)->get('/employees');
@@ -57,16 +58,16 @@ class EmployeeSalaryComponentTest extends TestCase
 
     public function test_employee_salary_configuration_and_accurate_calculation(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['role' => 'admin', 'is_active' => true]);
         $employee = Employee::create([
-            'external_id'   => 99992,
+            'external_id' => 99992,
             'employee_code' => 'TEST-002',
-            'first_name'    => 'Kamal',
-            'last_name'     => 'Silva',
-            'full_name'     => 'Kamal Silva',
-            'status'        => 'active',
-            'basic_salary'  => 100000.00,
-            'currency'      => 'LKR',
+            'first_name' => 'Kamal',
+            'last_name' => 'Silva',
+            'full_name' => 'Kamal Silva',
+            'status' => 'active',
+            'basic_salary' => 100000.00,
+            'currency' => 'LKR',
         ]);
 
         $fixedAllow = SalaryComponent::where('code', 'FIXED_ALLOW')->first();
@@ -77,14 +78,14 @@ class EmployeeSalaryComponentTest extends TestCase
         $apit = SalaryComponent::where('code', 'APIT')->first();
 
         $postData = [
-            'basic_salary'    => 100000.00,
-            'currency'        => 'LKR',
-            'payment_mode'    => 'bank_transfer',
-            'bank_name'       => 'Commercial Bank',
+            'basic_salary' => 100000.00,
+            'currency' => 'LKR',
+            'payment_mode' => 'bank_transfer',
+            'bank_name' => 'Commercial Bank',
             'bank_account_no' => '1234567890',
-            'bank_branch'     => 'Colombo',
-            'epf_number'      => 'EPF-1234',
-            'components'      => [
+            'bank_branch' => 'Colombo',
+            'epf_number' => 'EPF-1234',
+            'components' => [
                 ['id' => $fixedAllow->id, 'value' => 20000.00, 'enabled' => '1'],
                 ['id' => $travelAllow->id, 'value' => 15000.00, 'enabled' => '1'],
                 ['id' => $epfEe->id, 'value' => 8.00, 'enabled' => '1'],
@@ -94,7 +95,7 @@ class EmployeeSalaryComponentTest extends TestCase
             ],
         ];
 
-        $response = $this->actingAs($user)->postJson('/employees/' . $employee->id . '/salary', $postData);
+        $response = $this->actingAs($user)->postJson('/employees/'.$employee->id.'/salary', $postData);
 
         $response->assertStatus(200);
         $response->assertJsonPath('success', true);
@@ -127,33 +128,33 @@ class EmployeeSalaryComponentTest extends TestCase
 
     public function test_role_specific_allowances_for_field_vs_desk_employees(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['role' => 'admin', 'is_active' => true]);
 
         // 1. Create Petrol Allowance & Telephone Allowance in Masters
         $petrolAllow = SalaryComponent::create([
-            'name'             => 'Petrol Allowance',
-            'code'             => 'PETROL_ALLOW',
-            'type'             => 'earning',
+            'name' => 'Petrol Allowance',
+            'code' => 'PETROL_ALLOW',
+            'type' => 'earning',
             'calculation_type' => 'fixed_amount',
             'calculation_base' => 'on_basic',
-            'default_value'    => 0,
-            'is_epf_eligible'  => false,
-            'is_taxable'       => true,
-            'is_statutory'     => false,
-            'sort_order'       => 5,
+            'default_value' => 0,
+            'is_epf_eligible' => false,
+            'is_taxable' => true,
+            'is_statutory' => false,
+            'sort_order' => 5,
         ]);
 
         $telAllow = SalaryComponent::create([
-            'name'             => 'Telephone Allowance',
-            'code'             => 'TEL_ALLOW',
-            'type'             => 'earning',
+            'name' => 'Telephone Allowance',
+            'code' => 'TEL_ALLOW',
+            'type' => 'earning',
             'calculation_type' => 'fixed_amount',
             'calculation_base' => 'on_basic',
-            'default_value'    => 0,
-            'is_epf_eligible'  => false,
-            'is_taxable'       => true,
-            'is_statutory'     => false,
-            'sort_order'       => 6,
+            'default_value' => 0,
+            'is_epf_eligible' => false,
+            'is_taxable' => true,
+            'is_statutory' => false,
+            'sort_order' => 6,
         ]);
 
         $epfEe = SalaryComponent::where('code', 'EPF_EE')->first();
@@ -162,21 +163,21 @@ class EmployeeSalaryComponentTest extends TestCase
 
         // 2. Field Employee (gets Petrol Allowance 25,000, Telephone disabled)
         $fieldEmployee = Employee::create([
-            'external_id'   => 99993,
+            'external_id' => 99993,
             'employee_code' => 'FIELD-01',
-            'first_name'    => 'Rohan',
-            'last_name'     => 'Fernando',
-            'full_name'     => 'Rohan Fernando',
-            'status'        => 'active',
-            'basic_salary'  => 80000.00,
-            'currency'      => 'LKR',
+            'first_name' => 'Rohan',
+            'last_name' => 'Fernando',
+            'full_name' => 'Rohan Fernando',
+            'status' => 'active',
+            'basic_salary' => 80000.00,
+            'currency' => 'LKR',
         ]);
 
-        $this->actingAs($user)->postJson('/employees/' . $fieldEmployee->id . '/salary', [
-            'basic_salary'    => 80000.00,
-            'currency'        => 'LKR',
-            'payment_mode'    => 'bank_transfer',
-            'components'      => [
+        $this->actingAs($user)->postJson('/employees/'.$fieldEmployee->id.'/salary', [
+            'basic_salary' => 80000.00,
+            'currency' => 'LKR',
+            'payment_mode' => 'bank_transfer',
+            'components' => [
                 ['id' => $petrolAllow->id, 'value' => 25000.00, 'enabled' => '1'],
                 ['id' => $telAllow->id, 'value' => 0.00, 'enabled' => '0'],
                 ['id' => $epfEe->id, 'value' => 8.00, 'enabled' => '1'],
@@ -187,21 +188,21 @@ class EmployeeSalaryComponentTest extends TestCase
 
         // 3. Desk Employee (gets Telephone Allowance 5,000, Petrol disabled)
         $deskEmployee = Employee::create([
-            'external_id'   => 99994,
+            'external_id' => 99994,
             'employee_code' => 'DESK-01',
-            'first_name'    => 'Anoma',
-            'last_name'     => 'De Silva',
-            'full_name'     => 'Anoma De Silva',
-            'status'        => 'active',
-            'basic_salary'  => 70000.00,
-            'currency'      => 'LKR',
+            'first_name' => 'Anoma',
+            'last_name' => 'De Silva',
+            'full_name' => 'Anoma De Silva',
+            'status' => 'active',
+            'basic_salary' => 70000.00,
+            'currency' => 'LKR',
         ]);
 
-        $this->actingAs($user)->postJson('/employees/' . $deskEmployee->id . '/salary', [
-            'basic_salary'    => 70000.00,
-            'currency'        => 'LKR',
-            'payment_mode'    => 'bank_transfer',
-            'components'      => [
+        $this->actingAs($user)->postJson('/employees/'.$deskEmployee->id.'/salary', [
+            'basic_salary' => 70000.00,
+            'currency' => 'LKR',
+            'payment_mode' => 'bank_transfer',
+            'components' => [
                 ['id' => $petrolAllow->id, 'value' => 0.00, 'enabled' => '0'],
                 ['id' => $telAllow->id, 'value' => 5000.00, 'enabled' => '1'],
                 ['id' => $epfEe->id, 'value' => 8.00, 'enabled' => '1'],
@@ -227,19 +228,19 @@ class EmployeeSalaryComponentTest extends TestCase
 
     public function test_employee_show_view_renders_save_button_and_dropdowns_without_filter_buttons(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['role' => 'admin', 'is_active' => true]);
         $employee = Employee::create([
-            'external_id'   => 99995,
+            'external_id' => 99995,
             'employee_code' => 'TEST-005',
-            'first_name'    => 'Nuwan',
-            'last_name'     => 'Pradeep',
-            'full_name'     => 'Nuwan Pradeep',
-            'status'        => 'active',
-            'basic_salary'  => 85000.00,
-            'currency'      => 'LKR',
+            'first_name' => 'Nuwan',
+            'last_name' => 'Pradeep',
+            'full_name' => 'Nuwan Pradeep',
+            'status' => 'active',
+            'basic_salary' => 85000.00,
+            'currency' => 'LKR',
         ]);
 
-        $response = $this->actingAs($user)->get('/employees/' . $employee->id);
+        $response = $this->actingAs($user)->get('/employees/'.$employee->id);
 
         $response->assertStatus(200);
 
@@ -270,4 +271,3 @@ class EmployeeSalaryComponentTest extends TestCase
         $response->assertSee('formatComponentBlur');
     }
 }
-

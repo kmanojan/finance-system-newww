@@ -144,7 +144,7 @@
 }
 .slash-menu-hint {
     color: #94a3b8 !important;
-    font-size: 0.7rem !important;
+    font-size:0.75rem !important;
 }
 
 /* Search Bar (Always Visible) */
@@ -435,8 +435,11 @@ function setupSlashCommands(editor, editorId) {
     let activeCategory = 'all'; // 'all', 'loan', 'transaction', 'party', 'employee'
     let lastSlashLength = 1;
     let searchDebounceTimer = null;
+    let searchRevision = 0;
+    const escapeMention = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[char]));
 
     function closeMenu() {
+        searchRevision++;
         menu.style.display = 'none';
         isMenuOpen = false;
         selectedIndex = 0;
@@ -506,9 +509,9 @@ function setupSlashCommands(editor, editorId) {
                     </div>
                 `;
             } else if (item.type === 'loan') {
-                const codeBadge = `<span style="font-size:0.75rem; font-weight:700; color:#8b5cf6; background:rgba(139,92,246,0.15); padding:1px 6px; border-radius:4px;">${item.loan_code || 'LN-' + item.id}</span>`;
-                const statusBadge = `<span style="font-size:0.68rem; padding:1px 6px; border-radius:4px; font-weight:600; background:${item.status === 'settled' ? '#dcfce7; color:#15803d' : '#fef3c7; color:#b45309'}">${item.status}</span>`;
-                const descSnippet = item.purpose ? `<span style="color:#94a3b8; font-size:0.72rem;"> &bull; ${item.purpose.substring(0, 35)}${item.purpose.length > 35 ? '...' : ''}</span>` : '';
+                const codeBadge = `<span style="font-size:0.75rem; font-weight:700; color:#8b5cf6; background:rgba(139,92,246,0.15); padding:1px 6px; border-radius:4px;">${escapeMention(item.loan_code || 'LN-' + item.id)}</span>`;
+                const statusBadge = `<span style="font-size:0.68rem; padding:1px 6px; border-radius:4px; font-weight:600; background:${item.status === 'settled' ? '#dcfce7; color:#15803d' : '#fef3c7; color:#b45309'}">${escapeMention(item.status)}</span>`;
+                const descSnippet = item.purpose ? `<span style="color:#94a3b8; font-size:0.72rem;"> &bull; ${escapeMention(item.purpose.substring(0, 100))}${item.purpose.length > 100 ? '…' : ''}</span>` : '';
 
                 itemEl.innerHTML = `
                     <div class="slash-menu-item-icon" style="color:#8b5cf6; background:rgba(139,92,246,0.15);">
@@ -516,13 +519,14 @@ function setupSlashCommands(editor, editorId) {
                     </div>
                     <div class="slash-menu-item-content">
                         <div class="slash-menu-item-title">
-                            <span>${codeBadge} ${item.lender_name}</span>
+                            <span>${codeBadge} ${escapeMention(item.party_name || item.lender_name)}</span>
                             ${statusBadge}
                         </div>
                         <div class="slash-menu-item-sub">
-                            <strong style="color:#f8fafc;">${item.currency} ${Number(item.principal_amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</strong>
+                            <strong style="color:#f8fafc;">${escapeMention(item.currency)} ${Number(item.principal_amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</strong>
                             ${descSnippet}
                         </div>
+                        ${item.party_name && item.lender_name && item.party_name !== item.lender_name ? `<div class="slash-menu-item-sub">Lender: ${escapeMention(item.lender_name)}</div>` : ''}
                     </div>
                 `;
             } else if (item.type === 'transaction') {
@@ -541,7 +545,7 @@ function setupSlashCommands(editor, editorId) {
                     <div class="slash-menu-item-content">
                         <div class="slash-menu-item-title">
                             <span>
-                                <span style="font-size:0.7rem; font-weight:700; color:${typeColor}; background:${typeBg}; padding:1px 5px; border-radius:4px; margin-right:4px;">${typeLabel}</span>
+                                <span style="font-size:0.75rem; font-weight:700; color:${typeColor}; background:${typeBg}; padding:1px 5px; border-radius:4px; margin-right:4px;">${typeLabel}</span>
                                 ${item.description || 'Transaction #' + item.id}
                             </span>
                             ${refSnippet}
@@ -574,7 +578,7 @@ function setupSlashCommands(editor, editorId) {
                     <div class="slash-menu-item-content">
                         <div class="slash-menu-item-title">
                             <span>${item.name}</span>
-                            ${item.code ? `<span style="font-size:0.7rem; color:#94a3b8;">${item.code}</span>` : ''}
+                            ${item.code ? `<span style="font-size:0.75rem; color:#94a3b8;">${item.code}</span>` : ''}
                         </div>
                         <div class="slash-menu-item-sub">${item.job_position || 'Employee'}</div>
                     </div>
@@ -624,7 +628,7 @@ function setupSlashCommands(editor, editorId) {
         let htmlToInsert = '';
         if (item.type === 'loan') {
             const code = item.loan_code || ('LN-' + item.id);
-            htmlToInsert = `<a href="/loans/${item.id}" target="_blank" rel="noopener noreferrer" class="mention-chip mention-loan" style="display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:6px; background:rgba(139,92,246,0.12); color:#8b5cf6; font-weight:600; text-decoration:none; border:1px solid rgba(139,92,246,0.25);" contenteditable="false"><ion-icon name="link-outline"></ion-icon> ${code}: ${item.lender_name} (${item.currency} ${Number(item.principal_amount).toLocaleString(undefined, {minimumFractionDigits: 2})})</a>&nbsp;`;
+            htmlToInsert = `<a href="/loans/${item.id}" target="_blank" rel="noopener noreferrer" class="mention-chip mention-loan" style="display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:6px; background:rgba(139,92,246,0.12); color:#8b5cf6; font-weight:600; text-decoration:none; border:1px solid rgba(139,92,246,0.25);" contenteditable="false"><ion-icon name="link-outline"></ion-icon> ${escapeMention(code)}: ${escapeMention(item.party_name || item.lender_name)} (${escapeMention(item.currency)} ${Number(item.principal_amount).toLocaleString(undefined, {minimumFractionDigits: 2})})</a>&nbsp;`;
         } else if (item.type === 'transaction') {
             const isInc = item.type === 'income';
             const sign = isInc ? '+' : (item.type === 'expense' ? '-' : '');
@@ -659,17 +663,19 @@ function setupSlashCommands(editor, editorId) {
 
     // Show root commands or fetch on demand
     function fetchCategoryData(category, query) {
+        const revision = ++searchRevision;
+        if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
         updateTabsUI(category);
         const titles = {
             all: 'Slash Commands & Search',
-            loan: 'Loans (/loan - 10 Results)',
+            loan: 'Loans · up to 10 matches',
             transaction: 'Transactions (/transaction - 10 Results)',
             party: 'Parties (/party - 10 Results)',
             employee: 'Employees (/employee - 10 Results)'
         };
         const placeholders = {
             all: 'Search loans, transactions, parties, employees...',
-            loan: 'Search loan by name, code, amount, purpose...',
+            loan: 'Search code, party, lender, description or amount…',
             transaction: 'Search transaction by description, ref no, amount...',
             party: 'Search party by name, contact, phone, email...',
             employee: 'Search employee by name, code, position...'
@@ -731,6 +737,7 @@ function setupSlashCommands(editor, editorId) {
         if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
         searchDebounceTimer = setTimeout(() => {
             window.__fetchMentionsServer(category === 'all' ? 'loan' : category, query, 10).then(data => {
+                if (revision !== searchRevision) return;
                 let items = [];
                 if (category === 'loan') {
                     items = (data.loans || data.items || []).map(l => ({ ...l, type: 'loan' }));

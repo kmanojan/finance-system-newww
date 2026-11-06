@@ -43,7 +43,7 @@
                 @foreach($acc->unreconciled_tx as $tx)
                 <tr style="border-bottom:1px solid var(--border-light);">
                     <td style="padding:0.6rem 0.8rem; font-size:0.82rem;">{{ $tx->transaction_date }}</td>
-                    <td style="padding:0.6rem 0.8rem;"><span class="badge" style="background:{{ $tx->type === 'income' ? 'var(--success-light)' : '#fee2e2' }}; color:{{ $tx->type === 'income' ? 'var(--success)' : '#b91c1c' }}; font-size:0.7rem;">{{ ucfirst($tx->type) }}</span></td>
+                    <td style="padding:0.6rem 0.8rem;"><span class="badge" style="background:{{ $tx->type === 'income' ? 'var(--success-light)' : '#fee2e2' }}; color:{{ $tx->type === 'income' ? 'var(--success)' : '#b91c1c' }}; font-size:0.75rem;">{{ ucfirst($tx->type) }}</span></td>
                     <td style="padding:0.6rem 0.8rem; font-size:0.82rem;">{{ $tx->notes ?? 'Transaction #' . $tx->id }}</td>
                     <td style="padding:0.6rem 0.8rem; text-align:right; font-weight:700;">{{ $acc->currency }} {{ number_format($tx->amount, 2) }}</td>
                 </tr>

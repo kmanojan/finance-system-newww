@@ -1,134 +1,79 @@
-# 29. UI/UX Design System & Mobile PWA Ergonomics
+# Finance UI design system
 
-This document details the frontend architecture, design system tokens, responsive navigation, and reusable Blade components powering the **Apptimus Finance System**.
+The maintained source is `public/design-system.css`, loaded after the legacy stylesheet by the authenticated and shared layouts. `public/design-system.js` supplies common accessibility behavior. `/design-system` is a signed-in component reference.
 
----
+## Direction
 
-## 29.1 Design System & Theming Tokens
+A compact finance workspace: a narrow labelled navigation rail, soft white surfaces, a pale purple balance highlight, purple primary actions, and restrained status colours. The revised direction follows the request for a more contemporary interface without sacrificing workspace width. Lexend Deca remains the product typeface. Data, tasks and clear actions lead each screen; decoration must not compete with money.
 
-The application supports seamless **Dark Mode** and **Light Mode** switching with persistent `localStorage` preference and system matching.
+## Tokens and layout
 
-### Core CSS Variables (`public/styles.css`)
+| Role | Light | Dark |
+|---|---|---|
+| Page | `#f6f7fb` | `#141416` |
+| Surface | `#ffffff` | `#1d1d20` |
+| Heading | `#18191c` | `#f6f6f7` |
+| Body | `#303238` | `#e2e2e6` |
+| Muted text | `#5b606b` | `#b9bac2` |
+| Brand/data | `#6941c6` | `#b9a0f7` |
+| Primary action | `#6941c6` | `#b9a0f7` |
 
-```css
-:root {
-    --primary: #8b5cf6;
-    --primary-hover: #a78bfa;
-    --primary-light: rgba(139, 92, 246, 0.15);
-    --primary-gradient: linear-gradient(135deg, #a78bfa 0%, #7c3aed 100%);
-    --danger: #ef4444;
-    --success: #10b981;
-    --warning: #f59e0b;
-}
+Use semantic variables (`--bg-card`, `--text-main`, `--text-muted`, `--action`, `--danger`), not new per-page colours. Surface radius is 20px; control radius is 10px. Small status badges use 6px. Spacing uses 4, 8, 12, 16, 24px increments.
 
-html[data-theme="dark"] {
-    --bg-page: #1a1d27;
-    --bg-sidebar-primary: #12141c;
-    --bg-sidebar-secondary: #161923;
-    --bg-card: #202431;
-    --text-heading: #f8fafc;
-    --text-main: #cbd5e1;
-    --text-muted: #94a3b8;
-    --text-light: #64748b;
-    --border: rgba(255, 255, 255, 0.12);
-    --border-light: rgba(255, 255, 255, 0.06);
-}
+Desktop restores the original 70px primary rail with icons and visible 12px short labels, plus an optional 200px section navigation. Full destination names are available as accessible names and tooltips. The rail scrolls independently on shorter screens while account controls stay reachable. Main gutters are 32px, reduced to 24px on narrower desktops. At 1100px and below, navigation collapses and content uses the full viewport with 16px gutters. Phone tables retain column labels on each row; dense financial comparisons may use an explicitly scrollable table instead.
 
-[data-theme="light"], :root {
-    --bg-page: #F3F4F6;
-    --bg-sidebar-primary: #FFFFFF;
-    --bg-sidebar-secondary: #F9FAFB;
-    --bg-card: #FFFFFF;
-    --text-heading: #111827;
-    --text-main: #374151;
-    --text-muted: #6B7280;
-    --text-light: #9CA3AF;
-    --border: #E5E7EB;
-    --border-light: #F3F4F6;
-}
-```
+## Typography and numbers
 
-### Semantic Adaptive Badges
-Translucent alpha badges ensure high contrast and readability on both dark and light surfaces:
-- `.badge-success` — Emerald Green (`#10b981`, `rgba(16, 185, 129, 0.15)`)
-- `.badge-danger` — Rose Red (`#ef4444`, `rgba(239, 68, 68, 0.15)`)
-- `.badge-warning` — Amber Yellow (`#f59e0b`, `rgba(245, 158, 11, 0.15)`)
-- `.badge-info` — Sky Blue (`#3b82f6`, `rgba(59, 130, 246, 0.15)`)
-- `.badge-primary` / `.badge-purple` — Violet (`var(--primary)`, `var(--primary-light)`)
-- `.badge-neutral` / `.badge-draft` — Slate Gray (`--badge-draft-color`, `--badge-draft-bg`)
+- Body and controls: 14px; metadata and column labels: at least 12px.
+- Page titles: 28px desktop, 22px phone; section titles: 16–20px.
+- Money: tabular numerals, right aligned, explicit currency code and two decimals.
+- Summaries that combine currencies must convert using the reporting service; never add raw amounts with different currencies.
+- Use sentence case, concrete labels and concise help text. Do not display implementation jargon in normal user workflows.
 
----
+## Components
 
-## 29.2 Tabular Numerals & Monetary Presentation
+Use `.page-header`, `.btn.btn-primary`, `.btn.btn-outline`, `.ds-panel`, `.ds-stack`, `.ds-form-grid`, `.data-table`, `.amount-cell`, `.ds-notice`, `.overview-balances` and `.work-row`. Existing Blade selectors, amount inputs, date-range pickers and empty states remain available.
 
-All financial figures, ledger balances, project limits, and invoice sums implement **tabular numbers**:
-- `.tabular-nums`: sets `font-variant-numeric: tabular-nums;` ensuring monospaced alignment of digits `0-9` and decimal separators.
-- `.amount-cell`: right-aligned monetary cell class with `tabular-nums` and bold weight.
+Keep one primary screen action. Keep balance summaries compact. Overview balances use softly rounded cards with one pale purple cash highlight; detailed transaction totals use a divided summary. Do not add decorative icons, invented trends or extra colours to financial figures. Preserve real empty states with a next step; do not fill them with invented data.
 
----
+Every input needs a visible associated label. Error messages must explain how to correct the value and keep entered data. Use `old()` for server forms and retain form state on failed API requests. Name icon-only actions with `aria-label` or `title`. Mark unavailable actions and explain access restrictions.
 
-## 29.3 Reusable Blade Components
+Dialogs use `.modal-backdrop` and `.modal-card`. The shared script adds dialog semantics, initial focus, Tab trapping, focus return, labelled close buttons and background scroll locking. The existing shell handles Escape. Avoid nested dialogs. Respect reduced motion and preserve browser zoom. Phone touch targets are at least 44px.
 
-### 1. `<x-amount-input>`
-Interactive currency amount input that formats live user input with thousand separators (commas) and manages raw decimal values for form submission:
-```blade
-<x-amount-input name="amount" :value="$loan->principal_amount" required="true" />
-```
+Table cells should include `data-label` in Blade. The shared script adds missing labels for legacy static tables; dynamic rows must declare them explicitly. Do not use colour as the only status indicator.
 
-### 2. `<x-amount-display>`
-Standardized formatted currency output with optional positive/negative color coding:
-```blade
-<x-amount-display :amount="$tx->amount" currency="{{ $tx->currency }}" class="text-heading font-medium" />
-```
+## Verification for changes
 
-### 3. `<x-empty-state>`
-Engaging empty state card with icon, title, description, and primary action button or modal trigger:
-```blade
-<x-empty-state 
-    icon="briefcase-outline" 
-    title="No Projects Found" 
-    description="Track client deliverables, payment milestones, and timesheets." 
-    actionModal="createProjectModal" 
-    actionText="Create First Project" 
-/>
-```
+1. Run the affected feature tests on an isolated database.
+2. Inspect a populated and empty state, validation errors, and the primary action.
+3. Check browser layouts at 1440px, 1280px, 768px and 390px using DOM measurements, including content below the fold. Do not create screenshots for the current revision, as requested by the user.
+4. Check light/dark themes, keyboard navigation, modal focus and Escape.
+5. Confirm no clipped content, unlabeled mobile amounts, low contrast text or dead controls.
 
-### 4. `<x-confirm-modal>` & `window.confirmAction()`
-Themed replacement for native browser `confirm()` prompts with danger styling and form submission handlers:
-```javascript
-confirmAction({
-    title: 'Delete Invoice?',
-    message: 'Are you sure you want to delete invoice INV-2026-001?',
-    confirmText: 'Delete Invoice',
-    formId: 'delete_inv_1'
-});
-```
+The earlier 2026-11-06 audit covered 51 application pages. The compact-rail revision uses DOM-only browser checks; no new screenshots are created. Existing images from the earlier audit are historical review evidence, not production assets.
 
----
 
-## 29.4 Mobile & PWA Ergonomics
+## Navigation and party selection
 
-1. **Fixed Mobile Bottom Navigation Bar**:
-   - App-like bottom bar on screens `< 768px` providing 1-handed thumb navigation to:
-     - 📊 **Home** (`/dashboard`)
-     - 💳 **Ledger** (`/transactions`)
-     - 💼 **Projects** (`/projects`)
-     - 📄 **Invoices** (`/invoices`)
-     - 💳 **Loans** (`/loans`)
-     - ☰ **More** (slide-out navigation drawer)
-2. **Safe Area Insets**:
-   - `padding-bottom: calc(65px + env(safe-area-inset-bottom, 0px))` prevents UI clipping on iOS home indicator bars.
-3. **PWA Standalone Mode**:
-   - Fullscreen viewport settings (`viewport-fit=cover`, `mobile-web-app-capable`).
+All section menus use `<x-secondary-sidebar>` with one 18px outline icon and a visible text label per link. Loan and ledger menus live in `resources/views/navigation/`; operations and master-data menus keep their shared partials. Keep repeated menus in those partials rather than copying markup into pages. Navigation counts belong inside `.section-navigation-label`.
 
----
+The primary rail and section menu close independently. Use their chevron buttons to close them and the visible **Main menu** / **Section menu** controls above the content to reopen them. Desktop preferences persist in local storage. On small screens the main menu is a temporary drawer, closed by its button, Escape, a destination link or the backdrop. Closed panels are inert and release their content width. The mobile drawer traps keyboard focus and returns it to the menu trigger.
 
-## 29.5 Micro-interactions & Form Submit Guards
+`<x-party-selector>` has a separate **Clear selected party** button. Clearing restores that instance's placeholder, empties its submitted ID, emits input/change events and calls its own callback with empty values. Clear an automatically copied lender name only if it still matches the selected party; preserve a manually edited lender name. Dropdown options use escaped text, keyboard navigation, Escape and outside-click dismissal.
 
-1. **Floating Toast Notifications**:
-   - Flash alerts float in the bottom-right corner and auto-dismiss after 4 seconds.
-   - Global JS API: `window.showToast(message, 'success' | 'error' | 'warning' | 'info')`.
-2. **Double-Submission Protection**:
-   - Automated JavaScript form listener disables submit buttons and displays a spinner icon (`<span class="spinner-icon"></span> Processing...`) to prevent duplicate transactions.
-3. **Escape Key Modal Dismissal**:
-   - Modals automatically close when pressing `Escape` or clicking on the background backdrop.
+The current navigation revision is verified with DOM-only browser checks; do not generate screenshots.
+
+
+## Sign-in screen
+
+The login view loads shared design tokens, then `public/auth.css` for its isolated layout and `public/auth.js` for theme, password visibility and install controls. Desktop pairs a pale brand introduction with a form capped at 400px. At 800px and below, the introduction gives way to a single-column form and compact brand header. Inputs and the primary action are at least 50px high; ancillary controls are at least 44px. Browser zoom remains enabled.
+
+Keep visible field labels, username/current-password autocomplete, retained email after errors, blank passwords after failed submissions, and an error summary announced with `role="alert"`. The unchecked remember option explicitly submits zero. Do not add nonfunctional reset links, sample credentials, financial figures or customer data to this public page. Installation suggestions sit below the form and never obscure sign-in.
+
+## Loan detail workspace
+
+The loan single view uses `loan-detail.css` and `loan-detail.js` with the shared theme tokens and compact navigation. A single payable summary leads, supported by principal borrowed, unpaid interest, total paid, and a compact dates row. Avoid repeating the payable total in multiple cards.
+
+Use the full-width tabs in this order: **Interest Schedule**, **Principal Records**, **Loan Flow**, **Loan Details**. Each tab has its own panel and contextual actions. Terms, bank information, description, collateral/guarantor, and documents live in Loan Details. Record repayments and additional draws from Principal Records. The header keeps activation/full settlement and editing visible; pending-loan deletion and status changes sit in a More actions menu. Activated loans do not expose a delete action.
+
+Tabs implement `tablist`/`tab`/`tabpanel`, selected state, roving tabindex, Arrow keys, Home/End, and browser history. `#loan-flow` opens Loan Flow; `#loan-description` opens Loan Details and reveals the description. The flow redraws when its panel becomes visible. On narrow screens only the tab strip and flow canvas scroll horizontally; content stays within the page. No screenshots are generated for this redesign.

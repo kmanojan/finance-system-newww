@@ -2,29 +2,36 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\ActivityLogService;
+use App\Services\InvoicePostingService;
+use App\Services\LedgerPostingService;
+use App\Services\PeriodLockService;
+use App\Services\TransactionPostingService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class ProjectController extends Controller
 {
-    public function index(\Illuminate\Http\Request $request)
+    public function index(Request $request)
     {
         $deptId = $request->get('department_id');
         $departments = DB::table('departments')->get();
-        
+
         // Fetch projects along with company details, client name, and department name
         $query = DB::table('projects')
-            ->leftJoin('project_party', function($join) {
+            ->leftJoin('project_party', function ($join) {
                 $join->on('projects.id', '=', 'project_party.project_id')
                     ->where('project_party.role', '=', 'client');
             })
             ->leftJoin('parties', 'project_party.party_id', '=', 'parties.id')
             ->leftJoin('departments', 'projects.department_id', '=', 'departments.id')
             ->select('projects.*', 'parties.name as client_name', 'departments.name as department_name');
-            
-        if (!empty($deptId)) {
+
+        if (! empty($deptId)) {
             $deptIds = [$deptId];
-            $getDescendants = function($parentId) use (&$getDescendants, $departments, &$deptIds) {
+            $getDescendants = function ($parentId) use (&$getDescendants, $departments, &$deptIds) {
                 foreach ($departments as $dept) {
                     if ($dept->parent_id == $parentId) {
                         $deptIds[] = $dept->id;
@@ -33,12 +40,18 @@ class ProjectController extends Controller
                 }
             };
             $getDescendants($deptId);
-            
+
             $query->whereIn('projects.department_id', $deptIds);
         }
-        
-        $projects = $query->get();
-            
+
+        if ($request->filled('search')) {
+            $query->where('projects.name', 'like', '%'.$request->search.'%');
+        }
+        if ($request->filled('status')) {
+            $query->where('projects.status', $request->status);
+        }
+        $projects = $query->orderByDesc('projects.id')->paginate(20)->withQueryString();
+
         // Get milestone counts for today
         foreach ($projects as $project) {
             $project->milestones_due_today_count = DB::table('payment_milestones')
@@ -47,12 +60,12 @@ class ProjectController extends Controller
                 ->where('due_date', date('Y-m-d'))
                 ->count();
         }
-        
+
         // For the dropdowns in the creation form
         $companies = DB::table('companies')->get();
         $clients = DB::table('parties')->where('types', 'LIKE', '%client%')->where('status', 'active')->get();
         $partners = DB::table('parties')->where('types', 'LIKE', '%partner%')->where('status', 'active')->get();
-        
+
         return view('projects', compact('projects', 'companies', 'clients', 'partners', 'departments', 'deptId'));
     }
 
@@ -62,9 +75,9 @@ class ProjectController extends Controller
         $clientId = $request->input('client_id');
         $partnerId = $request->input('partner_id');
         $partnerShare = $request->input('partner_share_percentage', 0);
-        
+
         $projectData = $request->except(['_token', 'client_id', 'partner_id', 'partner_share_percentage']);
-        if (!isset($projectData['company_id'])) {
+        if (! isset($projectData['company_id'])) {
             $projectData['company_id'] = DB::table('companies')->value('id') ?? 1;
         }
         $projectData['created_at'] = now();
@@ -74,25 +87,25 @@ class ProjectController extends Controller
         $projectId = DB::table('projects')->insertGetId($projectData);
 
         // Insert into project_party pivot table if a client was selected
-        if (!empty($clientId)) {
+        if (! empty($clientId)) {
             DB::table('project_party')->insert([
                 'project_id' => $projectId,
                 'party_id' => $clientId,
-                'role' => 'client'
+                'role' => 'client',
             ]);
         }
 
         // Insert into project_party pivot table if a partner was selected
-        if (!empty($partnerId)) {
+        if (! empty($partnerId)) {
             DB::table('project_party')->insert([
                 'project_id' => $projectId,
                 'party_id' => $partnerId,
                 'role' => 'partner',
-                'share_percentage' => $partnerShare
+                'share_percentage' => $partnerShare,
             ]);
         }
 
-        \App\Services\ActivityLogService::logCreate('Project', $projectId, [
+        ActivityLogService::logCreate('Project', $projectId, [
             'name' => $projectData['name'] ?? null,
             'budget_limit' => $projectData['budget_limit'] ?? null,
         ]);
@@ -106,7 +119,7 @@ class ProjectController extends Controller
         $clientId = $request->input('client_id');
         $partnerId = $request->input('partner_id');
         $partnerShare = $request->input('partner_share_percentage', 0);
-        
+
         $projectData = $request->except(['_token', '_method', 'client_id', 'partner_id', 'partner_share_percentage']);
         $projectData['updated_at'] = now();
 
@@ -114,38 +127,39 @@ class ProjectController extends Controller
 
         // Update Client
         DB::table('project_party')->where('project_id', $id)->where('role', 'client')->delete();
-        if (!empty($clientId)) {
+        if (! empty($clientId)) {
             DB::table('project_party')->insert([
                 'project_id' => $id,
                 'party_id' => $clientId,
-                'role' => 'client'
+                'role' => 'client',
             ]);
         }
 
         // Update Partner
         DB::table('project_party')->where('project_id', $id)->where('role', 'partner')->delete();
-        if (!empty($partnerId)) {
+        if (! empty($partnerId)) {
             DB::table('project_party')->insert([
                 'project_id' => $id,
                 'party_id' => $partnerId,
                 'role' => 'partner',
-                'share_percentage' => $partnerShare
+                'share_percentage' => $partnerShare,
             ]);
         }
 
-        \App\Services\ActivityLogService::logUpdate('Project', $id, $oldProject, $projectData);
+        ActivityLogService::logUpdate('Project', $id, $oldProject, $projectData);
 
         return back()->with('success', 'Project updated successfully!');
     }
 
-
     public function show($id)
     {
         $project = DB::table('projects')->where('id', $id)->first();
-        if (!$project) abort(404);
+        if (! $project) {
+            abort(404);
+        }
 
         $company = DB::table('companies')->where('id', $project->company_id)->first();
-        
+
         $clients = DB::table('project_party')
             ->join('parties', 'project_party.party_id', '=', 'parties.id')
             ->where('project_party.project_id', $id)
@@ -162,35 +176,35 @@ class ProjectController extends Controller
 
         $invoices = DB::table('invoices')->where('project_id', $id)->get();
         $invoiceItems = DB::table('invoice_items')->whereIn('invoice_id', $invoices->pluck('id'))->get();
-        
+
         $payments = DB::table('payments')->where('project_id', $id)->get();
         $paymentModes = DB::table('payment_modes')->whereIn('payment_id', $payments->pluck('id'))->get();
-        
+
         $timesheets = DB::table('timesheets')->where('project_id', $id)->orderBy('logged_date', 'desc')->get();
-        
+
         $change_requests = DB::table('change_requests')->where('project_id', $id)->orderBy('created_at', 'desc')->get();
         foreach ($change_requests as $cr) {
             $cr->attachments = DB::table('attachments')
                 ->where('model_type', 'ChangeRequest')
                 ->where('model_id', $cr->id)
                 ->get();
-            $cr->links = !empty($cr->external_links) ? json_decode($cr->external_links, true) : [];
+            $cr->links = ! empty($cr->external_links) ? json_decode($cr->external_links, true) : [];
         }
         $notes = DB::table('notes')->where('notable_type', 'project')->where('notable_id', $id)->orderBy('created_at', 'desc')->get();
         $interactions = DB::table('interactions')->where('interactionable_type', 'project')->where('interactionable_id', $id)->orderBy('interaction_date', 'desc')->get();
-        
+
         // References for dropdowns
         $invoiceTypes = DB::table('invoice_types')->get();
         $allClients = DB::table('parties')->where('types', 'LIKE', '%client%')->where('status', 'active')->get();
         $allPartners = DB::table('parties')->where('types', 'LIKE', '%partner%')->where('status', 'active')->get();
-        
+
         // Load Commissions
         $commissions = $this->calculateCommissionDetails($id);
         $bankAccounts = DB::table('bank_accounts')->get();
         $allRecipients = DB::table('parties')
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->where('types', 'LIKE', '%partner%')
-                  ->orWhere('types', 'LIKE', '%vendor%');
+                    ->orWhere('types', 'LIKE', '%vendor%');
             })
             ->where('status', 'active')
             ->get();
@@ -216,11 +230,11 @@ class ProjectController extends Controller
             ->get();
         foreach ($draftInvoices as $draft) {
             $draft->items = DB::table('invoice_items')->where('invoice_id', $draft->id)->get();
-            $draft->source_name = $draft->schedule_id 
-                ? DB::table('invoice_schedules')->where('id', $draft->schedule_id)->value('name') 
+            $draft->source_name = $draft->schedule_id
+                ? DB::table('invoice_schedules')->where('id', $draft->schedule_id)->value('name')
                 : 'Manual';
         }
-        
+
         // Calculations
         $totalInvoiced = $invoices->whereNotIn('status', ['draft', 'pending_approval'])->sum('amount');
         $totalCollected = $payments->sum('total_amount');
@@ -251,11 +265,11 @@ class ProjectController extends Controller
             ->where('project_id', $id)
             ->orderBy('due_date', 'asc')
             ->get();
-            
+
         $milestonesDueTodayCount = $paymentMilestones
             ->where('status', 'pending')
-            ->filter(function($m) {
-                return \Carbon\Carbon::parse($m->due_date)->isToday();
+            ->filter(function ($m) {
+                return Carbon::parse($m->due_date)->isToday();
             })
             ->count();
 
@@ -269,8 +283,8 @@ class ProjectController extends Controller
             ->get();
 
         return view('projects-show', compact(
-            'project', 'company', 'clients', 'partners', 
-            'invoices', 'invoiceItems', 'payments', 'paymentModes', 'timesheets', 
+            'project', 'company', 'clients', 'partners',
+            'invoices', 'invoiceItems', 'payments', 'paymentModes', 'timesheets',
             'change_requests', 'notes', 'interactions', 'invoiceTypes',
             'allClients', 'allPartners', 'commissions', 'bankAccounts', 'allRecipients',
             'schedules', 'documentTemplates', 'allInvoiceTypes', 'draftInvoices',
@@ -283,19 +297,19 @@ class ProjectController extends Controller
 
     public function destroy($id)
     {
+        foreach (['invoices', 'payments', 'transactions', 'cost_allocations', 'project_commissions'] as $table) {
+            if (DB::table($table)->where('project_id', $id)->exists()) {
+                throw ValidationException::withMessages(['project' => 'This project has financial history. Mark it completed instead of deleting it.']);
+            }
+        }
         DB::table('projects')->where('id', $id)->delete();
-        return redirect('/projects')->with('success', 'Project deleted successfully!');
-    }
 
-    // --- Payment Milestones ---
+        return back()->with('success', 'Project deleted.');
+    }
 
     public function storeMilestone(Request $request, $id)
     {
-        $data = $request->validate([
-            'name' => 'required|string|max:255',
-            'amount' => 'required|numeric|min:0',
-            'due_date' => 'required|date'
-        ]);
+        $data = $this->milestoneData($request, $id);
 
         $data['project_id'] = $id;
         $data['status'] = 'pending';
@@ -307,14 +321,17 @@ class ProjectController extends Controller
         return back()->with('success', 'Payment milestone added successfully!');
     }
 
-    public function skipMilestone($id, $milestoneId)
+    public function skipMilestone(Request $request, $id, $milestoneId)
     {
+        $request->validate(['reason' => 'required|string|max:1000']);
+        abort_unless(DB::table('payment_milestones')->where('id', $milestoneId)->where('project_id', $id)->where('status', 'pending')->exists(), 422);
         DB::table('payment_milestones')
             ->where('id', $milestoneId)
             ->where('project_id', $id)
             ->update([
                 'status' => 'skipped',
-                'updated_at' => now()
+                'skip_reason' => $request->input('reason', 'Skipped by finance team'),
+                'updated_at' => now(),
             ]);
 
         return back()->with('success', 'Payment milestone skipped.');
@@ -327,7 +344,7 @@ class ProjectController extends Controller
             ->where('project_id', $id)
             ->first();
 
-        if (!$milestone || $milestone->status !== 'pending') {
+        if (! $milestone || $milestone->status !== 'pending') {
             return back()->with('error', 'Invalid milestone or already processed.');
         }
 
@@ -336,12 +353,12 @@ class ProjectController extends Controller
         $client = DB::table('project_party')->where('project_id', $id)->where('role', 'client')->first();
         $clientId = $client ? $client->party_id : (DB::table('parties')->value('id') ?? 1);
         $invoiceTypeId = DB::table('invoice_types')->value('id') ?? 1;
-        
+
         $invoiceId = DB::table('invoices')->insertGetId([
             'client_id' => $clientId,
             'department_id' => $project->department_id ?? (DB::table('departments')->value('id') ?? 1),
             'project_id' => $id,
-            'invoice_no' => 'INV-' . strtoupper(uniqid()),
+            'invoice_no' => 'INV-'.strtoupper(uniqid()),
             'status' => 'draft',
             'due_date' => null,
             'issue_date' => now()->format('Y-m-d'),
@@ -355,20 +372,19 @@ class ProjectController extends Controller
             'tax_amount' => 0.00,
             'grand_total' => $milestone->amount,
             'created_at' => now(),
-            'updated_at' => now()
+            'updated_at' => now(),
         ]);
-
 
         DB::table('invoice_items')->insert([
             'invoice_id' => $invoiceId,
             'invoice_type_id' => $invoiceTypeId,
-            'description' => 'Milestone: ' . $milestone->name,
+            'description' => 'Milestone: '.$milestone->name,
             'qty' => 1,
             'unit_price' => $milestone->amount,
             'currency' => $project->currency ?? 'LKR',
             'tax_percentage' => 0,
             'total' => $milestone->amount,
-            'created_at' => now()
+            'created_at' => now(),
         ]);
 
         // Mark milestone as invoiced
@@ -376,10 +392,42 @@ class ProjectController extends Controller
             ->where('id', $milestoneId)
             ->update([
                 'status' => 'invoiced',
-                'updated_at' => now()
+                'invoice_id' => $invoiceId,
+                'updated_at' => now(),
             ]);
 
         return back()->with('success', 'Draft invoice generated for the milestone!');
+    }
+
+    private function milestoneData(Request $request, $projectId): array
+    {
+        $data = $request->validate(['name' => 'required|string|max:255', 'due_date' => 'required|date_format:Y-m-d', 'calculation_type' => 'nullable|in:fixed,percentage', 'amount' => 'required_unless:calculation_type,percentage|nullable|numeric|gt:0', 'percentage' => 'required_if:calculation_type,percentage|nullable|numeric|gt:0|max:100']);
+        $data['calculation_type'] ??= 'fixed';
+        if ($data['calculation_type'] === 'percentage') {
+            $data['amount'] = round(DB::table('projects')->where('id', $projectId)->value('budget_limit') * $data['percentage'] / 100, 2);
+        }
+        if ($data['amount'] <= 0) {
+            throw ValidationException::withMessages(['amount' => 'Set a positive project budget before creating a percentage milestone.']);
+        }
+
+        return $data;
+    }
+
+    public function updateMilestone(Request $request, $id, $milestoneId)
+    {
+        $milestone = DB::table('payment_milestones')->where('id', $milestoneId)->where('project_id', $id)->first();
+        abort_unless($milestone && $milestone->status === 'pending', 422);
+        DB::table('payment_milestones')->where('id', $milestoneId)->update($this->milestoneData($request, $id) + ['updated_at' => now()]);
+
+        return back()->with('success', 'Milestone updated.');
+    }
+
+    public function destroyMilestone($id, $milestoneId)
+    {
+        abort_unless(DB::table('payment_milestones')->where('id', $milestoneId)->where('project_id', $id)->where('status', 'pending')->exists(), 422);
+        DB::table('payment_milestones')->where('id', $milestoneId)->delete();
+
+        return back()->with('success', 'Pending milestone deleted.');
     }
 
     public function storeTimesheet(Request $request, $id)
@@ -387,31 +435,64 @@ class ProjectController extends Controller
         $data = $request->validate([
             'task_description' => 'required|string',
             'hours' => 'required|numeric|min:0.1',
-            'logged_date' => 'required|date'
+            'logged_date' => 'required|date',
         ]);
-        
+
         $data['project_id'] = $id;
         $data['created_at'] = now();
-        
+
         DB::table('timesheets')->insert($data);
+
         return back()->with('success', 'Timesheet logged successfully!');
     }
 
     public function storePayment(Request $request, $id)
     {
+        $request->validate([
+            'payment_date' => 'required|date_format:Y-m-d', 'total_amount' => 'required|numeric|gt:0',
+            'currency' => 'required|string|size:3', 'pm_mode' => 'required|array|min:1',
+            'pm_mode.*' => 'required|string|max:50', 'pm_amount' => 'required|array',
+            'pm_amount.*' => 'required|numeric|gt:0', 'pm_bank_account_id' => 'nullable|array',
+            'pm_bank_account_id.*' => 'nullable|exists:bank_accounts,id',
+            'alloc_invoice_id' => 'nullable|array', 'alloc_invoice_id.*' => 'required|integer|distinct|exists:invoices,id',
+            'alloc_amount' => 'nullable|array', 'alloc_amount.*' => 'required|numeric|min:0',
+        ]);
+        PeriodLockService::checkLockedDate($request->payment_date, DB::table('projects')->where('id', $id)->value('company_id'));
+        $project = DB::table('projects')->where('id', $id)->lockForUpdate()->first();
+        abort_unless($project, 404);
+        $cents = fn ($amount) => (int) round((float) $amount * 100);
+        $total = $cents($request->total_amount);
+        if ($request->currency !== $project->currency || count($request->pm_mode) !== count($request->pm_amount) || array_sum(array_map($cents, $request->pm_amount)) !== $total) {
+            throw ValidationException::withMessages(['total_amount' => 'Payment modes must total the payment amount in the project currency.']);
+        }
+        if (count($request->input('alloc_invoice_id', [])) !== count($request->input('alloc_amount', [])) || array_sum(array_map($cents, $request->input('alloc_amount', []))) > $total) {
+            throw ValidationException::withMessages(['alloc_amount' => 'Invoice allocations cannot exceed the payment total.']);
+        }
+        foreach ($request->input('alloc_invoice_id', []) as $index => $invoiceId) {
+            $invoice = DB::table('invoices')->where('id', $invoiceId)->lockForUpdate()->first();
+            $paid = DB::table('payment_allocations')->where('invoice_id', $invoiceId)->sum('amount');
+            if ($invoice->project_id != $id || $invoice->currency !== $request->currency || in_array($invoice->status, ['draft', 'pending_approval', 'rejected', 'cancelled']) || $cents($request->alloc_amount[$index]) > $cents($invoice->amount) - $cents($paid)) {
+                throw ValidationException::withMessages(['alloc_amount' => 'Choose an issued invoice from this project and do not exceed its outstanding balance.']);
+            }
+        }
+        foreach ($request->input('pm_bank_account_id', []) as $bankId) {
+            if ($bankId && DB::table('bank_accounts')->where('id', $bankId)->value('currency') !== $request->currency) {
+                throw ValidationException::withMessages(['pm_bank_account_id' => 'Bank account currency must match the payment.']);
+            }
+        }
         // Fetch project for details
         $project = DB::table('projects')->where('id', $id)->first();
         $departmentId = ($project && $project->department_id) ? $project->department_id : (DB::table('departments')->value('id') ?? 1);
-        
+
         $cat = DB::table('categories')->where('name', 'Project Payment')->first();
-        if (!$cat) {
+        if (! $cat) {
             $companyId = DB::table('companies')->value('id') ?? 1;
             $categoryId = DB::table('categories')->insertGetId([
                 'company_id' => $companyId,
                 'name' => 'Project Payment',
                 'type' => 'income',
                 'created_at' => now(),
-                'updated_at' => now()
+                'updated_at' => now(),
             ]);
         } else {
             $categoryId = $cat->id;
@@ -421,16 +502,16 @@ class ProjectController extends Controller
         $paymentData = $request->only(['payment_date', 'total_amount', 'currency']);
         $paymentData['project_id'] = $id;
         $paymentData['created_at'] = now();
-        
+
         $paymentId = DB::table('payments')->insertGetId($paymentData);
-        
+
         // Save allocations
         $allocInvoiceIds = $request->input('alloc_invoice_id', []);
         $allocAmounts = $request->input('alloc_amount', []);
-        
+
         $allocInserts = [];
         foreach ($allocInvoiceIds as $idx => $invId) {
-            $amt = (float)($allocAmounts[$idx] ?? 0);
+            $amt = (float) ($allocAmounts[$idx] ?? 0);
             if ($amt > 0) {
                 $allocInserts[] = [
                     'payment_id' => $paymentId,
@@ -440,8 +521,8 @@ class ProjectController extends Controller
                 ];
             }
         }
-        
-        if (!empty($allocInserts)) {
+
+        if (! empty($allocInserts)) {
             DB::table('payment_allocations')->insert($allocInserts);
         }
 
@@ -457,7 +538,7 @@ class ProjectController extends Controller
         $modeInserts = [];
         $transactionInserts = [];
         for ($i = 0; $i < count($modes); $i++) {
-            if (!empty($amounts[$i])) {
+            if (! empty($amounts[$i])) {
                 $modeInserts[] = [
                     'payment_id' => $paymentId,
                     'mode' => $modes[$i],
@@ -469,12 +550,15 @@ class ProjectController extends Controller
                     'notes' => $notes[$i] ?? null,
                     'created_at' => now(),
                 ];
-                
+
                 $refNo = $references[$i] ?? $chequeNos[$i] ?? null;
-                $desc = "Project Payment - " . ($project ? $project->name : "Prj {$id}") . " (" . ucfirst($modes[$i]) . ")";
-                
+                $desc = 'Project Payment - '.($project ? $project->name : "Prj {$id}").' ('.ucfirst($modes[$i]).')';
+
                 $transactionInserts[] = [
                     'type' => 'income',
+                    'project_id' => $id,
+                    'bank_account_id' => $request->input("pm_bank_account_id.$i") ?: null,
+                    'payment_method' => $modes[$i],
                     'category_id' => $categoryId,
                     'department_id' => $departmentId,
                     'amount' => $amounts[$i],
@@ -488,15 +572,25 @@ class ProjectController extends Controller
             }
         }
 
-        if (!empty($modeInserts)) {
+        if (! empty($modeInserts)) {
             DB::table('payment_modes')->insert($modeInserts);
         }
-        if (!empty($transactionInserts)) {
+        if (! empty($transactionInserts)) {
             DB::table('transactions')->insert($transactionInserts);
         }
 
+        $allocated = array_sum(array_column($allocInserts, 'amount'));
+        $lines = [['account_code' => '1010', 'debit' => $paymentData['total_amount'], 'currency' => $paymentData['currency']]];
+        if ($allocated > 0) {
+            $lines[] = ['account_code' => '1200', 'credit' => $allocated, 'currency' => $paymentData['currency']];
+        }
+        if ($paymentData['total_amount'] > $allocated) {
+            $lines[] = ['account_code' => '2300', 'account_name' => 'Customer advances', 'account_type' => 'liability', 'credit' => round($paymentData['total_amount'] - $allocated, 2), 'currency' => $paymentData['currency']];
+        }
+        LedgerPostingService::postJournal($paymentData['payment_date'], 'Project receipt '.$project->name, $lines, $paymentId, 'Payment', $project->company_id);
+
         // Auto-mark invoices based on allocations
-        if (!empty($allocInserts)) {
+        if (! empty($allocInserts)) {
             foreach ($allocInserts as $alloc) {
                 $invId = $alloc['invoice_id'];
                 $inv = DB::table('invoices')->where('id', $invId)->first();
@@ -520,18 +614,18 @@ class ProjectController extends Controller
         $data['project_id'] = $id;
         $data['created_at'] = now();
         $data['updated_at'] = now();
-        
+
         $crId = DB::table('change_requests')->insertGetId($data);
 
         if ($request->has('auto_create_invoice') && $data['status'] === 'approved' && isset($data['amount']) && $data['amount'] > 0) {
             $project = DB::table('projects')->where('id', $id)->first();
             $clientParty = DB::table('project_party')->where('project_id', $id)->where('role', 'client')->first();
-            
+
             if ($project && $clientParty) {
                 $lastInvoice = DB::table('invoices')->orderBy('id', 'desc')->first();
                 $nextId = $lastInvoice ? $lastInvoice->id + 1 : 1;
-                $invoiceNo = 'INV-CR-' . str_pad($nextId, 5, '0', STR_PAD_LEFT);
-                
+                $invoiceNo = 'INV-CR-'.str_pad($nextId, 5, '0', STR_PAD_LEFT);
+
                 $crType = DB::table('invoice_types')->where('name', 'CR')->first();
                 $invoiceTypeId = $crType ? $crType->id : (DB::table('invoice_types')->value('id') ?? 1);
 
@@ -567,7 +661,7 @@ class ProjectController extends Controller
 
                 DB::table('change_requests')->where('id', $crId)->update([
                     'status' => 'invoiced',
-                    'updated_at' => now()
+                    'updated_at' => now(),
                 ]);
             }
         }
@@ -578,21 +672,21 @@ class ProjectController extends Controller
     public function approveChangeRequest($id, $crId)
     {
         $cr = DB::table('change_requests')->where('id', $crId)->where('project_id', $id)->first();
-        if (!$cr) {
+        if (! $cr) {
             return back()->with('error', 'Change Request not found.');
         }
-        
+
         $status = 'approved';
-        
+
         if ($cr->amount > 0) {
             $project = DB::table('projects')->where('id', $id)->first();
             $clientParty = DB::table('project_party')->where('project_id', $id)->where('role', 'client')->first();
-            
+
             if ($project && $clientParty) {
                 $lastInvoice = DB::table('invoices')->orderBy('id', 'desc')->first();
                 $nextId = $lastInvoice ? $lastInvoice->id + 1 : 1;
-                $invoiceNo = 'INV-CR-' . str_pad($nextId, 5, '0', STR_PAD_LEFT);
-                
+                $invoiceNo = 'INV-CR-'.str_pad($nextId, 5, '0', STR_PAD_LEFT);
+
                 $crType = DB::table('invoice_types')->where('name', 'CR')->first();
                 $invoiceTypeId = $crType ? $crType->id : (DB::table('invoice_types')->value('id') ?? 1);
 
@@ -625,42 +719,44 @@ class ProjectController extends Controller
                     'total' => $cr->amount,
                     'created_at' => now(),
                 ]);
-                
+
                 $status = 'invoiced';
             }
         }
-        
+
         DB::table('change_requests')->where('id', $crId)->update([
             'status' => $status,
-            'updated_at' => now()
+            'updated_at' => now(),
         ]);
-        
-        return back()->with('success', 'Change Request approved ' . ($status === 'invoiced' ? 'and invoiced ' : '') . 'successfully!');
+
+        return back()->with('success', 'Change Request approved '.($status === 'invoiced' ? 'and invoiced ' : '').'successfully!');
     }
 
     public function updateChangeRequest(Request $request, $id, $crId)
     {
         $cr = DB::table('change_requests')->where('id', $crId)->where('project_id', $id)->first();
-        if (!$cr) return back()->with('error', 'Change request not found.');
+        if (! $cr) {
+            return back()->with('error', 'Change request not found.');
+        }
 
-        $links = !empty($cr->external_links) ? json_decode($cr->external_links, true) : [];
+        $links = ! empty($cr->external_links) ? json_decode($cr->external_links, true) : [];
 
         // Add External Link
         if ($request->filled('link_title') && $request->filled('link_url')) {
             $links[] = [
                 'title' => $request->input('link_title'),
-                'url' => $request->input('link_url')
+                'url' => $request->input('link_url'),
             ];
             DB::table('change_requests')->where('id', $crId)->update([
                 'external_links' => json_encode($links),
-                'updated_at' => now()
+                'updated_at' => now(),
             ]);
         }
 
         // Add File Attachments
         if ($request->hasFile('attachments')) {
             foreach ($request->file('attachments') as $file) {
-                $path = $file->store('attachments/change_requests', 'public');
+                $path = $file->store('attachments/change_requests', config('filesystems.documents_disk', 'local'));
                 DB::table('attachments')->insert([
                     'model_type' => 'ChangeRequest',
                     'model_id' => $crId,
@@ -678,13 +774,14 @@ class ProjectController extends Controller
     public function storeNote(Request $request, $id)
     {
         $data = $request->validate([
-            'content' => 'required|string'
+            'content' => 'required|string',
         ]);
         $data['notable_type'] = 'project';
         $data['notable_id'] = $id;
         $data['created_at'] = now();
-        
+
         DB::table('notes')->insert($data);
+
         return back()->with('success', 'Note added successfully!');
     }
 
@@ -694,8 +791,9 @@ class ProjectController extends Controller
         $data['interactionable_type'] = 'project';
         $data['interactionable_id'] = $id;
         $data['created_at'] = now();
-        
+
         DB::table('interactions')->insert($data);
+
         return back()->with('success', 'Interaction logged successfully!');
     }
 
@@ -708,7 +806,9 @@ class ProjectController extends Controller
             ->get();
 
         $project = DB::table('projects')->where('id', $projectId)->first();
-        if (!$project) return collect();
+        if (! $project) {
+            return collect();
+        }
 
         // Gather base variables
         $totalInvoiced = DB::table('invoices')->where('project_id', $projectId)->whereNotIn('status', ['draft', 'pending_approval'])->sum('amount');
@@ -739,7 +839,7 @@ class ProjectController extends Controller
             }
 
             $paid = DB::table('commission_payments')->where('project_commission_id', $comm->id)->sum('amount');
-            
+
             $comm->total_commission = $totalComm;
             $comm->paid = $paid;
             $comm->payable = max(0, $totalComm - $paid);
@@ -754,9 +854,12 @@ class ProjectController extends Controller
         $data['project_id'] = $id;
         $data['created_at'] = now();
         $data['updated_at'] = now();
-        if (empty($data['effective_from'])) $data['effective_from'] = date('Y-m-d');
+        if (empty($data['effective_from'])) {
+            $data['effective_from'] = date('Y-m-d');
+        }
 
         DB::table('project_commissions')->insert($data);
+
         return back()->with('success', 'Commission setup added successfully!');
     }
 
@@ -766,6 +869,7 @@ class ProjectController extends Controller
         $data['updated_at'] = now();
 
         DB::table('project_commissions')->where('id', $commId)->update($data);
+
         return back()->with('success', 'Commission setup updated successfully!');
     }
 
@@ -777,23 +881,29 @@ class ProjectController extends Controller
         }
 
         DB::table('project_commissions')->where('id', $commId)->delete();
+
         return back()->with('success', 'Commission setup removed successfully!');
     }
 
     public function storeCommissionPayment(Request $request, $projectId, $commId)
     {
+        $paymentData = $request->validate(['amount' => 'required|numeric|gt:0', 'payment_date' => 'required|date_format:Y-m-d', 'payment_mode' => 'required|string|max:50', 'bank_account_id' => 'nullable|exists:bank_accounts,id', 'reference_no' => 'nullable|string|max:255', 'notes' => 'nullable|string']);
+        DB::table('project_commissions')->where('id', $commId)->lockForUpdate()->first();
         $project = DB::table('projects')->where('id', $projectId)->first();
-        if (!$project) abort(404);
+        if (! $project) {
+            abort(404);
+        }
 
         $commDetails = $this->calculateCommissionDetails($projectId)->firstWhere('id', $commId);
-        if (!$commDetails) abort(404);
+        if (! $commDetails) {
+            abort(404);
+        }
 
         $amount = $request->input('amount');
         if ($amount > $commDetails->payable) {
-            return back()->with('error', 'Payment amount cannot exceed the payable balance of ' . number_format($commDetails->payable, 2));
+            return back()->with('error', 'Payment amount cannot exceed the payable balance of '.number_format($commDetails->payable, 2));
         }
 
-        $paymentData = $request->except(['_token', 'currency']);
         $paymentData['project_commission_id'] = $commId;
         $paymentData['created_at'] = now();
         $paymentData['updated_at'] = now();
@@ -801,30 +911,33 @@ class ProjectController extends Controller
         $paymentId = DB::table('commission_payments')->insertGetId($paymentData);
 
         // Record expense transaction under Commission Expense category
-        $cat = DB::table('categories')->where('name', 'Commission Expense')->first();
-        if (!$cat) {
+        $cat = DB::table('categories')->where('name', 'Commission Expense')->where('company_id', $project->company_id)->first();
+        if (! $cat) {
             $catId = DB::table('categories')->insertGetId([
                 'name' => 'Commission Expense',
+                'company_id' => $project->company_id,
                 'type' => 'expense',
                 'created_at' => now(),
-                'updated_at' => now()
+                'updated_at' => now(),
             ]);
         } else {
             $catId = $cat->id;
         }
 
-        DB::table('transactions')->insert([
+        TransactionPostingService::create([
             'type' => 'expense',
+            'project_id' => $projectId,
+            'party_id' => DB::table('project_commissions')->where('id', $commId)->value('party_id'),
             'category_id' => $catId,
             'department_id' => $project->department_id ?? 1,
             'bank_account_id' => $request->input('bank_account_id'),
             'amount' => $amount,
-            'currency' => $request->input('currency', $project->currency ?? (DB::table('companies')->value('base_currency') ?? 'LKR')),
+            'currency' => $project->currency,
             'transaction_date' => $request->input('payment_date'),
-            'description' => "Commission Payment to " . $commDetails->party_name . " for project " . $project->name,
+            'description' => 'Commission Payment to '.$commDetails->party_name.' for project '.$project->name,
             'reference_no' => $request->input('reference_no'),
             'created_at' => now(),
-            'updated_at' => now()
+            'updated_at' => now(),
         ]);
 
         return back()->with('success', 'Commission payment recorded and synced to expenses successfully!');
@@ -832,7 +945,7 @@ class ProjectController extends Controller
 
     private function calculateNextDate($currentDate, $frequency, $intervalDays = null, $genDay = null)
     {
-        $date = \Carbon\Carbon::parse($currentDate);
+        $date = Carbon::parse($currentDate);
         if ($frequency === 'monthly') {
             $date->addMonth();
             if ($genDay) {
@@ -853,23 +966,29 @@ class ProjectController extends Controller
         } else {
             $date->addMonth();
         }
+
         return $date->toDateString();
     }
 
     private function adjustForWeekends($dateString, $enabled)
     {
-        if (!$enabled) return $dateString;
-        $date = \Carbon\Carbon::parse($dateString);
+        if (! $enabled) {
+            return $dateString;
+        }
+        $date = Carbon::parse($dateString);
         while ($date->isWeekend()) {
             $date->addDay();
         }
+
         return $date->toDateString();
     }
 
     private function generateInvoiceFromSchedule($schedule, $generationDate)
     {
         $project = DB::table('projects')->where('id', $schedule->project_id)->first();
-        if (!$project) return null;
+        if (! $project) {
+            return null;
+        }
 
         $clientParty = DB::table('project_party')
             ->where('project_id', $schedule->project_id)
@@ -877,9 +996,9 @@ class ProjectController extends Controller
             ->first();
         $clientId = $clientParty ? $clientParty->party_id : null;
 
-        $dueDate = \Carbon\Carbon::parse($generationDate)->addDays(30)->toDateString();
-        $invoiceNo = 'INV-SCH-' . date('Ymd') . '-' . rand(1000, 9999);
-        $status = $schedule->require_approval ? 'draft' : 'sent';
+        $dueDate = Carbon::parse($generationDate)->addDays(30)->toDateString();
+        $invoiceNo = 'INV-SCH-'.date('Ymd').'-'.rand(1000, 9999);
+        $status = $schedule->require_approval ? 'pending_approval' : 'sent';
 
         // 1. Fetch template snapshot
         $departmentId = $project->department_id ?? 1;
@@ -888,12 +1007,14 @@ class ProjectController extends Controller
             ->where('is_default', true)
             ->first();
 
-        if (!$template) {
+        if (! $template) {
             $template = DB::table('document_templates')->where('is_default', true)->first();
-            if (!$template) $template = DB::table('document_templates')->first();
+            if (! $template) {
+                $template = DB::table('document_templates')->first();
+            }
         }
 
-         $templateSnapshot = $template ? json_encode([
+        $templateSnapshot = $template ? json_encode([
             'header_image_url' => $template->header_image_url,
             'footer_image_url' => $template->footer_image_url,
             'background_image_url' => $template->background_image_url ?? null,
@@ -901,7 +1022,7 @@ class ProjectController extends Controller
             'bank_details' => $template->bank_details,
             'description' => $template->description,
             'terms_conditions' => $template->terms_conditions,
-            'language' => $template->language ?? 'English'
+            'language' => $template->language ?? 'English',
         ]) : null;
 
         $invoiceId = DB::table('invoices')->insertGetId([
@@ -920,7 +1041,7 @@ class ProjectController extends Controller
             'due_date' => $dueDate,
             'schedule_id' => $schedule->id,
             'created_at' => now(),
-            'updated_at' => now()
+            'updated_at' => now(),
         ]);
 
         $items = DB::table('invoice_schedule_items')->where('schedule_id', $schedule->id)->get();
@@ -940,18 +1061,18 @@ class ProjectController extends Controller
                 'currency' => $schedule->currency,
                 'tax_percentage' => $item->tax_percentage,
                 'total' => $itemTotal,
-                'created_at' => now()
+                'created_at' => now(),
             ];
         }
 
-        if (!empty($itemsToInsert)) {
+        if (! empty($itemsToInsert)) {
             DB::table('invoice_items')->insert($itemsToInsert);
         }
 
         DB::table('invoices')->where('id', $invoiceId)->update([
             'amount' => $totalAmount,
             'subtotal' => $totalAmount,
-            'grand_total' => $totalAmount
+            'grand_total' => $totalAmount,
         ]);
 
         if ($schedule->notify_on_generation) {
@@ -963,9 +1084,11 @@ class ProjectController extends Controller
                 'notify_before_days' => 0,
                 'status' => 'pending',
                 'created_at' => now(),
-                'updated_at' => now()
+                'updated_at' => now(),
             ]);
         }
+
+        InvoicePostingService::sync($invoiceId);
 
         return $invoiceId;
     }
@@ -976,23 +1099,23 @@ class ProjectController extends Controller
         $schedules = DB::table('invoice_schedules')
             ->where('status', 'active')
             ->where('from_date', '<=', $today)
-            ->where(function($q) use ($today) {
+            ->where(function ($q) use ($today) {
                 $q->whereNull('to_date')->orWhere('to_date', '>=', $today);
             })
             ->where('next_generation_date', '<=', $today)
-            ->get();
+            ->lockForUpdate()->get();
 
-        $controller = new self();
+        $controller = new self;
 
         foreach ($schedules as $s) {
-            $controller->generateInvoiceFromSchedule($s, $today);
-            
+            $controller->generateInvoiceFromSchedule($s, $s->next_generation_date);
+
             $nextDate = $controller->calculateNextDate($s->next_generation_date, $s->frequency, $s->custom_interval_days, $s->generate_day);
             $nextDate = $controller->adjustForWeekends($nextDate, $s->auto_adjust_holidays);
-            
+
             $updateData = [
                 'next_generation_date' => $nextDate,
-                'updated_at' => now()
+                'updated_at' => now(),
             ];
 
             if ($s->to_date && $nextDate > $s->to_date) {
@@ -1006,9 +1129,9 @@ class ProjectController extends Controller
     public function storeSchedule(Request $request, $id)
     {
         $scheduleData = $request->only([
-            'name', 'from_date', 'to_date', 'frequency', 'custom_interval_days', 
-            'generate_day', 'next_generation_date', 'invoice_type_id', 'currency', 
-            'template_id', 'notes'
+            'name', 'from_date', 'to_date', 'frequency', 'custom_interval_days',
+            'generate_day', 'next_generation_date', 'invoice_type_id', 'currency',
+            'template_id', 'notes',
         ]);
 
         $scheduleData['project_id'] = $id;
@@ -1032,19 +1155,19 @@ class ProjectController extends Controller
 
         $items = [];
         for ($i = 0; $i < count($descriptions); $i++) {
-            if (!empty($descriptions[$i])) {
+            if (! empty($descriptions[$i])) {
                 $items[] = [
                     'schedule_id' => $scheduleId,
                     'description' => $descriptions[$i],
                     'quantity' => $qtys[$i] ?? 1,
                     'unit_price' => $prices[$i] ?? 0,
                     'tax_percentage' => $taxes[$i] ?? 0,
-                    'created_at' => now()
+                    'created_at' => now(),
                 ];
             }
         }
 
-        if (!empty($items)) {
+        if (! empty($items)) {
             DB::table('invoice_schedule_items')->insert($items);
         }
 
@@ -1054,9 +1177,9 @@ class ProjectController extends Controller
     public function updateSchedule(Request $request, $projectId, $scheduleId)
     {
         $scheduleData = $request->only([
-            'name', 'from_date', 'to_date', 'frequency', 'custom_interval_days', 
-            'generate_day', 'next_generation_date', 'invoice_type_id', 'currency', 
-            'template_id', 'notes'
+            'name', 'from_date', 'to_date', 'frequency', 'custom_interval_days',
+            'generate_day', 'next_generation_date', 'invoice_type_id', 'currency',
+            'template_id', 'notes',
         ]);
 
         $scheduleData['require_approval'] = $request->has('require_approval') ? 1 : 0;
@@ -1075,19 +1198,19 @@ class ProjectController extends Controller
 
         $items = [];
         for ($i = 0; $i < count($descriptions); $i++) {
-            if (!empty($descriptions[$i])) {
+            if (! empty($descriptions[$i])) {
                 $items[] = [
                     'schedule_id' => $scheduleId,
                     'description' => $descriptions[$i],
                     'quantity' => $qtys[$i] ?? 1,
                     'unit_price' => $prices[$i] ?? 0,
                     'tax_percentage' => $taxes[$i] ?? 0,
-                    'created_at' => now()
+                    'created_at' => now(),
                 ];
             }
         }
 
-        if (!empty($items)) {
+        if (! empty($items)) {
             DB::table('invoice_schedule_items')->insert($items);
         }
 
@@ -1102,6 +1225,7 @@ class ProjectController extends Controller
         }
 
         DB::table('invoice_schedules')->where('id', $scheduleId)->delete();
+
         return back()->with('success', 'Invoice generation schedule deleted successfully!');
     }
 
@@ -1109,8 +1233,9 @@ class ProjectController extends Controller
     {
         DB::table('invoice_schedules')->where('id', $scheduleId)->update([
             'status' => 'paused',
-            'updated_at' => now()
+            'updated_at' => now(),
         ]);
+
         return back()->with('success', 'Schedule paused successfully!');
     }
 
@@ -1118,15 +1243,18 @@ class ProjectController extends Controller
     {
         DB::table('invoice_schedules')->where('id', $scheduleId)->update([
             'status' => 'active',
-            'updated_at' => now()
+            'updated_at' => now(),
         ]);
+
         return back()->with('success', 'Schedule resumed successfully!');
     }
 
     public function runScheduleImmediately(Request $request, $projectId, $scheduleId)
     {
         $schedule = DB::table('invoice_schedules')->where('id', $scheduleId)->first();
-        if (!$schedule) abort(404);
+        if (! $schedule) {
+            abort(404);
+        }
 
         $today = date('Y-m-d');
         $this->generateInvoiceFromSchedule($schedule, $today);
@@ -1136,7 +1264,7 @@ class ProjectController extends Controller
 
         $updateData = [
             'next_generation_date' => $nextDate,
-            'updated_at' => now()
+            'updated_at' => now(),
         ];
 
         if ($schedule->to_date && $nextDate > $schedule->to_date) {
@@ -1151,14 +1279,16 @@ class ProjectController extends Controller
     public function skipOccurrence(Request $request, $projectId, $scheduleId)
     {
         $schedule = DB::table('invoice_schedules')->where('id', $scheduleId)->first();
-        if (!$schedule) abort(404);
+        if (! $schedule) {
+            abort(404);
+        }
 
         $nextDate = $this->calculateNextDate($schedule->next_generation_date, $schedule->frequency, $schedule->custom_interval_days, $schedule->generate_day);
         $nextDate = $this->adjustForWeekends($nextDate, $schedule->auto_adjust_holidays);
 
         $updateData = [
             'next_generation_date' => $nextDate,
-            'updated_at' => now()
+            'updated_at' => now(),
         ];
 
         if ($schedule->to_date && $nextDate > $schedule->to_date) {
@@ -1172,30 +1302,37 @@ class ProjectController extends Controller
 
     public function approveDraftInvoice(Request $request, $projectId, $invoiceId)
     {
+        abort_unless(DB::table('invoices')->where('id', $invoiceId)->where('project_id', $projectId)->whereIn('status', ['draft', 'pending_approval'])->exists(), 422);
         $invoice = DB::table('invoices')->where('id', $invoiceId)->first();
-        if (!$invoice) abort(404);
+        if (! $invoice) {
+            abort(404);
+        }
 
         $invoiceNo = $invoice->invoice_no;
         if (str_starts_with($invoiceNo, 'INV-SCH-')) {
-            $invoiceNo = 'INV-' . date('Ymd') . '-' . rand(1000, 9999);
+            $invoiceNo = 'INV-'.date('Ymd').'-'.rand(1000, 9999);
         }
 
         DB::table('invoices')->where('id', $invoiceId)->update([
             'status' => 'sent',
             'invoice_no' => $invoiceNo,
             'issue_date' => date('Y-m-d'),
-            'updated_at' => now()
+            'updated_at' => now(),
         ]);
+
+        InvoicePostingService::sync($invoiceId);
 
         return back()->with('success', 'Draft invoice approved and set to sent!');
     }
 
     public function rejectDraftInvoice(Request $request, $projectId, $invoiceId)
     {
+        abort_unless(DB::table('invoices')->where('id', $invoiceId)->where('project_id', $projectId)->whereIn('status', ['draft', 'pending_approval'])->exists(), 422);
         DB::table('invoices')->where('id', $invoiceId)->update([
             'status' => 'cancelled',
-            'updated_at' => now()
+            'updated_at' => now(),
         ]);
+
         return back()->with('success', 'Draft invoice rejected and cancelled.');
     }
 }

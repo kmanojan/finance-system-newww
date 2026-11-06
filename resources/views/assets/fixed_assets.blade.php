@@ -2,12 +2,7 @@
 @section('title', 'Fixed Assets & Depreciation')
 
 @section('secondary-sidebar')
-<aside class="sidebar-secondary" id="sidebarSecondary">
-    <h2 class="sidebar-title">Assets</h2>
-    <nav class="nav-links">
-        <a href="/assets/fixed-assets" class="nav-link active">Fixed Assets Register</a>
-    </nav>
-</aside>
+@include('operations._sidebar')
 @endsection
 
 @section('content')

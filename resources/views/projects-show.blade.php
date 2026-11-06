@@ -2,41 +2,32 @@
 @section('title', 'Project Hub: ' . $project->name)
 
 @section('secondary-sidebar')
-<aside class="sidebar-secondary" id="sidebarSecondary">
+<x-secondary-sidebar title="Project Hub">
     <a href="/projects" class="btn btn-outline btn-pill" style="margin-bottom: 2rem; width: 100%;">
         <ion-icon name="arrow-back-outline"></ion-icon> Back to Projects
     </a>
-    <h2 class="sidebar-title">Project Hub</h2>
     <nav class="nav-links">
-        <a href="#overview" class="nav-link active" onclick="switchTab('overview', this)">Overview</a>
-        <a href="#invoices" class="nav-link" onclick="switchTab('invoices', this)">
-            Invoices
+        <a href="#overview" class="nav-link active" onclick="switchTab('overview', this)"><ion-icon name="grid-outline" aria-hidden="true"></ion-icon><span class="section-navigation-label">Overview</span></a>
+        <a href="#invoices" class="nav-link" onclick="switchTab('invoices', this)"><ion-icon name="document-text-outline" aria-hidden="true"></ion-icon><span class="section-navigation-label">Invoices
             @if($draftInvoices->count() > 0)
                 <span class="badge" style="background:var(--danger); color:#fff; font-size:0.75rem; padding:0.2rem 0.5rem; border-radius:50%; margin-left:5px;">{{ $draftInvoices->count() }}</span>
-            @endif
-        </a>
-        <a href="#payments" class="nav-link" onclick="switchTab('payments', this)">Payments</a>
-        <a href="#change-requests" class="nav-link" onclick="switchTab('change-requests', this)">Change Requests</a>
-        <a href="#notes" class="nav-link" onclick="switchTab('notes', this)">Notes & Interactions</a>
-        <a href="#commission-setup" class="nav-link" onclick="switchTab('commission-setup', this)">Commission Setup</a>
-        <a href="#invoice-schedule" class="nav-link" onclick="switchTab('invoice-schedule', this)">Invoice Schedule</a>
-        <a href="#payment-milestones" class="nav-link" onclick="switchTab('payment-milestones', this)">
-            Payment Milestones
+            @endif</span></a>
+        <a href="#payments" class="nav-link" onclick="switchTab('payments', this)"><ion-icon name="wallet-outline" aria-hidden="true"></ion-icon><span class="section-navigation-label">Payments</span></a>
+        <a href="#change-requests" class="nav-link" onclick="switchTab('change-requests', this)"><ion-icon name="git-compare-outline" aria-hidden="true"></ion-icon><span class="section-navigation-label">Change Requests</span></a>
+        <a href="#notes" class="nav-link" onclick="switchTab('notes', this)"><ion-icon name="chatbubbles-outline" aria-hidden="true"></ion-icon><span class="section-navigation-label">Notes & Interactions</span></a>
+        <a href="#commission-setup" class="nav-link" onclick="switchTab('commission-setup', this)"><ion-icon name="calculator-outline" aria-hidden="true"></ion-icon><span class="section-navigation-label">Commission Setup</span></a>
+        <a href="#invoice-schedule" class="nav-link" onclick="switchTab('invoice-schedule', this)"><ion-icon name="calendar-outline" aria-hidden="true"></ion-icon><span class="section-navigation-label">Invoice Schedule</span></a>
+        <a href="#payment-milestones" class="nav-link" onclick="switchTab('payment-milestones', this)"><ion-icon name="flag-outline" aria-hidden="true"></ion-icon><span class="section-navigation-label">Payment Milestones
             @if($milestonesDueTodayCount > 0)
                 <span class="badge" style="background:#FEE2E2;color:#991B1B;padding:0.2em 0.6em;margin-left:0.5rem;font-size:0.8rem;">{{ $milestonesDueTodayCount }} Due Today</span>
-            @endif
-        </a>
-        <a href="#documents" class="nav-link" onclick="switchTab('documents', this)">
-            Documents
+            @endif</span></a>
+        <a href="#documents" class="nav-link" onclick="switchTab('documents', this)"><ion-icon name="folder-open-outline" aria-hidden="true"></ion-icon><span class="section-navigation-label">Documents
             @if(count($documents) > 0)
                 <span class="badge" style="background:#E0E7FF;color:#3730A3;padding:0.2em 0.6em;margin-left:0.5rem;font-size:0.8rem;">{{ count($documents) }}</span>
-            @endif
-        </a>
-        <a href="#cost-allocations" class="nav-link" onclick="switchTab('cost-allocations', this)">
-            Cost Allocations
-        </a>
+            @endif</span></a>
+        <a href="#cost-allocations" class="nav-link" onclick="switchTab('cost-allocations', this)"><ion-icon name="pie-chart-outline" aria-hidden="true"></ion-icon><span class="section-navigation-label">Cost Allocations</span></a>
     </nav>
-</aside>
+</x-secondary-sidebar>
 @endsection
 
 @section('content')
@@ -89,13 +80,13 @@
     .metric-card h3 { font-size: 0.9rem; font-weight: 500; opacity: 0.9; margin-bottom: 0.5rem; }
     .metric-card .value { font-size: 2rem; font-weight: 700; letter-spacing: -0.5px; }
     
-    .grad-purple { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-    .grad-green { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
-    .grad-orange { background: linear-gradient(135deg, #f12711 0%, #f5af19 100%); }
-    .grad-blue { background: linear-gradient(135deg, #2193b0 0%, #6dd5ed 100%); }
+    .grad-purple { background:var(--bg-card); }
+    .grad-green { background:var(--bg-card); }
+    .grad-orange { background:var(--bg-card); }
+    .grad-blue { background:var(--bg-card); }
 
     .budget-track { background: #e2e8f0; border-radius: 10px; height: 12px; width: 100%; margin-top: 1rem; overflow: hidden; position: relative; }
-    .budget-fill { background: linear-gradient(90deg, #f5af19, #f12711); height: 100%; border-radius: 10px; transition: width 1s cubic-bezier(0.4, 0, 0.2, 1); }
+    .budget-fill { background:var(--bg-card); height: 100%; border-radius: 10px; transition: width 1s cubic-bezier(0.4, 0, 0.2, 1); }
     
     .section-title { font-size: 1.2rem; font-weight: 600; color: var(--text-heading); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; justify-content: space-between; }
     
@@ -136,7 +127,7 @@
 
 <header class="page-header">
     <div class="header-titles">
-        <h1 style="font-size: 2.2rem; letter-spacing: -1px; background: linear-gradient(90deg, #1e293b, #3b82f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+        <h1>
             {{ $project->name }}
         </h1>
     </div>
@@ -176,256 +167,30 @@
 
 <!-- ================== TAB 1: OVERVIEW ================== -->
 <div id="overview" class="tab-content active">
-
-    <!-- Revenue Realization Progress Banner -->
-    <div class="glass-card" style="background: var(--bg-card); border: 1px solid var(--border); border-left: 6px solid var(--primary); margin-bottom: 2rem;">
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
-            <div>
-                <span style="font-size:0.85rem; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-muted); display:flex; align-items:center; gap:0.4rem;">
-                    <ion-icon name="analytics-outline" style="color:var(--primary);"></ion-icon> Total Revenue Realization Base
-                </span>
-                <h2 style="font-size:2rem; font-weight:800; color:var(--text-heading); margin:0.3rem 0 0 0;">
-                    {{ $project->currency ?? ($company->base_currency ?? 'LKR') }} {{ number_format($project->budget_limit + $totalApprovedCR, 2) }}
-                    <small style="font-size:0.9rem; font-weight:500; color:var(--text-muted);">(Budget: {{ number_format($project->budget_limit, 2) }} + CRs: {{ number_format($totalApprovedCR, 2) }})</small>
-                </h2>
-            </div>
-            <div style="display:flex; gap:1rem; align-items:center;">
-                <div style="background:var(--primary-light); padding:0.6rem 1.2rem; border-radius:10px; text-align:center;">
-                    <span style="font-size:0.75rem; color:var(--primary); font-weight:600; text-transform:uppercase;">Realization Rate</span>
-                    <div style="font-size:1.4rem; font-weight:700; color:var(--primary);">{{ $collectionRate }}%</div>
-                </div>
-            </div>
-        </div>
-
-        @php
-            $revBase = max(1, $project->budget_limit + $totalApprovedCR);
-            $invoicedPct = min(100, round(($totalInvoiced / $revBase) * 100, 1));
-            $collectedPct = min(100, round(($invoiceCollected / $revBase) * 100, 1));
-        @endphp
-
-        <!-- Progress Bars -->
-        <div style="margin-top: 1.5rem;">
-            <div style="display:flex; justify-content:space-between; font-size:0.85rem; font-weight:600; color:var(--text-main); margin-bottom:0.4rem;">
-                <span>Billing Realization Progress</span>
-                <span style="color:var(--text-heading);">{{ $invoicedPct }}% Invoiced ({{ $project->currency ?? ($company->base_currency ?? 'LKR') }} {{ number_format($totalInvoiced, 2) }})</span>
-            </div>
-            <div style="background:var(--bg-page); border-radius:8px; height:10px; overflow:hidden; border:1px solid var(--border-light);">
-                <div style="width:{{ $invoicedPct }}%; background: linear-gradient(90deg, #3b82f6, #0284c7); height:100%; border-radius:8px; transition:width 0.8s ease;"></div>
-            </div>
-
-            <div style="display:flex; justify-content:space-between; font-size:0.85rem; font-weight:600; color:var(--text-main); margin-top:0.8rem; margin-bottom:0.4rem;">
-                <span>Collection Realization Progress</span>
-                <span style="color:var(--text-heading);">{{ $collectedPct }}% Collected ({{ $project->currency ?? ($company->base_currency ?? 'LKR') }} {{ number_format($invoiceCollected, 2) }})</span>
-            </div>
-            <div style="background:var(--bg-page); border-radius:8px; height:10px; overflow:hidden; border:1px solid var(--border-light);">
-                <div style="width:{{ $collectedPct }}%; background: linear-gradient(90deg, #10b981, #059669); height:100%; border-radius:8px; transition:width 0.8s ease;"></div>
-            </div>
-        </div>
+    <div class="overview-balances">
+        <a href="#invoices" onclick="switchTab('invoices')"><span>Invoiced</span><strong>{{ number_format($totalInvoiced,2) }}</strong><small>{{ $project->currency }} · issued invoices</small></a>
+        <a href="#payments" onclick="switchTab('payments')"><span>Collected</span><strong>{{ number_format($totalCollected,2) }}</strong><small>{{ $project->currency }} · client receipts</small></a>
+        <a href="#invoices" onclick="switchTab('invoices')"><span>Outstanding</span><strong>{{ number_format($outstandingBalance,2) }}</strong><small>{{ $project->currency }} · to collect</small></a>
+        <a href="#change-requests" onclick="switchTab('change-requests')"><span>Contract value</span><strong>{{ number_format($project->budget_limit+$totalApprovedCR,2) }}</strong><small>{{ $project->currency }} · budget + approved changes</small></a>
     </div>
-
-    <!-- Categorized Metric Sections -->
-    <div style="display:flex; flex-direction:column; gap:1.25rem;">
-
-        <!-- Section 1: Contract & Scope (Revenue Base) -->
-        <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:1.2rem;">
-            <div style="font-weight:700; font-size:0.95rem; color:var(--text-heading); margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem;">
-                <ion-icon name="contract-outline" style="color:var(--primary); font-size:1.15rem;"></ion-icon>
-                <span>Contract & Scope (Revenue Base)</span>
-            </div>
-            <div class="metric-grid" style="grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap:1rem;">
-                <!-- Tile 1: Project Budget -->
-                <div class="metric-card" style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <h3>Project Budget</h3>
-                        <ion-icon name="wallet-outline" style="font-size:1.3rem; opacity:0.8;"></ion-icon>
-                    </div>
-                    <div class="value" style="font-size:1.5rem; margin-top:0.3rem;">{{ $project->currency ?? ($company->base_currency ?? 'LKR') }} {{ number_format($project->budget_limit, 2) }}</div>
-                    <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">Initial Base Budget</div>
-                </div>
-
-                <!-- Tile 2: Approved Change Requests -->
-                <div class="metric-card" style="background: linear-gradient(135deg, #0891b2 0%, #06b6d4 100%);">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <h3>Approved CRs</h3>
-                        <ion-icon name="document-text-outline" style="font-size:1.3rem; opacity:0.8;"></ion-icon>
-                    </div>
-                    <div class="value" style="font-size:1.5rem; margin-top:0.3rem;">+{{ $project->currency ?? ($company->base_currency ?? 'LKR') }} {{ number_format($totalApprovedCR, 2) }}</div>
-                    <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">Scope Adjustments</div>
-                </div>
-
-                <!-- Tile 3: Total Revenue Base -->
-                <div class="metric-card" style="background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <h3>Total Project Value</h3>
-                        <ion-icon name="trending-up-outline" style="font-size:1.3rem; opacity:0.8;"></ion-icon>
-                    </div>
-                    <div class="value" style="font-size:1.5rem; margin-top:0.3rem;">{{ $project->currency ?? ($company->base_currency ?? 'LKR') }} {{ number_format($project->budget_limit + $totalApprovedCR, 2) }}</div>
-                    <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">Budget + Approved CR</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Section 2: Billing & Cash Collections (Money Flow) -->
-        <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:1.2rem;">
-            <div style="font-weight:700; font-size:0.95rem; color:var(--text-heading); margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem;">
-                <ion-icon name="cash-outline" style="color:#16a34a; font-size:1.15rem;"></ion-icon>
-                <span>Billing & Cash Collections</span>
-            </div>
-            <div class="metric-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:1rem;">
-                <!-- Tile 1: Cash Collected -->
-                <div class="metric-card" style="background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <h3>Cash Collected</h3>
-                        <ion-icon name="cash-outline" style="font-size:1.3rem; opacity:0.8;"></ion-icon>
-                    </div>
-                    <div class="value" style="font-size:1.5rem; margin-top:0.3rem;">{{ $project->currency ?? ($company->base_currency ?? 'LKR') }} {{ number_format($totalCollected, 2) }}</div>
-                    <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">Total Cash Received</div>
-                </div>
-
-                <!-- Tile 2: Invoices Issued -->
-                <div class="metric-card" style="background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <h3>Invoices Issued</h3>
-                        <ion-icon name="paper-plane-outline" style="font-size:1.3rem; opacity:0.8;"></ion-icon>
-                    </div>
-                    <div class="value" style="font-size:1.5rem; margin-top:0.3rem;">{{ $project->currency ?? ($company->base_currency ?? 'LKR') }} {{ number_format($totalInvoiced, 2) }}</div>
-                    <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">Total Billed to Client</div>
-                </div>
-
-                <!-- Tile 3: Outstanding Balance -->
-                <div class="metric-card" style="background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <h3>Outstanding Balance</h3>
-                        <ion-icon name="alert-circle-outline" style="font-size:1.3rem; opacity:0.8;"></ion-icon>
-                    </div>
-                    <div class="value" style="font-size:1.5rem; margin-top:0.3rem;">{{ $project->currency ?? ($company->base_currency ?? 'LKR') }} {{ number_format($outstandingBalance, 2) }}</div>
-                    <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">Pending Billed Collection</div>
-                </div>
-
-                <!-- Tile 4: Realization Rate -->
-                <div class="metric-card" style="background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%);">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <h3>Collection Rate</h3>
-                        <ion-icon name="pie-chart-outline" style="font-size:1.3rem; opacity:0.8;"></ion-icon>
-                    </div>
-                    <div class="value" style="font-size:1.5rem; margin-top:0.3rem;">{{ $collectionRate }}%</div>
-                    <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">Settled / Billed Ratio</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Section 3: Expenses & Profitability (Bottom Line) -->
-        <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:1.2rem;">
-            <div style="font-weight:700; font-size:0.95rem; color:var(--text-heading); margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem;">
-                <ion-icon name="stats-chart-outline" style="color:#0284c7; font-size:1.15rem;"></ion-icon>
-                <span>Expenses & Profitability (Bottom Line)</span>
-            </div>
-            <div class="metric-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:1rem;">
-                <!-- Tile 1: External Commissions -->
-                <div class="metric-card" style="background: linear-gradient(135deg, #db2777 0%, #ec4899 100%);">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <h3>Commissions</h3>
-                        <ion-icon name="people-circle-outline" style="font-size:1.3rem; opacity:0.8;"></ion-icon>
-                    </div>
-                    <div class="value" style="font-size:1.5rem; margin-top:0.3rem;">-{{ $project->currency ?? ($company->base_currency ?? 'LKR') }} {{ number_format($totalCommission, 2) }}</div>
-                    <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">External Partner Payouts</div>
-                </div>
-
-                <!-- Tile 2: Internal Cost Allocations -->
-                <div class="metric-card" style="background: linear-gradient(135deg, #475569 0%, #64748b 100%);">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <h3>Cost Allocations</h3>
-                        <ion-icon name="calculator-outline" style="font-size:1.3rem; opacity:0.8;"></ion-icon>
-                    </div>
-                    <div class="value" style="font-size:1.5rem; margin-top:0.3rem;">-{{ $project->currency ?? ($company->base_currency ?? 'LKR') }} {{ number_format($totalCostAllocation, 2) }}</div>
-                    <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">Employee + Server + Direct</div>
-                </div>
-
-                <!-- Tile 3: Project Profit 👁️ -->
-                <div class="metric-card" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%);">
-                    <div style="display:flex; justify-content:space-between; align-items:center; position:relative; z-index:10;">
-                        <h3 style="margin:0;">Project Profit</h3>
-                        <button type="button" onclick="openModal('projectProfitModal')" title="View Breakdown" style="position:relative; z-index:20; background:rgba(255,255,255,0.25); border:none; color:white; border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:1.2rem; transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.45)'" onmouseout="this.style.background='rgba(255,255,255,0.25)'">
-                            <ion-icon name="eye-outline" style="pointer-events:none;"></ion-icon>
-                        </button>
-                    </div>
-                    <div class="value" style="font-size:1.5rem; margin-top:0.3rem;">{{ $project->currency ?? ($company->base_currency ?? 'LKR') }} {{ number_format($projectProfit, 2) }}</div>
-                    <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">(Budget + CR) - Commission</div>
-                </div>
-
-                <!-- Tile 4: Company Net Profit 👁️ -->
-                <div class="metric-card" style="background: linear-gradient(135deg, #0284c7 0%, #06b6d4 100%);">
-                    <div style="display:flex; justify-content:space-between; align-items:center; position:relative; z-index:10;">
-                        <h3 style="margin:0;">Company Net Profit</h3>
-                        <button type="button" onclick="openModal('companyProfitModal')" title="View Breakdown" style="position:relative; z-index:20; background:rgba(255,255,255,0.25); border:none; color:white; border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:1.2rem; transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.45)'" onmouseout="this.style.background='rgba(255,255,255,0.25)'">
-                            <ion-icon name="eye-outline" style="pointer-events:none;"></ion-icon>
-                        </button>
-                    </div>
-                    <div class="value" style="font-size:1.5rem; margin-top:0.3rem;">{{ $project->currency ?? ($company->base_currency ?? 'LKR') }} {{ number_format($companyProfit, 2) }}</div>
-                    <div style="font-size:0.75rem; opacity:0.85; margin-top:0.2rem;">Net Bottom Line</div>
-                </div>
-            </div>
-        </div>
-
+    <div class="overview-work">
+        <section class="ds-panel">
+            <header class="overview-section-header"><h2>Billing progress</h2><button class="btn btn-primary" onclick="openModal('createPaymentModal')">Record payment</button></header>
+            @php
+                $contractValue = max(0, $project->budget_limit + $totalApprovedCR);
+                $billingPercent = $contractValue > 0 ? round($totalInvoiced / $contractValue * 100, 1) : 0;
+                $receiptPercent = $totalInvoiced > 0 ? round($invoiceCollected / $totalInvoiced * 100, 1) : 0;
+            @endphp
+            <div class="expense-row"><div><span>Contract invoiced</span><strong>{{ $billingPercent }}%</strong></div><progress max="100" value="{{ min(100,$billingPercent) }}" aria-label="Contract invoiced"></progress></div>
+            <div class="expense-row"><div><span>Invoices collected</span><strong>{{ $receiptPercent }}%</strong></div><progress max="100" value="{{ min(100,$receiptPercent) }}" aria-label="Invoices collected"></progress></div>
+            <div class="work-row"><span>Remaining to invoice</span><strong>{{ $project->currency }} {{ number_format(max(0,$contractValue-$totalInvoiced),2) }}</strong></div>
+            <p class="text-muted">Budget {{ number_format($project->budget_limit,2) }} + approved changes {{ number_format($totalApprovedCR,2) }}.</p>
+        </section>
+        <section class="ds-panel"><h2>Costs &amp; projected margin</h2><div class="work-row"><a href="#commission-setup" onclick="switchTab('commission-setup')">Commissions</a><strong>{{ number_format($totalCommission,2) }}</strong></div><div class="work-row"><a href="#cost-allocations" onclick="switchTab('cost-allocations')">Allocated costs</a><strong>{{ number_format($totalCostAllocation,2) }}</strong></div><div class="work-row"><span>Projected margin</span><strong>{{ number_format($companyProfit,2) }}</strong></div><p class="text-muted">{{ $project->currency }} · contract value less commissions and allocated costs. This is a projection, not collected profit.</p><button class="btn btn-outline" onclick="openModal('companyProfitModal')">View cost breakdown</button></section>
     </div>
-
-
-    <!-- Charts & Health Breakdown Section -->
-    <div style="display:grid; grid-template-columns: 2fr 1fr; gap:1.5rem; margin-top:1.5rem;">
-        <div class="card">
-            <h2 class="section-title"><ion-icon name="bar-chart-outline" style="color:var(--primary);"></ion-icon> Financial Performance & Profitability</h2>
-            <div style="height: 320px; width: 100%;">
-                <canvas id="financialOverviewChart"></canvas>
-            </div>
-        </div>
-        <div class="card" style="display:flex; flex-direction:column; justify-content:space-between;">
-            <div>
-                <h2 class="section-title"><ion-icon name="pie-chart-outline" style="color:var(--primary);"></ion-icon> Billing & Invoice Realization</h2>
-                <div style="height: 180px; width: 100%; display: flex; justify-content: center; align-items: center; margin-bottom: 1rem;">
-                    <canvas id="invoiceHealthChart"></canvas>
-                </div>
-            </div>
-            
-            <div style="border-top:1px solid var(--border-light); padding-top:1rem; margin-top:1rem;">
-                <h3 class="section-title" style="font-size:0.95rem; margin-bottom:0.75rem;"><ion-icon name="calendar-outline" style="color:var(--primary);"></ion-icon> Project Schedule & Duration</h3>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem; background:var(--bg-page); padding:0.85rem; border-radius:10px; border:1px solid var(--border-light);">
-                    <div><span class="text-muted" style="font-size:0.75rem; display:block;">Start Date</span> <strong style="color:var(--text-heading); font-size:0.85rem;">{{ $project->start_date ?? 'Not set' }}</strong></div>
-                    <div><span class="text-muted" style="font-size:0.75rem; display:block;">End Date</span> <strong style="color:var(--text-heading); font-size:0.85rem;">{{ $project->end_date ?? 'Not set' }}</strong></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Stakeholders Card -->
-    <div class="card" style="margin-top:1.5rem;">
-        <h2 class="section-title"><ion-icon name="people-outline" style="color:var(--primary);"></ion-icon> Project Stakeholders</h2>
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1.5rem;">
-            <div>
-                <span class="text-muted" style="font-size:0.8rem; text-transform:uppercase; font-weight:600; letter-spacing:0.5px;">Clients</span>
-                @forelse($clients as $c)
-                    <div style="padding:0.75rem 1rem; background:var(--bg-page); border-radius:10px; margin-top:0.5rem; border:1px solid var(--border-light); display:flex; align-items:center; gap:0.5rem;">
-                        <ion-icon name="business-outline" style="color:var(--primary); font-size:1.1rem;"></ion-icon>
-                        <div style="font-weight:500; color:var(--text-heading);">{{ $c->name }}</div>
-                    </div>
-                @empty
-                    <div class="text-muted" style="padding:0.5rem 0;">No clients assigned.</div>
-                @endforelse
-            </div>
-            <div>
-                <span class="text-muted" style="font-size:0.8rem; text-transform:uppercase; font-weight:600; letter-spacing:0.5px;">Partners</span>
-                @forelse($partners as $p)
-                    <div style="padding:0.75rem 1rem; background:var(--bg-page); border-radius:10px; margin-top:0.5rem; border:1px solid var(--border-light); display:flex; justify-content:space-between; align-items:center;">
-                        <div style="display:flex; align-items:center; gap:0.5rem;">
-                            <ion-icon name="person-outline" style="color:var(--primary); font-size:1.1rem;"></ion-icon>
-                            <span style="font-weight:500; color:var(--text-heading);">{{ $p->name }}</span>
-                        </div>
-                        <span class="badge" style="background:var(--primary-light); color:var(--primary); font-weight:600;">{{ $p->share_percentage }}% Share</span>
-                    </div>
-                @empty
-                    <div class="text-muted" style="padding:0.5rem 0;">No partners assigned.</div>
-                @endforelse
-            </div>
-        </div>
+    <div class="overview-work">
+        <section class="ds-panel"><h2>Project contacts</h2><div class="ds-form-grid"><div><h3>Clients</h3>@forelse($clients as $client)<p>{{ $client->name }}</p>@empty<p class="text-muted">No client assigned.</p>@endforelse</div><div><h3>Partners</h3>@forelse($partners as $partner)<p>{{ $partner->name }}</p>@empty<p class="text-muted">No partner assigned.</p>@endforelse</div></div></section>
+        <section class="ds-panel"><h2>Schedule</h2><div class="work-row"><span>Start date</span><strong>{{ $project->start_date ?? '—' }}</strong></div><div class="work-row"><span>End date</span><strong>{{ $project->end_date ?? '—' }}</strong></div><a class="btn btn-outline" href="#payment-milestones" onclick="switchTab('payment-milestones')">Review milestones</a></section>
     </div>
 </div>
 
@@ -566,12 +331,12 @@
                         <td>
                             <span style="font-weight:600;">{{ $cr->description }}</span>
                             @if(!empty($cr->attachments) && $cr->attachments->count() > 0)
-                                <span class="badge" style="background:#e0f2fe; color:#0369a1; font-size:0.7rem; margin-left:4px;" title="Has Attachments">
+                                <span class="badge" style="background:#e0f2fe; color:#0369a1; font-size:0.75rem; margin-left:4px;" title="Has Attachments">
                                     <ion-icon name="attach-outline"></ion-icon> {{ $cr->attachments->count() }}
                                 </span>
                             @endif
                             @if(!empty($cr->links) && count($cr->links) > 0)
-                                <span class="badge" style="background:#f3e8ff; color:#6b21a8; font-size:0.7rem; margin-left:4px;" title="Has External Links">
+                                <span class="badge" style="background:#f3e8ff; color:#6b21a8; font-size:0.75rem; margin-left:4px;" title="Has External Links">
                                     <ion-icon name="link-outline"></ion-icon> {{ count($cr->links) }}
                                 </span>
                             @endif
@@ -869,7 +634,7 @@
                         <td style="font-weight:500;">
                             {{ $milestone->name }}
                             @if($milestone->status === 'pending' && $isToday)
-                                <span class="badge" style="background:var(--danger); color:#fff; font-size:0.7rem; margin-left:8px;">Due Today</span>
+                                <span class="badge" style="background:var(--danger); color:#fff; font-size:0.75rem; margin-left:8px;">Due Today</span>
                             @endif
                         </td>
                         <td style="font-weight:600;"><x-amount-display :amount="$milestone->amount" currency="$" /></td>
@@ -890,9 +655,18 @@
                                 <button type="button" class="btn btn-sm btn-outline" style="color:var(--primary); border-color:var(--primary); margin-right:5px;" onclick="openCreateInvoiceForMilestone({{ $milestone->id }}, {{ $milestone->amount }}, '{{ addslashes($milestone->name) }}')">
                                     Create as Invoice
                                 </button>
+                                <details style="margin:8px 0"><summary>Edit milestone</summary><form method="POST" action="/projects/{{ $project->id }}/milestones/{{ $milestone->id }}" class="ds-stack" style="padding:12px 0">@csrf @method('PUT')
+                                    <div><label class="form-label">Name</label><input class="form-control" name="name" value="{{ $milestone->name }}" required></div>
+                                    <div><label class="form-label">Due date</label><input class="form-control" type="date" name="due_date" value="{{ $milestone->due_date }}" required></div>
+                                    <div><label class="form-label">Calculation</label><select class="form-control" name="calculation_type"><option value="fixed" @selected($milestone->calculation_type !== 'percentage')>Fixed amount</option><option value="percentage" @selected($milestone->calculation_type === 'percentage')>Percentage of budget</option></select></div>
+                                    <div><label class="form-label">Fixed amount</label><input class="form-control" type="number" name="amount" step="0.01" min="0.01" value="{{ $milestone->amount }}"></div>
+                                    <div><label class="form-label">Budget percentage</label><input class="form-control" type="number" name="percentage" step="0.01" min="0.01" max="100" value="{{ $milestone->percentage }}"></div>
+                                    <button class="btn btn-primary">Save milestone</button></form></details>
+                                <form method="POST" action="/projects/{{ $project->id }}/milestones/{{ $milestone->id }}" style="display:inline" onsubmit="return confirm('Delete this pending milestone?');">@csrf @method('DELETE')<button class="btn btn-outline">Delete</button></form>
                                 <form action="/projects/{{ $project->id }}/milestones/{{ $milestone->id }}/skip" method="POST" style="display:inline;">
                                     @csrf
-                                    <button type="submit" class="btn btn-sm btn-outline" style="color:var(--text-muted); border-color:var(--border);" onsubmit="return confirm('Skip this milestone?');">
+                                    <input class="form-control" name="reason" placeholder="Reason for skipping" aria-label="Reason for skipping milestone" required>
+                                    <button type="submit" class="btn btn-sm btn-outline" style="color:var(--text-muted); border-color:var(--border);">
                                         Skip
                                     </button>
                                 </form>
@@ -939,10 +713,10 @@
                     <td style="font-weight: 500;">
                         {{ $doc->name }}
                         @if($doc->visible_to_client)
-                            <span class="badge" style="background:#E0F2FE; color:#0369A1; font-size:0.7rem; margin-left:0.5rem;" title="Visible to Client">Client</span>
+                            <span class="badge" style="background:#E0F2FE; color:#0369A1; font-size:0.75rem; margin-left:0.5rem;" title="Visible to Client">Client</span>
                         @endif
                         @if($doc->change_request_id)
-                            <span class="badge" style="background:#FEF3C7; color:#92400E; font-size:0.7rem; margin-left:0.5rem;" title="Linked to Change Request #{{ $doc->change_request_id }}">CR #{{ $doc->change_request_id }}</span>
+                            <span class="badge" style="background:#FEF3C7; color:#92400E; font-size:0.75rem; margin-left:0.5rem;" title="Linked to Change Request #{{ $doc->change_request_id }}">CR #{{ $doc->change_request_id }}</span>
                         @endif
                     </td>
                     <td>
@@ -998,7 +772,7 @@
 
 <!-- ================== TAB: COST ALLOCATIONS ================== -->
 <div id="cost-allocations" class="tab-content" x-data="{
-        allocations: [],
+        allocations: [], editing: null, editError: '',
         loading: false,
         filters: {
             from: '',
@@ -1117,12 +891,19 @@
                 }
             });
         },
+        async saveAllocationEdit() {
+            this.editError = '';
+            const response = await fetch(`/api/cost-allocations/${this.editing.id}`, {method: 'PUT',headers: {'X-CSRF-TOKEN': '{{ csrf_token() }}','Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(this.editing)});
+            const data = await response.json();
+            if (!response.ok) { this.editError = Object.values(data.errors || {}).flat().join(' ') || data.message || 'Unable to save changes.'; return; }
+            this.editing = null;this.fetchAllocations();
+        },
         deleteAllocation(id) {
             if(!confirm('Are you sure you want to delete this allocation?')) return;
             fetch(`/api/cost-allocations/${id}`, {
                 method: 'DELETE',
                 headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
-            }).then(() => this.fetchAllocations());
+            }).then(response => { if(response.ok)this.fetchAllocations();else alert('This allocation could not be deleted. Check your access and whether the period is closed.'); });
         }
     }" x-init="fetchAllocations()" @cost-allocation-added.window="fetchAllocations()">
     
@@ -1137,6 +918,11 @@
         </button>
     </div>
 
+    <template x-if="editing"><form class="ds-panel ds-stack" @submit.prevent="saveAllocationEdit()" style="margin-bottom:20px">
+        <h3>Edit cost allocation</h3><p class="ds-notice error" x-show="editError" x-text="editError" role="alert"></p>
+        <div class="ds-form-grid"><div><label class="form-label" for="allocationEditAmount">Amount</label><input x-ref="editAmount" id="allocationEditAmount" class="form-control" type="number" step="0.01" min="0.01" x-model="editing.amount" required></div><div><label class="form-label" for="allocationEditDate">Period start</label><input id="allocationEditDate" class="form-control" type="date" x-model="editing.period_start" required></div><div><label class="form-label" for="allocationEditEnd">Period end</label><input id="allocationEditEnd" class="form-control" type="date" x-model="editing.period_end"></div><div><label class="form-label" for="allocationEditNotes">Notes</label><textarea id="allocationEditNotes" class="form-control" x-model="editing.notes"></textarea></div></div>
+        <div><button class="btn btn-primary">Save changes</button><button type="button" class="btn btn-outline" @click="editing=null">Cancel</button></div>
+    </form></template>
     {{-- Filter Bar --}}
     <div style="background: var(--bg-card); padding: 1rem 1.25rem; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 1.5rem; display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end;">
         <div style="flex: 1; min-width: 150px;">
@@ -1402,6 +1188,7 @@
                             <span x-text="parseFloat(item.amount).toLocaleString('en-US', {minimumFractionDigits: 2})"></span>
                         </td>
                         <td style="padding: 0.85rem 1rem; text-align: right;">
+                            <button @click="editing = {id:item.id,amount:item.amount,period_start:item.period_start.slice(0,10),period_end:item.period_end ? item.period_end.slice(0,10) : null,notes:item.notes};editError='';$nextTick(()=>$refs.editAmount.focus())" class="action-btn" title="Edit allocation"><ion-icon name="create-outline"></ion-icon></button>
                             <button @click="deleteAllocation(item.id)" class="action-btn text-danger" title="Delete">
                                 <ion-icon name="trash-outline"></ion-icon>
                             </button>
@@ -1755,7 +1542,7 @@
                                 <div style="flex: 1; min-width: 120px;">
                                     <input type="hidden" name="alloc_invoice_id[]" value="{{ $inv->id }}">
                                     <x-amount-input name="alloc_amount[]" placeholder="0.00" class="form-control alloc-amt-input" />
-                                    <button type="button" class="btn btn-sm btn-outline" style="padding: 0.15rem 0.4rem; font-size: 0.7rem; margin-top: 0.25rem; width: 100%; border: 1px dashed var(--border);" onclick="fillMaxAllocation(this, {{ $invBalance }})">Fill Balance</button>
+                                    <button type="button" class="btn btn-sm btn-outline" style="padding: 0.15rem 0.4rem; font-size:0.75rem; margin-top: 0.25rem; width: 100%; border: 1px dashed var(--border);" onclick="fillMaxAllocation(this, {{ $invBalance }})">Fill Balance</button>
                                 </div>
                             </div>
                         @endforeach
@@ -2046,7 +1833,7 @@ function switchTab(tabId, element) {
 
     // Save state
     localStorage.setItem('activeProjectTab_{{ $project->id }}', tabId);
-    window.history.replaceState(null, null, '#' + tabId);
+    if (element) window.history.replaceState(null, null, '#' + tabId);
 }
 
 function fillMaxAllocation(btn, balance) {
@@ -2787,7 +2574,7 @@ function openViewCRModal(cr) {
         cr.attachments.forEach(att => {
             html += `<div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-page); padding:0.5rem 0.8rem; border-radius:6px; font-size:0.85rem; border:1px solid var(--border-light);">
                         <span><ion-icon name="document-outline" style="vertical-align:middle; color:var(--primary);"></ion-icon> ${att.file_name}</span>
-                        <a href="/storage/${att.file_path}" target="_blank" class="btn btn-sm btn-outline" style="font-size:0.78rem; padding:0.2rem 0.6rem;">View File</a>
+                        <a href="/attachments/${att.id}/download" target="_blank" class="btn btn-sm btn-outline" style="font-size:0.78rem; padding:0.2rem 0.6rem;">View File</a>
                      </div>`;
         });
         html += '</div>';
@@ -3235,14 +3022,15 @@ function closeApprovalSidebar() {
         <form action="/projects/{{ $project->id }}/milestones" method="POST">
             @csrf
             <div class="modal-body">
+                <div class="form-row"><div class="form-col"><label class="form-label">Calculation</label><select class="form-control" name="calculation_type"><option value="fixed">Fixed amount</option><option value="percentage">Percentage of project budget</option></select></div><div class="form-col"><label class="form-label">Percentage (if selected)</label><input class="form-control" name="percentage" type="number" min="0.01" max="100" step="0.01"></div></div>
                 <div class="form-group">
                     <label class="form-label">Milestone Name / Description</label>
                     <input type="text" name="name" class="form-control" required>
                 </div>
                 <div class="form-row">
                     <div class="form-col form-group">
-                        <label class="form-label">Amount</label>
-                        <x-amount-input name="amount" required="true" />
+                        <label class="form-label">Fixed amount</label>
+                        <x-amount-input name="amount" />
                     </div>
                     <div class="form-col form-group">
                         <label class="form-label">Due Date</label>
@@ -3504,7 +3292,7 @@ function openEditDocumentModal(doc) {
             <button type="button" class="btn-close" onclick="closeModal('projectProfitModal')">&times;</button>
         </div>
         <div class="modal-body" style="padding:1.5rem;">
-            <div style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); color:white; padding:1.25rem; border-radius:12px; margin-bottom:1.5rem; display:flex; justify-content:space-between; align-items:center;">
+            <div style="background:var(--bg-card); color:var(--text-heading); padding:1.25rem; border-radius:12px; margin-bottom:1.5rem; display:flex; justify-content:space-between; align-items:center;">
                 <div>
                     <span style="font-size:0.85rem; opacity:0.9;">Total Project Profit</span>
                     <h2 style="font-size:1.8rem; font-weight:700; margin:0.2rem 0 0 0;">{{ $project->currency ?? ($company->base_currency ?? 'LKR') }} {{ number_format($projectProfit, 2) }}</h2>

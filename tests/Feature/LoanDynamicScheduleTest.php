@@ -3,10 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\User;
-use App\Models\Company;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class LoanDynamicScheduleTest extends TestCase
@@ -22,6 +20,7 @@ class LoanDynamicScheduleTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+        DB::table('departments')->insert(['company_id' => 1, 'name' => 'Finance']);
         DB::table('categories')->insert([
             'name' => 'Loan Disbursement',
             'type' => 'income',
@@ -57,7 +56,7 @@ class LoanDynamicScheduleTest extends TestCase
         $this->assertEquals(18, $loan->due_day);
 
         // Activate loan
-        $this->actingAs($admin)->post("/loans/{$loan->id}/activate");
+        $this->actingAs($admin)->post("/loans/{$loan->id}/activate")->assertRedirect();
 
         $schedules = DB::table('loan_interest_schedule')
             ->where('loan_id', $loan->id)
@@ -98,7 +97,7 @@ class LoanDynamicScheduleTest extends TestCase
         $this->assertNotNull($loan);
 
         // Activate loan
-        $this->actingAs($admin)->post("/loans/{$loan->id}/activate");
+        $this->actingAs($admin)->post("/loans/{$loan->id}/activate")->assertRedirect();
 
         $schedules = DB::table('loan_interest_schedule')
             ->where('loan_id', $loan->id)

@@ -3,15 +3,14 @@
 @section('meta_description', 'Manage client invoicing, payments, receivables, overdue tracking, and billing workflows.')
 
 @section('secondary-sidebar')
-<aside class="sidebar-secondary" id="sidebarSecondary">
-    <h2 class="sidebar-title">Invoicing</h2>
+<x-secondary-sidebar title="Invoicing">
     <nav class="nav-links">
-        <a href="#invoices-tab" class="nav-link active" onclick="switchTab('invoices-tab', this)">All Invoices</a>
-        <a href="/payables/vendor-bills" class="nav-link">Vendor Bills (AP)</a>
-        <a href="#payments-tab" class="nav-link" onclick="switchTab('payments-tab', this)">Payments</a>
-        <a href="#reminders-tab" class="nav-link" onclick="switchTab('reminders-tab', this)">Reminders</a>
+        <a href="#invoices-tab" class="nav-link active" onclick="switchTab('invoices-tab', this)"><ion-icon name="document-text-outline" aria-hidden="true"></ion-icon><span class="section-navigation-label">All Invoices</span></a>
+        <a href="/payables/vendor-bills" class="nav-link"><ion-icon name="receipt-outline" aria-hidden="true"></ion-icon><span class="section-navigation-label">Vendor Bills (AP)</span></a>
+        <a href="#payments-tab" class="nav-link" onclick="switchTab('payments-tab', this)"><ion-icon name="wallet-outline" aria-hidden="true"></ion-icon><span class="section-navigation-label">Payments</span></a>
+        <a href="#reminders-tab" class="nav-link" onclick="switchTab('reminders-tab', this)"><ion-icon name="notifications-outline" aria-hidden="true"></ion-icon><span class="section-navigation-label">Reminders</span></a>
     </nav>
-</aside>
+</x-secondary-sidebar>
 
 @endsection
 
@@ -34,7 +33,7 @@
 
 <div class="toolbar">
     <div class="toolbar-left">
-        <form method="GET" action="/invoices" style="display:flex; gap:0.5rem; align-items:center; margin:0;">
+        <form id="invoiceFilters" method="GET" action="/invoices" style="display:flex; gap:0.5rem; align-items:center; margin:0;">
             <div style="width: 250px;">
                 <x-client-selector name="client_id" :clients="$clients" :selected="request('client_id')" />
             </div>
@@ -47,7 +46,7 @@
     <div class="toolbar-right">
         <div class="search-input">
             <ion-icon name="search-outline"></ion-icon>
-            <input type="text" placeholder="Search...">
+            <input type="search" name="search" form="invoiceFilters" value="{{ request('search') }}" placeholder="Invoice number" aria-label="Search invoices">
         </div>
     </div>
 </div>
@@ -111,11 +110,15 @@
                     @elseif($invoice->status === 'overdue')
                         <span class="badge badge-danger">Overdue</span>
                     @else
-                        <span class="badge badge-warning">{{ ucfirst($invoice->status) }}</span>
+                        <span class="badge badge-warning">{{ ucwords(str_replace('_',' ',$invoice->status)) }}</span>
                     @endif
                 </td>
                 <td data-label="Action" class="text-center">
                     <div class="actions" style="justify-content:center;">
+                        @if($invoice->status === 'draft')
+                        <a class="action-btn" href="/invoices/{{ $invoice->id }}/edit" title="Edit draft"><ion-icon name="create-outline"></ion-icon></a>
+                        @endif
+                        <form method="POST" action="/invoices/{{ $invoice->id }}/duplicate" style="display:inline">@csrf<button class="action-btn" title="Duplicate as draft" aria-label="Duplicate as draft"><ion-icon name="copy-outline"></ion-icon></button></form>
                         <a href="/invoices/{{ $invoice->id }}/pdf" class="action-btn" title="Download PDF"><ion-icon name="download-outline"></ion-icon></a>
                         <form id="delete_inv_{{ $invoice->id }}" action="/invoices/{{ $invoice->id }}" method="POST" style="display:inline; margin:0;">
                             @csrf
@@ -130,6 +133,7 @@
             @endforeach
         </tbody>
     </table>
+    {{ $invoices->links() }}
 </div>
 @endif
 </div> <!-- End invoices-tab -->

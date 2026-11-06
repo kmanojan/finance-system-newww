@@ -11,8 +11,8 @@ This document covers the Progressive Web App (PWA) configuration, long-lived aut
 - **Session Lifetime:** Configured for 5+ years (`SESSION_LIFETIME=2629800` minutes in `.env` and `config/session.php`).
 - **Remember Me Tokens:** `Auth::attempt($credentials, $remember)` automatically generates a long-lived remember cookie (`remember_web_...`).
 - **Login UI:**
-  - "Keep me signed in (Remember me)" option enabled by default.
-  - Interactive **Show / Hide Password** toggle (`eye-outline` / `eye-off-outline`) on password inputs.
+  - "Keep me signed in" is enabled by default; unchecking it explicitly submits `remember=0`.
+  - Keyboard-accessible **Show / Hide Password** toggle with an updated accessible label and pressed state.
   - Clean initial state: No hardcoded demo credentials pre-filled in login fields.
 
 ---
@@ -36,7 +36,7 @@ This document covers the Progressive Web App (PWA) configuration, long-lived aut
 
 ### Android WebAPK Installation & In-App Prompt
 - **Native Install Prompt (`beforeinstallprompt`)**:
-  - Automatically captures the browser's install event and displays an elegant floating **"Install Finance App"** banner at the bottom of the screen.
+  - Captures the browser's install event and offers installation. On the login page, the suggestion appears below the form so it never covers sign-in controls.
   - Tapping **"Install"** triggers Chrome's native WebAPK installation dialog directly, creating a true standalone app in the Android App Drawer rather than a bookmark shortcut.
 - **Dedicated Install App Page (`/profile?tab=app`):**
   - Standalone mode indicator (`window.matchMedia('(display-mode: standalone)')`).

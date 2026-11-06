@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\SalaryComponent;
-use App\Models\EmployeeSalaryComponent;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class SalaryComponentController extends Controller
 {
@@ -23,8 +23,8 @@ class SalaryComponentController extends Controller
         if ($request->filled('search')) {
             $query->where(function ($q) use ($request) {
                 $q->where('name', 'like', "%{$request->search}%")
-                  ->orWhere('code', 'like', "%{$request->search}%")
-                  ->orWhere('description', 'like', "%{$request->search}%");
+                    ->orWhere('code', 'like', "%{$request->search}%")
+                    ->orWhere('description', 'like', "%{$request->search}%");
             });
         }
 
@@ -40,25 +40,28 @@ class SalaryComponentController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name'             => 'required|string|max:255',
-            'code'             => 'required|string|max:50|unique:salary_components,code',
-            'type'             => 'required|in:earning,deduction,employer_contribution',
+            'name' => 'required|string|max:255',
+            'code' => 'required|string|max:50|unique:salary_components,code',
+            'type' => 'required|in:earning,deduction,employer_contribution',
             'calculation_type' => 'required|in:fixed_amount,percentage',
             'calculation_base' => 'required|in:on_basic,on_epf_base,on_gross,custom',
-            'default_value'    => 'required|numeric|min:0',
-            'is_epf_eligible'  => 'boolean',
-            'is_taxable'       => 'boolean',
-            'is_statutory'     => 'boolean',
-            'is_active'        => 'boolean',
-            'description'      => 'nullable|string',
-            'sort_order'       => 'nullable|integer',
+            'payroll_input_mode' => 'sometimes|required|in:display,monthly_amount',
+            'default_value' => 'required|numeric|min:0',
+            'is_epf_eligible' => 'boolean',
+            'is_taxable' => 'boolean',
+            'is_statutory' => 'boolean',
+            'is_active' => 'boolean',
+            'description' => 'nullable|string',
+            'sort_order' => 'nullable|integer',
         ]);
 
+        $this->validatePayrollInputMode($validated, null);
+
         $validated['is_epf_eligible'] = $request->boolean('is_epf_eligible');
-        $validated['is_taxable']      = $request->boolean('is_taxable');
-        $validated['is_statutory']    = $request->boolean('is_statutory');
-        $validated['is_active']       = $request->boolean('is_active', true);
-        $validated['sort_order']      = $request->input('sort_order', 10);
+        $validated['is_taxable'] = $request->boolean('is_taxable');
+        $validated['is_statutory'] = $request->boolean('is_statutory');
+        $validated['is_active'] = $request->boolean('is_active', true);
+        $validated['sort_order'] = $request->input('sort_order', 10);
 
         $component = SalaryComponent::create($validated);
 
@@ -74,24 +77,27 @@ class SalaryComponentController extends Controller
         $component = SalaryComponent::findOrFail($id);
 
         $validated = $request->validate([
-            'name'             => 'required|string|max:255',
-            'code'             => 'required|string|max:50|unique:salary_components,code,' . $component->id,
-            'type'             => 'required|in:earning,deduction,employer_contribution',
+            'name' => 'required|string|max:255',
+            'code' => 'required|string|max:50|unique:salary_components,code,'.$component->id,
+            'type' => 'required|in:earning,deduction,employer_contribution',
             'calculation_type' => 'required|in:fixed_amount,percentage',
             'calculation_base' => 'required|in:on_basic,on_epf_base,on_gross,custom',
-            'default_value'    => 'required|numeric|min:0',
-            'is_epf_eligible'  => 'boolean',
-            'is_taxable'       => 'boolean',
-            'is_statutory'     => 'boolean',
-            'is_active'        => 'boolean',
-            'description'      => 'nullable|string',
-            'sort_order'       => 'nullable|integer',
+            'payroll_input_mode' => 'sometimes|required|in:display,monthly_amount',
+            'default_value' => 'required|numeric|min:0',
+            'is_epf_eligible' => 'boolean',
+            'is_taxable' => 'boolean',
+            'is_statutory' => 'boolean',
+            'is_active' => 'boolean',
+            'description' => 'nullable|string',
+            'sort_order' => 'nullable|integer',
         ]);
 
+        $this->validatePayrollInputMode($validated, $component);
+
         $validated['is_epf_eligible'] = $request->boolean('is_epf_eligible');
-        $validated['is_taxable']      = $request->boolean('is_taxable');
-        $validated['is_statutory']    = $request->boolean('is_statutory');
-        $validated['is_active']       = $request->boolean('is_active', true);
+        $validated['is_taxable'] = $request->boolean('is_taxable');
+        $validated['is_statutory'] = $request->boolean('is_statutory');
+        $validated['is_active'] = $request->boolean('is_active', true);
 
         $component->update($validated);
 
@@ -100,6 +106,14 @@ class SalaryComponentController extends Controller
         }
 
         return redirect()->back()->with('success', "Salary component '{$component->name}' updated successfully.");
+    }
+
+    private function validatePayrollInputMode(array $data, ?SalaryComponent $component): void
+    {
+        $mode = $data['payroll_input_mode'] ?? $component?->payroll_input_mode ?? 'display';
+        if ($mode === 'monthly_amount' && in_array(strtoupper($data['code']), ['BASIC', 'EPF_EE', 'EPF_ER', 'ETF_ER', 'APIT', 'SALARY_ADVANCE'])) {
+            throw ValidationException::withMessages(['payroll_input_mode' => 'Basic salary and statutory/advance components use their dedicated payroll controls. Choose Display only.']);
+        }
     }
 
     public function destroy($id)

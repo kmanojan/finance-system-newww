@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'documents_disk' => env('DOCUMENTS_DISK', env('VERCEL') ? 'database-documents' : 'local'),
 
     /*
     |--------------------------------------------------------------------------
@@ -29,6 +30,7 @@ return [
     */
 
     'disks' => [
+        'database-documents' => ['driver' => 'database-documents', 'visibility' => 'private', 'throw' => true],
 
         'local' => [
             'driver' => 'local',

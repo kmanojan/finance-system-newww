@@ -144,3 +144,45 @@ Standard state flow:
 - **Cost of Borrowing summary** — total interest paid ÷ principal, shown per loan, so you can compare how expensive each borrowing source actually was over time.
 - **Early settlement discount** — optional field if a lender agrees to waive remaining interest for early full repayment; recorded as a Skipped period with a note rather than silently disappearing.
 - Feeds into the **Loan & Interest Summary report** (§9) and the **Reminders page** (§5) exactly like every other reminder-producing module.
+
+
+## Loan types and payable balances
+
+`loans.loan_type` distinguishes two payable presentations. Existing loans and new loans default to `interest_separate` (type 1). Select the type when creating or editing a loan. Changing this classification does not rewrite principal, interest rates, payment history or accounting entries.
+
+| Type | Payable calculation | Example: 100,000 principal, four monthly interest payments of 10,000, two interest payments made |
+|---|---|---|
+| Type 1 — Interest paid separately (`interest_separate`) | Remaining principal only | Payable 100,000; unpaid scheduled interest 20,000 shown separately |
+| Type 2 — Principal + interest (`principal_and_interest`) | Remaining principal + unpaid scheduled interest | Original obligation 140,000; payable 120,000 |
+
+Remaining principal is initial principal plus additional draws minus recorded principal repayments. Paying interest never reduces principal. All unpaid scheduled periods count for type 2, including future periods. No-interest loans have the same payable under both types.
+
+`LoanBalanceService` supplies the loan list, detail page, party totals and expanded party facilities. A party's total sums each facility's own type-aware payable; it must not add all interest to every principal balance. Repayment progress uses principal repayments only for type 1 and principal plus interest payments for type 2. Total cash paid remains visible separately. Reported payments come from recorded payments, never inferred from a settled status.
+
+Full settlement still pays both outstanding principal and unpaid scheduled interest for either type. Its dialog shows this complete amount explicitly. Type 1's separate interest presentation does not waive or erase interest.
+
+The additive migration `2026_11_06_000002_add_loan_type_to_loans_table.php` sets the database default to type 1 and assigns that value to existing rows without modifying payment history.
+
+## Loan flow from description selections
+
+The loan detail flow reads the existing loan links selected with **/loan** in the description / purpose editor. Edit the description, select a related loan, and save using the normal loan form. No separate linking action is needed. Existing saved descriptions work immediately without a backfill. Removing a selected loan from the description removes that relationship on the next page load, provided another description does not still link the same pair.
+
+These connections are relationships only. Borrowing 10,000 and then another 10,000 leaves both loans outstanding for a combined principal of 20,000. Paying one loan changes only that loan's balance. Selecting or removing a loan in a description never records a payment, posts a journal, activates a loan, or changes a status. This applies to both payable types; each node uses LoanBalanceService for its own balance and separate interest information.
+
+The flow shows the complete connected group from either loan. Dashed arrows show description relationships, arranged by borrowing date (ID breaks ties); connection rows link back to the description that supplies the relationship. Duplicate and reciprocal mentions collapse into a single relationship. Self-links, missing loans, external-site URLs, non-loan links, and plain-text loan numbers do not produce connections. CKEditor may strip mention classes, so the parser uses the saved local loan anchor URL. It performs no network requests.
+
+Explicit principal repayments funded by another loan remain separate financial records. If recorded with the optional funding-loan field on a payment form, they appear as solid arrows and reference the actual repayment. Description references never imply repayment funding. Both edge types can be shown between the same loans without overlapping their labels.
+
+The flow follows the shared light/dark design system and supports horizontal keyboard scrolling on small screens. It has no extra **Link another borrowing** or **Link a past repayment** buttons. Descriptions remain the source of truth for related loans. No separate relationship table or backfill is needed for description selections.
+
+### Loan detail navigation
+
+Loan Flow is now the tab immediately after Principal Records. The page has one main payable summary, supporting balance figures, and four full-width tabs: Interest Schedule, Principal Records, Loan Flow, Loan Details. Loan Details contains the terms, description, bank account, security information, and documents. Existing flow and description deep links automatically open the appropriate tab. Payment calculations and stored financial records are unchanged by this redesign.
+
+### Multiple loan attachments
+
+Create and edit forms accept multiple PDF, JPG/JPEG, PNG, WebP and Word documents. Editing appends files without replacing existing documents, including activated loans whose financial terms remain locked. Downloads are available in Loan Details → Documents through the authenticated download route. The application validates every file (10 MB maximum); the form also displays lower PHP per-file and total-request limits when configured. On the current local server these are 2 MB per file and below 8 MB total. A rejected file rejects the batch. Individual attachment deletion is not currently offered; deleting an eligible pending loan removes its private and legacy public attachment files.
+
+### Searching loans from descriptions
+
+The `/loan` picker matches loan code (including generated codes), linked party name, lender name, visible description text, principal amount, currency and status. Multiple search terms can match across fields, for example `Abi 100,000 equipment`. Amounts with grouping commas and decimals are accepted. Rich-text formatting and HTML entities do not prevent description matches. Search runs across all loans before returning the newest 10 matches; older matches remain discoverable. Results show the party, amount and description preview, and selection still inserts the same loan link used by Loan Flow.

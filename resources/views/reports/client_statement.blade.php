@@ -38,6 +38,7 @@
             <span style="font-size:0.8rem; color:var(--text-muted);">Contact: {{ $selectedClient->contact_person ?? '-' }} | {{ $selectedClient->email ?? '' }}</span>
         </div>
     </div>
+    <div class="ds-notice">Opening balance: {{ \App\Services\FinancialReportingService::baseCurrency() }} {{ number_format($openingBalance,2) }} · All statement amounts use the base currency.</div>
     <table class="data-table" style="margin:0; width:100%; border-collapse:collapse;">
         <thead style="background:var(--bg-page); border-bottom:1px solid var(--border);">
             <tr>
@@ -58,13 +59,13 @@
                     </span>
                 </td>
                 <td style="padding:0.75rem 1rem; font-weight:600;">
-                    {{ $item->entry_type === 'Invoice' ? 'Invoice #' . $item->invoice_number : 'Payment Received' }}
+                    {{ $item->entry_type === 'Invoice' ? 'Invoice #' . $item->invoice_no : 'Payment Received' }}
                 </td>
                 <td style="padding:0.75rem 1rem; text-align:right; font-weight:700;">
-                    {{ $item->entry_type === 'Invoice' ? number_format($item->amount, 2) : '-' }}
+                    {{ $item->entry_type === 'Invoice' ? number_format($item->amount_base, 2) : '-' }}
                 </td>
                 <td style="padding:0.75rem 1rem; text-align:right; font-weight:700; color:var(--success);">
-                    {{ $item->entry_type === 'Payment' ? number_format($item->total_amount, 2) : '-' }}
+                    {{ $item->entry_type === 'Payment' ? number_format($item->amount_base, 2) : '-' }}
                 </td>
             </tr>
             @endforeach

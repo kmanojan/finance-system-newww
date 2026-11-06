@@ -93,14 +93,14 @@
             <tr>
                 <td data-label="User">
                     <div style="display: flex; align-items: center; gap: 0.75rem;">
-                        <div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.875rem; flex-shrink: 0;">
+                        <div style="width: 36px; height: 36px; border-radius: 50%; background:var(--bg-card); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.875rem; flex-shrink: 0;">
                             {{ strtoupper(substr($user->name, 0, 2)) }}
                         </div>
                         <div>
                             <div class="font-medium" style="color: var(--text-heading);">
                                 {{ $user->name }}
                                 @if($user->id === auth()->id())
-                                    <span style="font-size: 0.7rem; background: #e0e7ff; color: #3730a3; padding: 2px 6px; border-radius: 4px; margin-left: 4px; font-weight: 600;">You</span>
+                                    <span style="font-size:0.75rem; background: #e0e7ff; color: #3730a3; padding: 2px 6px; border-radius: 4px; margin-left: 4px; font-weight: 600;">You</span>
                                 @endif
                             </div>
                             <div class="text-muted" style="font-size: 0.8rem;">{{ $user->email }}</div>
