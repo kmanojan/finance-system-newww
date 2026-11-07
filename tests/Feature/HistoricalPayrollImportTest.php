@@ -135,4 +135,41 @@ class HistoricalPayrollImportTest extends TestCase
         $this->assertDatabaseCount('payroll_runs', 1);
         $this->assertDatabaseCount('payroll_items', 1);
     }
+
+    public function test_separate_allowance_and_partial_package_retain_source_basic_and_explanation(): void
+    {
+        $payload = $this->payload();
+        foreach (HistoricalPayrollImportService::AMOUNTS as $field) {
+            $payload['rows'][0][$field] = 0;
+        }
+        $payload['rows'][0] = array_replace($payload['rows'][0], ['basic' => 3000000, 'package' => 2318181,
+            'allowance' => 305000, 'net' => 2623181, 'source_note' => 'Source basic is 30,000; package is 23,181.81. Breakdown <review>.']);
+        $id = HistoricalPayrollImportService::import($payload, 1, 1)[0];
+        $item = PayrollService::items($id)->first();
+        $fields = HistoricalPayrollImportService::comparison($item);
+        $this->assertSame(3000000, $item->snapshot['basic']);
+        $this->assertSame(-681819, $fields['Package balance']['system']);
+        $this->assertSame(305000, $fields['Allowance']['system']);
+        $this->assertSame(2623181, $item->gross_cents);
+        $this->assertSame(2623181, $item->net_cents);
+        $this->assertSame(0, collect($fields)->sum('difference'));
+        $this->assertSame($payload['rows'][0]['source_note'], $item->snapshot['historical_source']['source_note']);
+        $this->assertStringContainsString('Breakdown <review>.', $item->adjustments['notes']);
+        $this->get('/payroll/'.$id)->assertOk()->assertSee('Package balance')->assertSee('Breakdown <review>.');
+        $this->assertSame([$id], HistoricalPayrollImportService::import($payload, 1, 1));
+        $this->assertDatabaseCount('journal_entries', 0);
+    }
+
+    public function test_mixed_optional_allowance_rows_render_with_consistent_columns(): void
+    {
+        $employee = Employee::create(['external_id' => 2, 'first_name' => 'Second', 'last_name' => 'Employee', 'full_name' => 'Second Employee', 'currency' => 'LKR', 'status' => 'active']);
+        $payload = $this->payload();
+        $second = $payload['rows'][0];
+        $second['employee_id'] = $employee->id;
+        $second['allowance'] = 123400;
+        $second['net'] += 123400;
+        $payload['rows'][] = $second;
+        $id = HistoricalPayrollImportService::import($payload, 1, 1)[0];
+        $this->get('/payroll/'.$id)->assertOk()->assertSee('0 employees with differences')->assertSee('Allowance')->assertSee('1,234.00');
+    }
 }

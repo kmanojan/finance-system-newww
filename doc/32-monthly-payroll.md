@@ -125,3 +125,11 @@ Each imported run opens with a **Salary sheet comparison** table containing the 
 The complete import is transactional. A repeated manifest returns matching drafts without duplicating them; another source, department, employee set or conflicting run aborts the import. Optional profile initialization fills only zero basic salaries from each employee's latest nonzero source basic. Existing salaries, component settings and employment status are preserved. Salary changes are audited. Due dates are provisional and the draft notes retain source provenance.
 
 No historical payments, advance issues, loans, cashbook transactions or journals are created. Drafts with historical advance or loan deductions cannot be approved until opening balances and recovery links have been reconciled; this prevents source recoveries from generating unsupported ledger entries. Importing drafts does not mark any salary or statutory payment paid.
+
+### Separate source allowances and incomplete rows
+
+Historical manifests may include an optional nonnegative integer-cent `allowance` in addition to the package and commission. The payroll calculator retains this as a separate monthly allowance. The comparison table uses **Package balance** for package less basic, then shows **Allowance** separately when supplied. Mixed rows with and without that optional field share aligned comparison columns.
+
+A source package below the stated basic salary is retained through a negative **Package adjustment (source)** earning. Basic, the package and no-pay remain distinguishable; no amount is silently reclassified as unpaid leave. Historical statutory amounts continue to be fixed source amounts.
+
+An optional `source_note` preserves a reviewed explanation of incomplete source data or a confirmed resolution. It appears in the comparison row and employee adjustment notes. Missing source net amounts or net-only rows must be resolved explicitly before preparing the manifest; the importer still rejects any source/calculator disagreement. The original workbook remains unchanged and is identified by its SHA-256. A resolved comparison amount is not presented as an originally populated sheet cell.

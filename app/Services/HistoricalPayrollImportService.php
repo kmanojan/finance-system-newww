@@ -17,7 +17,9 @@ class HistoricalPayrollImportService
         $rules = ['version' => 'required|in:1', 'source_url' => 'required|url|max:1000', 'source_sha256' => 'required|regex:/^[a-f0-9]{64}$/',
             'rows' => 'required|array|min:1|max:15000', 'rows.*.employee_id' => 'required|integer',
             'rows.*.month' => 'required|date_format:Y-m', 'rows.*.sheet' => 'required|string|max:100',
-            'rows.*.row' => 'required|integer|min:1', 'rows.*.name' => 'required|string|max:255'];
+            'rows.*.row' => 'required|integer|min:1', 'rows.*.name' => 'required|string|max:255',
+            'rows.*.allowance' => 'sometimes|required|integer|min:0|max:999999999999',
+            'rows.*.source_note' => 'sometimes|required|string|max:1500'];
         foreach (self::AMOUNTS as $field) {
             $rules['rows.*.'.$field] = 'required|integer|min:0|max:999999999999';
         }
@@ -25,6 +27,9 @@ class HistoricalPayrollImportService
         foreach ($data['rows'] as &$row) {
             foreach (array_merge(self::AMOUNTS, ['employee_id', 'row']) as $field) {
                 $row[$field] = (int) $row[$field];
+            }
+            if (isset($row['allowance'])) {
+                $row['allowance'] = (int) $row['allowance'];
             }
         }
         unset($row);
@@ -34,13 +39,12 @@ class HistoricalPayrollImportService
 
     public static function calculate(Employee $employee, array $row, array $source): array
     {
-        self::check($row['package'] >= $row['basic'], 'Source package cannot be less than basic salary.');
         $snapshot = PayrollCalculationService::snapshot($employee);
         $snapshot['basic'] = $row['basic'];
         $snapshot['currency'] = 'LKR';
         $snapshot['components'] = [];
         foreach ([
-            ['FIXED_ALLOW', 'Fixed allowance', 'earning', $row['package'] - $row['basic']],
+            [$row['package'] < $row['basic'] ? 'HIST_PACKAGE_ADJUSTMENT' : 'FIXED_ALLOW', $row['package'] < $row['basic'] ? 'Package adjustment (source)' : 'Fixed allowance', 'earning', $row['package'] - $row['basic']],
             ['COMMISSION', 'Commission', 'earning', $row['commission']],
             ['EPF_EE', 'Employee EPF', 'deduction', $row['epf_ee']],
             ['APIT', 'APIT', 'deduction', $row['tax']],
@@ -53,9 +57,9 @@ class HistoricalPayrollImportService
                 'epf_eligible' => false, 'taxable' => $type === 'earning', 'payroll_input_mode' => 'display'];
         }
         $snapshot['historical_source'] = $source + $row;
-        $adjustments = ['unpaid_leave' => $row['no_pay'] / 100, 'apit' => $row['tax'] / 100,
+        $adjustments = ['allowance' => ($row['allowance'] ?? 0) / 100, 'unpaid_leave' => $row['no_pay'] / 100, 'apit' => $row['tax'] / 100,
             'advance' => $row['advance'] / 100, 'epf_base' => $row['basic'] / 100, 'etf_base' => $row['basic'] / 100,
-            'notes' => 'Imported from '.$row['sheet'].' row '.$row['row'].'. Compare with the source before approval.'];
+            'notes' => 'Imported from '.$row['sheet'].' row '.$row['row'].'. Compare with the source before approval.'.(isset($row['source_note']) ? ' '.$row['source_note'] : '')];
         $calculation = PayrollCalculationService::calculate($snapshot, $adjustments);
         foreach (['net' => 'net', 'ee' => 'epf_ee', 'er' => 'epf_er', 'etf' => 'etf', 'apit' => 'tax', 'advance' => 'advance'] as $actual => $expected) {
             self::check($calculation[$actual] === $row[$expected], $row['sheet'].' row '.$row['row'].': '.$expected.' differs from the source.');
@@ -142,9 +146,10 @@ class HistoricalPayrollImportService
         $c = $item->calculation;
         $values = [
             'Basic' => [$c['basic'], $source['basic']],
-            'Fixed allowance' => [collect($c['earnings'])->where('name', 'Fixed allowance')->sum('amount'), $source['package'] - $source['basic']],
+            'Package balance' => [collect($c['earnings'])->whereIn('name', ['Fixed allowance', 'Package adjustment (source)'])->sum('amount'), $source['package'] - $source['basic']],
             'Commission' => [collect($c['earnings'])->where('name', 'Commission')->sum('amount'), $source['commission']],
-            'No pay' => [$c['leave'], $source['no_pay']], 'Gross' => [$c['gross'], $source['package'] + $source['commission'] - $source['no_pay']],
+            ...array_key_exists('allowance', $source) ? ['Allowance' => [collect($c['earnings'])->where('name', 'Additional allowance')->sum('amount'), $source['allowance']]] : [],
+            'No pay' => [$c['leave'], $source['no_pay']], 'Gross' => [$c['gross'], $source['package'] + $source['commission'] + ($source['allowance'] ?? 0) - $source['no_pay']],
             'Tax' => [$c['apit'], $source['tax']], 'Employee EPF' => [$c['ee'], $source['epf_ee']],
             'Employer EPF' => [$c['er'], $source['epf_er']], 'ETF' => [$c['etf'], $source['etf']],
             'Advance' => [$c['advance'], $source['advance']],
