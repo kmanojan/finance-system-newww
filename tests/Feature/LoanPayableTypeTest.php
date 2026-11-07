@@ -56,7 +56,8 @@ class LoanPayableTypeTest extends TestCase
 
         $this->get("/loans/{$first}")->assertOk()->assertViewHas('balance', fn ($b) => $b['total_outstanding'] === 100000 && $b['pending_interest'] === 20000 && $b['full_settlement_amount'] === 120000);
         $this->get("/loans/{$second}")->assertOk()->assertViewHas('balance', fn ($b) => $b['total_outstanding'] === 120000);
-        $this->get('/loans')->assertOk()->assertViewHas('totalWantToPaid', 220000);
+        $this->get('/loans')->assertOk()->assertViewHas('totalWantToPaid', 220000)
+            ->assertViewHas('totalToSettle', 240000);
         $this->get('/loans/party-report')->assertOk()->assertViewHas('overallPayables', 220000)
             ->assertViewHas('partyReports', fn ($rows) => $rows->first()->total_pending_interest == 40000 && $rows->first()->total_paids == 40000);
         $response = $this->getJson('/loans/party-report/loans?party_id=1')->assertOk();
@@ -80,7 +81,32 @@ class LoanPayableTypeTest extends TestCase
             $this->assertEquals(80000, $balance['outstanding_principal']);
             $this->assertEquals(15000, $balance['pending_interest']);
             $this->assertEquals($expected, $balance['total_outstanding']);
+            $this->assertEquals(95000, $balance['full_settlement_amount']);
         }
+    }
+
+    public function test_unpaid_principal_and_interest_are_visible_as_total_to_settle_on_both_pages(): void
+    {
+        $id = $this->loan();
+        DB::table('loans')->where('id', $id)->update(['principal_amount' => 1600000]);
+        DB::table('loan_interest_schedule')->where('loan_id', $id)->update([
+            'interest_amount' => 28000, 'paid_amount' => 0, 'status' => 'pending',
+        ]);
+
+        $this->get("/loans/{$id}")->assertOk()
+            ->assertSeeInOrder(['Total to settle', '1,712,000.00', 'Unpaid principal', '1,600,000.00', 'Unpaid interest', '112,000.00'])
+            ->assertViewHas('balance', fn ($balance) => $balance['total_outstanding'] == 1600000
+                && $balance['full_settlement_amount'] == 1712000 && $balance['total_paid'] == 0);
+        $this->get('/loans')->assertOk()
+            ->assertViewHas('totalWantToPaid', 1600000)
+            ->assertViewHas('totalToSettle', 1712000)
+            ->assertSeeInOrder(['Total to settle', '1,712,000.00', 'Unpaid principal:', '1,600,000.00', 'Unpaid interest:', '112,000.00'])
+            ->assertSeeInOrder(['<!-- Full settlement', 'Total to settle', '1,712,000.00', 'Principal 1,600,000.00', 'Interest 112,000.00'], false);
+
+        // Reading a settlement total must not record a payment or reclassify the loan.
+        $this->assertDatabaseHas('loans', ['id' => $id, 'loan_type' => LoanBalanceService::INTEREST_SEPARATE]);
+        $this->assertDatabaseCount('loan_principal_records', 0);
+        $this->assertDatabaseCount('transactions', 0);
     }
 
     public function test_type_can_be_reclassified_without_changing_paid_history_or_terms(): void
@@ -115,6 +141,7 @@ class LoanPayableTypeTest extends TestCase
         DB::table('loan_interest_schedule')->where('loan_id', $id)->update(['paid_amount' => 10000, 'status' => 'paid']);
         DB::table('loans')->where('id', $id)->update(['status' => 'settled']);
         $this->assertEquals(0, $this->balance($id)['total_outstanding']);
+        $this->assertEquals(0, $this->balance($id)['full_settlement_amount']);
         $this->assertEquals(140000, $this->balance($id)['total_paid']);
         $this->get('/loans/party-report')->assertOk()->assertViewHas('overallPayables', 0);
     }

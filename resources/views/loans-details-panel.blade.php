@@ -3,6 +3,7 @@
     <section class="loan-info-block" aria-labelledby="loan-terms-title">
         <h3 id="loan-terms-title">Terms & balances</h3>
         <dl class="loan-facts">
+            <div><dt>Payable balance</dt><dd>{{ $loan->currency }} {{ number_format($totalRemainingPayable, 2) }}<small>{{ $balance['interest_included'] ? 'Principal + unpaid interest' : 'Principal only; interest paid separately' }}</small></dd></div>
             <div><dt>Outstanding principal</dt><dd>{{ $loan->currency }} {{ number_format($balance['outstanding_principal'], 2) }}</dd></div>
             <div><dt>{{ $balance['interest_included'] ? 'Principal + scheduled interest' : 'Principal obligation' }}</dt><dd>{{ $loan->currency }} {{ number_format($totalLoanObligation, 2) }}</dd></div>
             <div><dt>Scheduled interest</dt><dd>{{ $loan->currency }} {{ number_format($totalContractedInterest, 2) }}</dd></div>

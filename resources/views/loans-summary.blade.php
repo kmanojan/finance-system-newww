@@ -28,14 +28,14 @@
 
 <section class="loan-summary" aria-label="Loan balances">
     <div class="loan-payable">
-        <span class="loan-summary-label">Remaining payable</span>
-        <div class="loan-payable-value"><span>{{ $loan->currency }}</span><strong>{{ number_format($totalRemainingPayable, 2) }}</strong></div>
-        <p>{{ $balance['interest_included'] ? 'Principal + unpaid scheduled interest' : 'Principal only · Interest paid separately' }}</p>
+        <span class="loan-summary-label">Total to settle</span>
+        <div class="loan-payable-value"><span>{{ $loan->currency }}</span><strong>{{ number_format($balance['full_settlement_amount'], 2) }}</strong></div>
+        <p>Unpaid principal + all unpaid scheduled interest</p>
         <div class="loan-progress-label"><span>{{ $balance['interest_included'] ? 'Principal + interest repaid' : 'Principal repaid' }}</span><strong>{{ $overallRepaymentPct }}%</strong></div>
         <progress max="100" value="{{ $overallRepaymentPct }}" aria-label="{{ $balance['interest_included'] ? 'Principal and interest repaid' : 'Principal repaid' }}">{{ $overallRepaymentPct }}%</progress>
     </div>
-    <div class="loan-stat"><span class="loan-summary-label">Principal borrowed</span><strong class="loan-stat-value"><small>{{ $loan->currency }}</small>{{ number_format($totalBorrowed, 2) }}</strong><p>Initial {{ number_format($loan->principal_amount, 2) }}@if($totalDraws > 0) + draws {{ number_format($totalDraws, 2) }}@endif</p></div>
-    <div class="loan-stat"><span class="loan-summary-label">Unpaid interest</span><strong class="loan-stat-value"><small>{{ $loan->currency }}</small>{{ number_format($totalInterestDue, 2) }}</strong><p>{{ $balance['interest_included'] ? 'Included in payable' : 'Separate from payable' }}</p></div>
+    <div class="loan-stat"><span class="loan-summary-label">Unpaid principal</span><strong class="loan-stat-value"><small>{{ $loan->currency }}</small>{{ number_format($balance['outstanding_principal'], 2) }}</strong><p>Borrowed {{ number_format($totalBorrowed, 2) }}@if($totalDraws > 0) (including draws)@endif<br>Repaid {{ number_format($totalRepaid, 2) }}</p></div>
+    <div class="loan-stat"><span class="loan-summary-label">Unpaid interest</span><strong class="loan-stat-value"><small>{{ $loan->currency }}</small>{{ number_format($totalInterestDue, 2) }}</strong><p>Included in total to settle</p></div>
     <div class="loan-stat"><span class="loan-summary-label">Total paid</span><strong class="loan-stat-value"><small>{{ $loan->currency }}</small>{{ number_format($totalPaidAll, 2) }}</strong><p>Principal {{ number_format($totalRepaid, 2) }}<br>Interest {{ number_format($totalInterestPaid, 2) }}</p></div>
 </section>
 <dl class="loan-key-dates">

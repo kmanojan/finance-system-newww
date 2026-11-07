@@ -122,6 +122,7 @@ class LoanController extends Controller
         }
 
         $totalWantToPaid = $loans->whereIn('status', ['active', 'pending', 'defaulted'])->sum('total_outstanding');
+        $totalToSettle = $loans->whereIn('status', ['active', 'pending', 'defaulted'])->sum('full_settlement_amount');
         $totalPaidAll = $totalPrincipalRepaid + $totalInterestPaid;
         $totalLoansCount = $loans->count();
         $activeLoansCount = $loans->where('status', 'active')->count();
@@ -157,6 +158,7 @@ class LoanController extends Controller
             'totalOutstandingPrincipal',
             'totalOutstandingInterest',
             'totalWantToPaid',
+            'totalToSettle',
             'thisMonthPayable',
             'totalLoansCount',
             'activeLoansCount',

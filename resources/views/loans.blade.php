@@ -245,21 +245,22 @@
     <div class="metric-card" style="background:var(--bg-card); border:1px solid var(--border); padding:1rem 1.15rem; border-radius:10px; display:flex; flex-direction:column; justify-content:space-between;">
         <div>
             <div style="display:flex; justify-content:space-between; align-items:center; color:var(--text-muted); font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">
-                <span>Payable balance</span>
+                <span>Total to settle</span>
                 <ion-icon name="alert-circle-outline" style="font-size:1.2rem; color:var(--danger);"></ion-icon>
             </div>
             <div style="font-size:1.35rem; font-weight:800; color:var(--danger); margin-top:0.35rem;">
-                LKR {{ number_format($totalWantToPaid, 2) }}
+                LKR {{ number_format($totalToSettle, 2) }}
             </div>
         </div>
         <div style="margin-top:0.5rem; padding-top:0.35rem; border-top:1px dashed var(--border-light); font-size:0.75rem; display:flex; justify-content:space-between; gap:0.5rem; flex-wrap:wrap;">
             <span style="color:var(--text-muted);">
-                <strong style="color:var(--danger);">Loan:</strong> {{ number_format($totalOutstandingPrincipal, 2) }}
+                <strong style="color:var(--danger);">Unpaid principal:</strong> {{ number_format($totalOutstandingPrincipal, 2) }}
             </span>
             <span style="color:var(--text-muted);">
-                <strong style="color:var(--text-muted);">Unpaid interest (included for type 2):</strong> {{ number_format($totalOutstandingInterest, 2) }}
+                <strong style="color:var(--text-muted);">Unpaid interest:</strong> {{ number_format($totalOutstandingInterest, 2) }}
             </span>
         </div>
+        <p class="text-muted" style="font-size:0.75rem; margin:0.5rem 0 0;">Payable balance by loan type: LKR {{ number_format($totalWantToPaid, 2) }}</p>
     </div>
 
     <!-- 4. This Month Due -->
@@ -404,13 +405,13 @@
                     </div>
                 </div>
 
-                <!-- Outstanding (P+I) -->
+                <!-- Full settlement always includes unpaid principal and interest. -->
                 <div style="text-align:right;">
-                    <div style="font-size:0.72rem; color:var(--text-muted); text-transform:uppercase; font-weight:600;">Outstanding Balance</div>
-                    <div style="font-weight:800; font-size:0.95rem; color: {{ $loan->total_outstanding > 0 ? 'var(--danger)' : 'var(--success)' }};">
-                        {{ $loan->currency }} {{ number_format($loan->total_outstanding, 2) }}
-                        <div class="text-muted" style="font-size:12px;font-weight:400;">{{ $loan->loan_type_label }}</div>
+                    <div style="font-size:0.72rem; color:var(--text-muted); text-transform:uppercase; font-weight:600;">Total to settle</div>
+                    <div style="font-weight:800; font-size:0.95rem; color: {{ $loan->full_settlement_amount > 0 ? 'var(--danger)' : 'var(--success)' }};">
+                        {{ $loan->currency }} {{ number_format($loan->full_settlement_amount, 2) }}
                     </div>
+                    <div class="text-muted" style="font-size:12px;line-height:1.6;">Principal {{ number_format($loan->outstanding_principal, 2) }}<br>Interest {{ number_format($loan->pending_interest, 2) }}</div>
                 </div>
 
                 <!-- Next Due / Settled Date -->
@@ -517,6 +518,10 @@
                     <div class="loan-stat-row">
                         <span class="loan-stat-label">Pending / Scheduled Interest</span>
                         <span class="loan-stat-val" style="color:var(--warning);">{{ $loan->currency }} {{ number_format($loan->pending_interest, 2) }}</span>
+                    </div>
+                    <div class="loan-stat-row">
+                        <span class="loan-stat-label">Payable Balance<br><small>{{ $loan->loan_type_label }}</small></span>
+                        <span class="loan-stat-val">{{ $loan->currency }} {{ number_format($loan->total_outstanding, 2) }}</span>
                     </div>
                     <div class="loan-stat-row">
                         <span class="loan-stat-label">Total Paid (P + I)</span>
