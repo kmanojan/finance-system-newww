@@ -127,3 +127,8 @@
 
 .loan-detail-page .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 .loan-records-table td[colspan]::before { display:none!important; }
+.loan-interest-payments { margin-top:8px; max-width:280px; white-space:normal; text-align:left; font-size:12px; }
+.loan-interest-payments summary { color:var(--primary); cursor:pointer; padding:4px 0; }
+.loan-interest-payment { padding:10px 0; border-top:1px solid var(--border-light); overflow-wrap:anywhere; }
+.loan-interest-payment strong { color:var(--text-heading); font-weight:500; }
+.loan-interest-payment p { margin:5px 0 0; color:var(--text-muted); white-space:pre-wrap; line-height:1.5; }

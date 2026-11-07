@@ -675,6 +675,13 @@ class LoanController extends Controller
             ->orderBy('due_date', 'asc')
             ->get();
 
+        $interestPayments = DB::table('transactions')
+            ->where('type', 'expense')
+            ->whereIn('reference_no', $schedules->map(fn ($schedule) => "LOAN-INT-{$id}-{$schedule->id}"))
+            ->orderBy('transaction_date')->orderBy('id')
+            ->get(['id', 'reference_no', 'transaction_date', 'amount', 'currency', 'description'])
+            ->groupBy('reference_no');
+
         $principalRecords = DB::table('loan_principal_records')
             ->where('loan_id', $id)
             ->orderBy('record_date', 'desc')
@@ -710,7 +717,7 @@ class LoanController extends Controller
         $fundingLoans = DB::table('loans')->where('id', '!=', $id)->where('currency', $loan->currency)
             ->whereIn('status', ['active', 'defaulted', 'settled', 'closed'])->orderByDesc('claimed_date')->get();
 
-        return view('loans-show', compact('loan', 'balance', 'schedules', 'principalRecords', 'attachments', 'parties', 'bankAccounts', 'linkedBankAccount', 'loanFlow', 'fundingLoans'));
+        return view('loans-show', compact('loan', 'balance', 'schedules', 'interestPayments', 'principalRecords', 'attachments', 'parties', 'bankAccounts', 'linkedBankAccount', 'loanFlow', 'fundingLoans'));
     }
 
     public function activate($id)
@@ -897,7 +904,7 @@ class LoanController extends Controller
 
     public function settleInterestPeriod(Request $request, $id, $scheduleId)
     {
-        $request->validate(['paid_amount' => 'required|numeric|gt:0', 'paid_date' => 'nullable|date_format:Y-m-d']);
+        $request->validate(['paid_amount' => 'required|numeric|gt:0', 'paid_date' => 'nullable|date_format:Y-m-d', 'notes' => 'nullable|string|max:1000']);
         PeriodLockService::checkLockedDate($request->paid_date ?: date('Y-m-d'));
         $period = DB::table('loan_interest_schedule')->where('id', $scheduleId)->where('loan_id', $id)->lockForUpdate()->first();
         abort_unless($period, 404);
@@ -906,6 +913,7 @@ class LoanController extends Controller
         }
         $paidAmount = floatval($request->input('paid_amount'));
         $paidDate = $request->input('paid_date') ?: now()->format('Y-m-d');
+        $notes = trim((string) $request->input('notes', ''));
 
         $schedule = DB::table('loan_interest_schedule')->where('id', $scheduleId)->first();
         $loan = DB::table('loans')->where('id', $id)->first();
@@ -934,7 +942,7 @@ class LoanController extends Controller
                 'amount' => $paidAmount,
                 'currency' => $loan->currency,
                 'transaction_date' => $paidDate,
-                'description' => "Interest Payment to {$loan->lender_name}",
+                'description' => "Interest Payment to {$loan->lender_name}".($notes !== '' ? "\nNote: {$notes}" : ''),
                 'reference_no' => "LOAN-INT-{$loan->id}-{$scheduleId}",
                 'payment_method' => 'Normal',
                 'created_at' => now(),

@@ -72,6 +72,18 @@
                             </td>
                             <td>
                                 {{ $loan->currency }} {{ number_format($paidAmt, 2) }}
+                                @php($payments = $interestPayments->get("LOAN-INT-{$loan->id}-{$sched->id}", collect()))
+                                @if($payments->isNotEmpty())
+                                    <details class="loan-interest-payments">
+                                        <summary>Payment details ({{ $payments->count() }})</summary>
+                                        @foreach($payments as $payment)
+                                            <div class="loan-interest-payment">
+                                                <strong>{{ $payment->transaction_date }} · {{ $payment->currency }} {{ number_format($payment->amount, 2) }}</strong>
+                                                <p>{{ $payment->description }}</p>
+                                            </div>
+                                        @endforeach
+                                    </details>
+                                @endif
                             </td>
                             <td>
                                 {{ $loan->currency }} {{ number_format($remAmt, 2) }}
@@ -535,6 +547,10 @@
                     <label class="form-label"><ion-icon name="card-outline" style="vertical-align:middle;"></ion-icon> Deduct from Bank Account</label>
                     <x-bank-account-selector name="bank_account_id" id="settle_interest_bank_account_id" :bankAccounts="$bankAccounts" :selected="$loan->bank_account_id" placeholder="Select Bank Account..." />
                 </div>
+                <div class="form-group" style="margin-top:1rem;">
+                    <label for="settle_interest_notes" class="form-label">Note (optional)</label>
+                    <textarea name="notes" id="settle_interest_notes" class="form-control" rows="3" maxlength="1000" placeholder="E.g. Cheque reference or reason for this payment"></textarea>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline" onclick="closeModal('settleModal')">Cancel</button>
@@ -695,6 +711,7 @@ function setAmountInputValue(id, val) {
 
 function openSettleModal(id, suggestedAmount, dueDate) {
     document.getElementById('settleForm').action = "/loans/{{ $loan->id }}/schedule/" + id + "/settle";
+    document.getElementById('settle_interest_notes').value = '';
     setAmountInputValue('settle_amount', suggestedAmount);
     const dateInput = document.getElementById('settle_paid_date') || document.querySelector('#settleModal input[name="paid_date"]');
     if (dateInput && dueDate) {
