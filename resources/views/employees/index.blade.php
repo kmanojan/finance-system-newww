@@ -110,8 +110,8 @@
     <!-- Filter Bar -->
     <div class="filter-bar" style="background:var(--bg-card); padding:1rem; border-radius:12px; border:1px solid var(--border); margin-bottom:1.5rem;">
         <form action="" method="GET" style="display:flex; flex-wrap:wrap; gap:0.75rem; width:100%;">
-            <input type="text" name="search" value="{{ request('search') }}" class="form-control" placeholder="Search by name, employee code, or role..." style="flex:1; min-width:200px; padding:0.6rem;">
-            <select name="status" class="form-control" style="width:160px; min-width:140px; padding:0.6rem;">
+            <input type="search" name="search" aria-label="Search employees" value="{{ request('search') }}" class="form-control" maxlength="200" placeholder="Search name, employee code, job title, or role..." style="flex:1; min-width:200px; padding:0.6rem;">
+            <select name="status" aria-label="Employee status" class="form-control" style="width:160px; min-width:140px; padding:0.6rem;">
                 <option value="">All Statuses</option>
                 <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Active Only</option>
                 <option value="inactive" {{ request('status') === 'inactive' ? 'selected' : '' }}>Inactive</option>
@@ -256,7 +256,11 @@
                     <td colspan="9" style="text-align:center; padding:3.5rem; color:var(--text-muted);">
                         <ion-icon name="people-outline" style="font-size:3.5rem; opacity:0.3; margin-bottom:1rem;"></ion-icon><br>
                         <span style="font-size:1.1rem; font-weight:600; color:var(--text-heading);">No employees found</span><br>
-                        Click "Sync HR Employees" to pull staff records from your HR system.
+                        @if(request('search') || request('status'))
+                            Try another search or reset the filters.
+                        @else
+                            Click "Sync HR Employees" to pull staff records from your HR system.
+                        @endif
                     </td>
                 </tr>
                 @endforelse

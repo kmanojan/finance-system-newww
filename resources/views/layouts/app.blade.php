@@ -163,7 +163,7 @@
                     </a>
                     <a href="/employees" title="Employees" class="nav-item {{ request()->is('employees*', 'payroll*') ? 'active' : '' }}">
                         <ion-icon name="people-outline"></ion-icon>
-                        <span>People</span>
+                        <span>Employees</span>
                     </a>
                     <a href="/projects" title="Projects" class="nav-item {{ request()->is('projects*') ? 'active' : '' }}" style="position:relative;">
                         <ion-icon name="briefcase-outline"></ion-icon>

@@ -14,36 +14,14 @@ class EmployeeController extends Controller
 {
     public function index(Request $request)
     {
-        $employees = Employee::query()
-            ->with(['salaryComponents.component'])
-            ->when($request->status, fn ($q) => $q->where('status', $request->status))
-            ->when($request->search, fn ($q) => $q->where(function ($q) use ($request) {
-                $q->where('full_name', 'like', "%{$request->search}%")
-                    ->orWhere('employee_code', 'like', "%{$request->search}%");
-            }))
-            ->orderBy('full_name')
-            ->paginate(20);
+        $employees = $this->employeeQuery($request)->orderBy('full_name')->orderBy('id')->paginate(20)->withQueryString();
 
         return response()->json($employees);
     }
 
     public function webIndex(Request $request)
     {
-        $query = Employee::query()->with(['salaryComponents.component']);
-
-        if ($request->search) {
-            $query->where(function ($q) use ($request) {
-                $q->where('full_name', 'like', "%{$request->search}%")
-                    ->orWhere('employee_code', 'like', "%{$request->search}%")
-                    ->orWhere('job_position', 'like', "%{$request->search}%");
-            });
-        }
-
-        if ($request->status) {
-            $query->where('status', $request->status);
-        }
-
-        $employees = $query->orderBy('full_name')->paginate(20);
+        $employees = $this->employeeQuery($request)->orderBy('full_name')->orderBy('id')->paginate(20)->withQueryString();
         $integration = ApiIntegration::first();
         $salaryComponents = SalaryComponent::active()->orderBy('sort_order')->get();
 
@@ -74,6 +52,20 @@ class EmployeeController extends Controller
         ];
 
         return view('employees.index', compact('employees', 'integration', 'salaryComponents', 'kpis'));
+    }
+
+    private function employeeQuery(Request $request)
+    {
+        $data = $request->validate(['search' => 'nullable|string|max:200', 'status' => 'nullable|in:active,inactive']);
+        $search = preg_replace('/\s+/u', ' ', trim($data['search'] ?? ''));
+
+        return Employee::query()->with(['salaryComponents.component'])
+            ->when($search !== '', fn ($query) => $query->where(fn ($query) => $query
+                ->whereLike('full_name', "%{$search}%")
+                ->orWhereLike('employee_code', "%{$search}%")
+                ->orWhereLike('job_position', "%{$search}%")
+                ->orWhereLike('role', "%{$search}%")))
+            ->when(! empty($data['status']), fn ($query) => $query->where('status', $data['status']));
     }
 
     public function show($id)
