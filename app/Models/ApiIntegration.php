@@ -11,6 +11,8 @@ class ApiIntegration extends Model
 
     protected $fillable = ['name', 'url', 'method', 'bearer_token', 'response_path', 'last_synced_at', 'last_sync_status', 'last_sync_error'];
 
+    protected $hidden = ['bearer_token'];
+
     protected $casts = [
         'bearer_token' => 'encrypted',
         'last_synced_at' => 'datetime',

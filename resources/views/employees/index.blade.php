@@ -154,10 +154,11 @@
                                 <a href="/employees/{{ $emp->id }}" style="font-weight:600; color:var(--text-heading); text-decoration:none;">
                                     {{ $emp->full_name }}
                                 </a>
-                                <div style="font-size:0.75rem; color:var(--text-muted); display:flex; gap:0.4rem; align-items:center; margin-top:2px;">
+                                <div style="font-size:0.75rem; color:var(--text-muted); display:flex; flex-wrap:wrap; gap:0.4rem; align-items:center; margin-top:2px;">
                                     <span>{{ $emp->employee_code ?? 'EMP-'.$emp->id }}</span>
                                     <span>•</span>
                                     <span>{{ $emp->job_position ?? 'Staff' }}</span>
+                                    <span class="badge {{ $emp->status === 'active' ? 'badge-success' : 'badge-draft' }}">{{ ucfirst($emp->status) }}</span>
                                 </div>
                             </div>
                         </div>
@@ -331,7 +332,7 @@
                 </div>
                 @endif
 
-                <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:1rem;">Provide your HR system API credentials to pull and update employee records.</p>
+                <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:1rem;">Sync employee profiles and employment status from HR. Nexus imports all active and inactive employees across every page. Existing salary settings and payment history are preserved.</p>
                 
                 <input type="hidden" id="integration_id" value="{{ $integration->id ?? '' }}">
 
@@ -429,13 +430,14 @@ function handleApiSetup(e) {
     })
     .then(async r => {
         const syncRes = await r.json();
-        if (syncRes.status === 'failed') {
-            throw new Error(syncRes.error || 'Sync failed on remote server.');
+        if (!r.ok || syncRes.status !== 'success') {
+            throw new Error(syncRes.error || syncRes.message || 'Sync failed on remote server.');
         }
+        const message = Number.isInteger(syncRes.employee_count) ? `${syncRes.employee_count} employees synchronized successfully.` : 'Employees synchronized successfully!';
         if (window.showToast) {
-            window.showToast('Employees synchronized successfully!', 'success');
+            window.showToast(message, 'success');
         } else {
-            alert('Employees synchronized successfully!');
+            alert(message);
         }
         closeModal('apiSetupModal');
         setTimeout(() => { window.location.reload(); }, 600);
