@@ -46,7 +46,7 @@ class LoanInterestNoteTest extends TestCase
         $this->assertDatabaseHas('transactions', ['amount' => 3000, 'description' => "Interest Payment to Test lender\nNote: {$note}"]);
         $this->assertDatabaseHas('transactions', ['amount' => 7000, 'description' => "Interest Payment to Test lender\nNote: Final interest balance"]);
         $this->assertDatabaseHas('loan_interest_schedule', ['id' => $this->scheduleId, 'paid_amount' => 10000, 'status' => 'paid']);
-        $this->get("/loans/{$this->loanId}")->assertOk()->assertSee('Payment details (2)')
+        $this->get("/loans/{$this->loanId}")->assertOk()->assertSee('<th>Note</th>', false)
             ->assertSee($note)->assertDontSee($note, false)->assertSee('Final interest balance');
         $this->assertDatabaseHas('loans', ['id' => $this->loanId, 'principal_amount' => 100000]);
     }
@@ -89,7 +89,7 @@ class LoanInterestNoteTest extends TestCase
         $paymentId = $this->pay();
         DB::table('loans')->where('id', $this->loanId)->update(['status' => 'settled']);
         $bankId = DB::table('bank_accounts')->insertGetId(['company_id' => 1, 'bank_name' => 'Test bank', 'account_no' => '123', 'currency' => 'LKR']);
-        $this->get("/loans/{$this->loanId}")->assertOk()->assertSee('Edit payments')->assertSee('Delete payment');
+        $this->get("/loans/{$this->loanId}")->assertOk()->assertSee('aria-label="Edit payment"', false)->assertSee('aria-label="Delete payment"', false);
         $this->putJson($this->paymentUrl($paymentId), ['paid_amount' => 8000, 'paid_date' => '2026-11-03', 'bank_account_id' => $bankId, 'notes' => 'Corrected note'])->assertRedirect();
         $this->assertDatabaseHas('transactions', ['id' => $paymentId, 'amount' => 8000, 'transaction_date' => '2026-11-03', 'bank_account_id' => $bankId, 'description' => "Interest Payment to Test lender\nNote: Corrected note"]);
         $this->assertDatabaseHas('loan_interest_schedule', ['id' => $this->scheduleId, 'paid_amount' => 8000, 'paid_date' => '2026-11-03', 'status' => 'partially_paid']);

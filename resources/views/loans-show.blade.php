@@ -52,6 +52,7 @@
                             <th>Paid amount</th>
                             <th>Remaining</th>
                             <th>Status</th>
+                            <th>Note</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -91,9 +92,28 @@
                                     <span class="loan-state">Pending</span>
                                 @endif
                             </td>
+                            <td class="loan-interest-notes">
+                                @forelse($payments as $payment)
+                                    <div class="loan-payment-note">
+                                        @if($payments->count() > 1)<small>{{ $payment->transaction_date }} · {{ $payment->currency }} {{ number_format($payment->amount, 2) }}</small>@endif
+                                        <p>{{ \App\Services\LoanInterestPaymentService::note($payment) ?: '—' }}</p>
+                                    </div>
+                                @empty
+                                    <span class="text-muted">—</span>
+                                @endforelse
+                            </td>
                             <td>
-                                @if($canManageLoan && $payments->isNotEmpty())
-                                    <button type="button" class="btn btn-outline" onclick="document.getElementById('interest-payments-{{ $sched->id }}').open = true; document.getElementById('interest-payments-{{ $sched->id }}').scrollIntoView({block:'nearest'});">Edit payments</button>
+                                @if($canManageLoan)
+                                    @foreach($payments as $payment)
+                                        <div class="actions loan-interest-row-actions">
+                                            @if($payments->count() > 1)<span class="loan-payment-caption">{{ $payment->transaction_date }} · {{ number_format($payment->amount, 2) }}</span>@endif
+                                            <button type="button" class="action-btn" title="Edit" aria-label="Edit payment" data-payment="{{ json_encode(['id' => $payment->id, 'schedule_id' => $sched->id, 'amount' => $payment->amount, 'paid_date' => $payment->transaction_date, 'bank_account_id' => $payment->bank_account_id, 'notes' => \App\Services\LoanInterestPaymentService::note($payment)]) }}" onclick="openEditInterestPayment(JSON.parse(this.dataset.payment))"><ion-icon name="create-outline" aria-hidden="true"></ion-icon></button>
+                                            <form action="/loans/{{ $loan->id }}/schedule/{{ $sched->id }}/payments/{{ $payment->id }}" method="POST" style="display:inline;" onsubmit="return confirm('Delete this recorded interest payment? Its ledger entry will be reversed and the unpaid interest restored. A settled loan will reopen if it has an unpaid balance.');">
+                                                @csrf @method('DELETE')
+                                                <button type="submit" class="action-btn" title="Delete" aria-label="Delete payment"><ion-icon name="trash-outline" aria-hidden="true"></ion-icon></button>
+                                            </form>
+                                        </div>
+                                    @endforeach
                                 @endif
                                 @if($canManageLoan && in_array($sched->status, ['pending', 'partially_paid', 'overdue']))
                                 <button type="button" class="btn btn-outline loan-pay-interest" onclick="openSettleModal({{ $sched->id }}, {{ $remAmt }}, '{{ $sched->due_date }}')">Pay interest</button>
@@ -118,39 +138,15 @@
                                 </div>
                                 @elseif(!$canManageLoan || $payments->isEmpty())
                                     <span class="text-muted">{{ in_array($sched->status, ['pending', 'partially_paid', 'overdue']) ? 'View only' : 'Completed' }}</span>
-                                    @if($canManageLoan && $paidAmt > 0)<details class="loan-legacy-help"><summary>Payment record unavailable</summary><p>Reconcile imported or upfront interest before changing this payment.</p></details>@endif
+                                    @if($canManageLoan && $paidAmt > 0)<span class="loan-legacy-help" title="Reconcile imported or upfront interest before changing this payment.">Payment record unavailable</span>@endif
                                 @endif
                             </td>
                         </tr>
-                        @if($payments->isNotEmpty())
-                        <tr class="loan-payment-history-row"><td colspan="6">
-
-                                    <details class="loan-interest-payments" id="interest-payments-{{ $sched->id }}">
-                                        <summary>Payment details ({{ $payments->count() }})</summary>
-                                        @foreach($payments as $payment)
-                                            <div class="loan-interest-payment">
-                                                <strong>{{ $payment->transaction_date }} · {{ $payment->currency }} {{ number_format($payment->amount, 2) }}</strong>
-                                                <p>{{ $payment->description }}</p>
-                                                @if($canManageLoan)
-                                                    <div class="loan-payment-actions">
-                                                        <button type="button" class="btn btn-outline" data-payment="{{ json_encode(['id' => $payment->id, 'schedule_id' => $sched->id, 'amount' => $payment->amount, 'paid_date' => $payment->transaction_date, 'bank_account_id' => $payment->bank_account_id, 'notes' => \App\Services\LoanInterestPaymentService::note($payment)]) }}" onclick="openEditInterestPayment(JSON.parse(this.dataset.payment))">Edit payment</button>
-                                                        <form action="/loans/{{ $loan->id }}/schedule/{{ $sched->id }}/payments/{{ $payment->id }}" method="POST" onsubmit="return confirm('Delete this recorded interest payment? Its ledger entry will be reversed and the unpaid interest restored. A settled loan will reopen if it has an unpaid balance.');">
-                                                            @csrf @method('DELETE')
-                                                            <button type="submit" class="btn btn-outline loan-payment-delete">Delete payment</button>
-                                                        </form>
-                                                    </div>
-                                                @endif
-                                            </div>
-                                        @endforeach
-                                    </details>
-
-                        </td></tr>
-                        @endif
                         @endforeach
 
                         @if($schedules->isEmpty())
                         <tr>
-                            <td colspan="6" class="text-center text-muted py-4">
+                            <td colspan="7" class="text-center text-muted py-4">
                                 <ion-icon name="calendar-outline"></ion-icon><br>
                                 @if($loan->interest_method === 'no_interest' || (($loan->interest_amount ?? 0) <= 0 && empty($loan->total_interest) && empty($loan->interest_rate)))
                                     This loan has no interest / zero periodic interest (Principal only). No interest schedules required.

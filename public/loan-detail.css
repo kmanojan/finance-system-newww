@@ -265,3 +265,26 @@
  .loan-ledger .loan-schedule-table td::before { padding:0!important; margin:0!important; min-height:0!important; line-height:16px; }
  .loan-ledger .loan-schedule-table td:is(:nth-child(2),:nth-child(3),:nth-child(4)) { white-space:nowrap!important; }
 }
+
+/* Use the shared master-data action controls for recorded payments. */
+.loan-interest-row-actions { display:inline-flex; flex-wrap:wrap; vertical-align:middle; margin:3px 0; }
+.loan-records-table .loan-interest-row-actions .action-btn { background:var(--bg-card); border:1px solid var(--border-light); border-radius:6px; }
+.loan-records-table .loan-interest-row-actions .action-btn:hover { background:var(--primary-light); border-color:var(--primary); color:var(--primary); }
+.loan-payment-caption { flex-basis:100%; color:var(--text-muted); font-size:12px; text-align:left; }
+
+.loan-ledger .loan-interest-notes { min-width:160px; max-width:320px; white-space:normal!important; text-align:left; }
+.loan-payment-note { overflow-wrap:anywhere; }
+.loan-payment-note + .loan-payment-note { margin-top:12px; }
+.loan-payment-note p { margin:0; white-space:pre-wrap; line-height:1.6; color:var(--text-main); }
+.loan-payment-note small { display:block; margin-bottom:4px; color:var(--text-muted); font-size:12px; }
+@media(max-width:600px) {
+ .loan-ledger .loan-schedule-table td:nth-child(6) { order:6; grid-column:1 / -1; flex-direction:column!important; align-items:flex-start!important; max-width:none; min-width:0; }
+ .loan-ledger .loan-schedule-table td:nth-child(6)::before { display:block; }
+ .loan-ledger .loan-schedule-table td:nth-child(7) { order:7; grid-column:1 / -1; flex-direction:row!important; flex-wrap:wrap; align-items:center!important; }
+ .loan-ledger .loan-schedule-table td:nth-child(7)::before { display:none; }
+ .loan-ledger .loan-interest-row-actions .action-btn { min-height:44px; min-width:44px; }
+}
+.loan-ledger .loan-records-table { overflow-x:visible; }
+.loan-ledger .loan-schedule-table :is(th,td) { padding-left:8px; padding-right:8px; }
+.loan-ledger .loan-interest-notes { min-width:100px; }
+.loan-ledger .loan-schedule-table td:last-child { white-space:normal!important; }
