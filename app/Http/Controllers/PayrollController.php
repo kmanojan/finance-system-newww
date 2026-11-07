@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Employee;
 use App\Models\SalaryComponent;
+use App\Services\HistoricalPayrollImportService;
 use App\Services\PayrollCalculationService;
 use App\Services\PayrollService;
 use App\Services\SalaryAdvanceService;
@@ -36,6 +37,24 @@ class PayrollController extends Controller
     public function create(Request $request)
     {
         return view('payroll.create', $this->options() + $this->employeeTableData($request));
+    }
+
+    public function importHistoryForm()
+    {
+        return view('payroll.import-history', $this->options());
+    }
+
+    public function importHistory(Request $request)
+    {
+        $data = $request->validate(['company_id' => 'required|integer|exists:companies,id', 'department_id' => 'required|integer|exists:departments,id',
+            'source_file' => 'required|file|max:4096', 'confirm_mapping' => 'accepted', 'fill_profiles' => 'nullable|boolean']);
+        $payload = json_decode(file_get_contents($request->file('source_file')->getRealPath()), true);
+        if (! is_array($payload)) {
+            throw ValidationException::withMessages(['source_file' => 'Upload a valid historical payroll import JSON file.']);
+        }
+        $ids = HistoricalPayrollImportService::import($payload, (int) $data['company_id'], (int) $data['department_id'], $request->boolean('fill_profiles'));
+
+        return redirect('/payroll?company_id='.$data['company_id'])->with('success', count($ids).' historical payroll drafts prepared. Compare each draft with its source before approval.');
     }
 
     public function employees(Request $request)

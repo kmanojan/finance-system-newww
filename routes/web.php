@@ -108,6 +108,8 @@ Route::middleware(['auth', AuthorizeWorkspace::class, AtomicWorkspaceWrite::clas
     Route::prefix('payroll')->controller(\App\Http\Controllers\PayrollController::class)->group(function () {
         Route::get('/', 'index');
         Route::get('/create', 'create');
+        Route::get('/import-history', 'importHistoryForm');
+        Route::post('/import-history', 'importHistory');
         Route::get('/employees', 'employees');
         Route::post('/', 'store');
         Route::post('/preview', 'preview');

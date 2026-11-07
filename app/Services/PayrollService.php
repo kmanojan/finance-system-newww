@@ -87,7 +87,8 @@ class PayrollService
             $item = DB::table('payroll_items')->where('payroll_run_id', $runId)->find($itemId) ?? abort(404);
             $data['component_amounts'] ??= json_decode($item->adjustments, true)['component_amounts'] ?? [];
             $c = PayrollCalculationService::calculate(json_decode($item->snapshot, true), $data);
-            self::check($c['advance'] <= (SalaryAdvanceService::eligible([$item->employee_id], $run->company_id, $run->currency, $run->month)[$item->employee_id] ?? collect())->sum('remaining_cents'), 'Advance recovery exceeds the balance eligible for this payroll month.');
+            $historicalAdvance = json_decode($item->snapshot, true)['historical_source']['advance'] ?? 0;
+            self::check($c['advance'] <= $historicalAdvance + (SalaryAdvanceService::eligible([$item->employee_id], $run->company_id, $run->currency, $run->month)[$item->employee_id] ?? collect())->sum('remaining_cents'), 'Advance recovery exceeds the balance eligible for this payroll month.');
             self::saveCalculation($itemId, $data, $c, (bool) ($data['reviewed'] ?? false));
             ActivityLogService::logUpdate('PayrollItem', $itemId, ['adjustments' => json_decode($item->adjustments, true)], ['adjustments' => $data]);
         });
@@ -116,6 +117,9 @@ class PayrollService
                 $update['status'] = 'draft';
             } elseif ($action === 'approve') {
                 self::check($r->status === 'review', 'Submit this payroll for review before approval.');
+                self::check(! $items->contains(fn ($item) => isset($item->snapshot['historical_source'])
+                    && (($item->snapshot['historical_source']['loan'] ?? 0) > 0 || ($item->snapshot['historical_source']['advance'] ?? 0) > 0)),
+                    'Historical loan and salary advance deductions need opening-balance reconciliation before approval. These drafts are available for comparison and review.');
                 foreach ($items as $i) {
                     Employee::whereKey($i->employee_id)->lockForUpdate()->first();
                     SalaryAdvanceService::allocate($r, $i);

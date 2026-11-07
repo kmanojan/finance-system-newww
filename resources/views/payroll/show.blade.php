@@ -8,6 +8,7 @@
 <ol class="pr-progress" aria-label="Payroll progress"><li @if($run->status === 'draft') aria-current="step" @endif>1. Prepare</li><li @if($run->status === 'review') aria-current="step" @endif>2. Review & approve</li><li @if($run->status === 'approved') aria-current="step" @endif>3. Pay & remit</li></ol>
 @if($run->status === 'void')<div class="pr-errors">Voided: {{ $run->void_reason }}. This payroll no longer creates an outstanding balance.</div>@endif
 <section class="pr-panel"><div class="pr-statline"><div><dl><dt>Employees</dt><dd>{{ $items->count() }}</dd></dl></div><div><dl><dt>Gross salary · {{ $run->currency }}</dt><dd>{{ number_format($items->sum('gross_cents')/100,2) }}</dd></dl></div><div><dl><dt>Net salaries</dt><dd>{{ number_format($items->sum('net_cents')/100,2) }}</dd></dl></div><div><dl><dt>Total employer cost</dt><dd>{{ number_format($items->sum('cost_cents')/100,2) }}</dd></dl></div></div></section>
+@include('payroll.source-comparison')
 <section class="pr-panel"><div class="pr-panel-head"><h2>Employee payroll</h2><span class="pr-muted">{{ $items->where('reviewed',true)->count() }} of {{ $items->count() }} reviewed</span></div><div class="pr-table-wrap"><table class="pr-table"><thead><tr><th>Employee</th><th class="pr-number">Gross</th><th class="pr-number">Net salary</th><th class="pr-number">Salary paid</th><th class="pr-number">Salary balance</th><th>Review / payment</th><th></th></tr></thead><tbody>
 @foreach($items as $item)
 @php($salaryPaid = ($item->paid['salary'] ?? 0))
