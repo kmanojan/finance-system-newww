@@ -14,6 +14,7 @@
             <p style="color:var(--text-muted); font-size:0.9rem;">Configure employee basic salary, allowances, EPF 8%/12%, ETF 3%, APIT tax, and net payroll.</p>
         </div>
         <div style="display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap;">
+            <a href="/employees/create" class="btn btn-primary"><ion-icon name="add-outline" aria-hidden="true"></ion-icon><span>Add employee</span></a>
             <a href="/payroll" class="btn btn-primary"><ion-icon name="calendar-outline" aria-hidden="true"></ion-icon><span>Monthly payroll</span></a>
             <a href="/master/salary-components" class="btn btn-outline" style="display:flex; align-items:center; gap:0.5rem; border-radius:8px; padding:0.6rem 1rem; text-decoration:none;">
                 <ion-icon name="options-outline"></ion-icon>

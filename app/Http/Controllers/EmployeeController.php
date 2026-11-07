@@ -6,9 +6,11 @@ use App\Models\ApiIntegration;
 use App\Models\Employee;
 use App\Models\EmployeeSalaryComponent;
 use App\Models\SalaryComponent;
+use App\Services\ActivityLogService;
 use App\Services\EmployeePartyService;
 use App\Services\SalaryHistoryService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class EmployeeController extends Controller
 {
@@ -66,6 +68,41 @@ class EmployeeController extends Controller
                 ->orWhereLike('job_position', "%{$search}%")
                 ->orWhereLike('role', "%{$search}%")))
             ->when(! empty($data['status']), fn ($query) => $query->where('status', $data['status']));
+    }
+
+    public function create()
+    {
+        return view('employees.create');
+    }
+
+    public function store(Request $request)
+    {
+        $data = $request->validate([
+            'first_name' => 'required|string|max:100', 'last_name' => 'nullable|string|max:100',
+            'employee_code' => ['nullable', 'string', 'max:50', function ($attribute, $value, $fail) {
+                if (Employee::whereRaw('LOWER(employee_code) = ?', [mb_strtolower($value)])->exists()) {
+                    $fail('This employee code is already in use.');
+                }
+            }],
+            'personal_email' => 'nullable|email|max:255', 'mobile_phone' => 'nullable|string|max:50',
+            'job_position' => 'nullable|string|max:255', 'role' => 'nullable|string|max:255',
+            'status' => 'required|in:active,inactive',
+        ]);
+        $data['first_name'] = trim($data['first_name']);
+        $data['last_name'] = trim($data['last_name'] ?? '');
+        $data['full_name'] = trim($data['first_name'].' '.$data['last_name']);
+        // Never allocate a synthetic Nexus ID or accept source IDs from the browser.
+        $employee = Employee::create($data + ['external_id' => null]);
+        if (blank($employee->employee_code)) {
+            $code = 'MAN-'.str_pad((string) $employee->id, 6, '0', STR_PAD_LEFT);
+            while (Employee::whereRaw('LOWER(employee_code) = ?', [strtolower($code)])->exists()) {
+                $code .= '-'.strtolower(Str::random(4));
+            }
+            $employee->update(['employee_code' => $code]);
+        }
+        ActivityLogService::logCreate('Employee', $employee->id, $employee->only(['full_name', 'employee_code', 'status', 'job_position', 'role']));
+
+        return redirect()->route('employees.show', $employee->id)->with('success', 'Employee added and linked as a party. Configure their salary and components below.');
     }
 
     public function show($id)

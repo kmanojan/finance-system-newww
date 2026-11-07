@@ -266,7 +266,6 @@ document.addEventListener('alpine:init', () => {
                     </h1>
                     <div class="employee-profile-meta" style="font-size:0.85rem; color:var(--text-muted); display:flex; align-items:center; gap:0.75rem; margin-top:0.25rem;">
                         <span>Code: <strong style="color:var(--text-main);">{{ $employee->employee_code ?? 'N/A' }}</strong></span>
-                        <span class="badge {{ $employee->status === 'active' ? 'badge-success' : 'badge-draft' }}">{{ ucfirst($employee->status) }}</span>
                         <span>•</span>
                         <span>{{ $employee->job_position ?? 'Team Member' }}</span>
                         <span>•</span>

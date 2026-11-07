@@ -250,6 +250,8 @@ Route::middleware(['auth', AuthorizeWorkspace::class, AtomicWorkspaceWrite::clas
     Route::put('/projects/{id}', [ProjectController::class, 'update']);
 
     Route::get('/employees', [EmployeeController::class, 'webIndex'])->name('employees.index');
+    Route::get('/employees/create', [EmployeeController::class, 'create'])->name('employees.create');
+    Route::post('/employees', [EmployeeController::class, 'store'])->name('employees.store');
     Route::post('/employee-integrations', [ApiIntegrationController::class, 'store']);
     Route::post('/employee-integrations/{apiIntegration}/sync', [ApiIntegrationController::class, 'sync']);
     Route::get('/employees/{id}', [EmployeeController::class, 'show'])->name('employees.show');
