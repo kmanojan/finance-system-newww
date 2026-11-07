@@ -39,7 +39,7 @@ class AuthorizeWorkspace
             abort_unless(in_array($role, ['manager', 'accountant']), 403, 'Payroll and salary records are restricted to authorised finance staff.');
         }
         $profile = $request->is('profile', 'profile/*');
-        $adminOnly = $request->is('master/users', 'master/users/*', 'settings/*', 'api/api-integrations*', 'activity-logs');
+        $adminOnly = $request->is('master/users', 'master/users/*', 'settings/*', 'api/api-integrations*', 'employee-integrations*', 'activity-logs');
         abort_if($adminOnly, 403, 'Administrator access is required.');
         if (! $request->isMethodSafe() && ! $profile) {
             abort_unless(in_array($role, ['manager', 'accountant']), 403, 'Your role has read-only access.');

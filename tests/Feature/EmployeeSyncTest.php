@@ -73,18 +73,21 @@ class EmployeeSyncTest extends TestCase
     {
         $this->actingAs(User::factory()->create(['role' => 'admin', 'is_active' => true]));
         $data = ['name' => 'Nexus', 'url' => 'https://nexus-api.apptimus.io/api/v1/employees?status=active', 'method' => 'GET', 'bearer_token' => 'Bearer test-only-token', 'response_path' => 'data'];
-        $this->postJson('/api/api-integrations', $data)->assertCreated()->assertJsonMissingPath('bearer_token');
+        $this->postJson('/employee-integrations', $data)->assertCreated()->assertJsonMissingPath('bearer_token');
         $integration = ApiIntegration::first();
         $this->assertSame('test-only-token', $integration->bearer_token);
         $this->assertStringNotContainsString('status=', $integration->url);
         $this->assertStringNotContainsString('test-only-token', DB::table('api_integrations')->value('bearer_token'));
-        $this->postJson('/api/api-integrations', array_replace($data, ['id' => $integration->id, 'name' => 'Renamed Nexus', 'bearer_token' => '']))->assertCreated();
+        $this->postJson('/employee-integrations', array_replace($data, ['id' => $integration->id, 'name' => 'Renamed Nexus', 'bearer_token' => '']))->assertCreated();
         $this->assertDatabaseCount('api_integrations', 1);
         $this->assertSame('test-only-token', $integration->fresh()->bearer_token);
         Http::fake(['nexus-api.apptimus.io/*' => Http::sequence()->push(['data' => [['id' => 1, 'full_name' => 'One employee', 'status' => 'inactive']], 'meta' => ['last_page' => 1]])->push([], 401)]);
-        $this->postJson('/api/api-integrations/'.$integration->id.'/sync')->assertOk()->assertJsonPath('employee_count', 1)->assertJsonPath('status', 'success');
-        $this->postJson('/api/api-integrations/'.$integration->id.'/sync')->assertOk()->assertJsonPath('status', 'failed');
+        $this->postJson('/employee-integrations/'.$integration->id.'/sync')->assertOk()->assertJsonPath('employee_count', 1)->assertJsonPath('status', 'success');
+        $this->postJson('/employee-integrations/'.$integration->id.'/sync')->assertOk()->assertJsonPath('status', 'failed');
         $this->assertSame('failed', $integration->fresh()->last_sync_status);
+        $this->actingAs(User::factory()->create(['role' => 'manager', 'is_active' => true]));
+        $this->postJson('/employee-integrations', $data)->assertForbidden();
+        $this->postJson('/employee-integrations/'.$integration->id.'/sync')->assertForbidden();
     }
 
     public function test_invalid_response_path_and_repeated_pages_fail_without_changes(): void

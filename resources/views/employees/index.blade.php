@@ -396,7 +396,7 @@ function handleApiSetup(e) {
         bearer_token: document.getElementById('integration_bearer_token').value
     };
 
-    fetch('/api/api-integrations', {
+    fetch('/employee-integrations', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -416,7 +416,7 @@ function handleApiSetup(e) {
     .then(data => {
         const syncId = data.id || integrationId;
         if (syncId) {
-            return fetch(`/api/api-integrations/${syncId}/sync`, {
+            return fetch(`/employee-integrations/${syncId}/sync`, {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
