@@ -6,9 +6,11 @@ use App\Models\CostAllocation;
 use App\Models\Employee;
 use App\Models\Project;
 use App\Models\Server;
+use App\Services\AuditPayablesService;
 use App\Services\FinancialReportingService;
 use App\Services\FinancialReportingService as Finance;
 use App\Services\PayrollPayablesService;
+use App\Services\PayrollStatutoryService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -17,6 +19,16 @@ use Illuminate\Validation\ValidationException;
 
 class ReportController extends Controller
 {
+    public function auditPayables(Request $request)
+    {
+        abort_unless($request->user()?->isAdmin() || in_array(strtolower($request->user()?->role ?? ''), ['manager', 'accountant']), 403, 'Employee salary details are restricted to authorised finance staff.');
+        $request->validate(['as_of' => 'nullable|date_format:Y-m-d|before_or_equal:'.PayrollStatutoryService::today()]);
+        $asOf = $request->input('as_of') ?: PayrollStatutoryService::today();
+        $report = AuditPayablesService::build($asOf);
+
+        return view('reports.audit-payables', compact('report'));
+    }
+
     private function getDateRange(Request $request)
     {
         $request->validate(['from' => 'nullable|date_format:Y-m-d', 'to' => 'nullable|date_format:Y-m-d|after_or_equal:from']);

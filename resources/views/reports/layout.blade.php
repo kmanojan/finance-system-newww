@@ -12,6 +12,9 @@
     <div style="margin-bottom: 1.5rem;">
         <h3 style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-light); margin-bottom: 0.5rem; padding-left: 0.75rem; font-weight: 600;">Finance & Accounting</h3>
         <nav class="nav-links">
+            @if(auth()->user()?->isAdmin() || in_array(strtolower(auth()->user()?->role ?? ''), ['manager', 'accountant']))
+            <a href="{{ route('reports.audit_payables') }}" class="nav-link {{ Route::currentRouteName() === 'reports.audit_payables' ? 'active' : '' }}"><ion-icon aria-hidden="true" name="clipboard-outline"></ion-icon><span class="section-navigation-label">Auditor Payables</span></a>
+            @endif
             <a href="{{ route('reports.pnl', ['month' => $month ?? date('m'), 'year' => $year ?? date('Y')]) }}" class="nav-link {{ Route::currentRouteName() === 'reports.pnl' ? 'active' : '' }}">
                 <ion-icon name="bar-chart-outline" aria-hidden="true"></ion-icon><span class="section-navigation-label">Profit & Loss</span></a>
             <a href="{{ route('reports.balance_sheet') }}" class="nav-link {{ Route::currentRouteName() === 'reports.balance_sheet' ? 'active' : '' }}"><ion-icon aria-hidden="true" name="document-text-outline"></ion-icon><span class="section-navigation-label">Balance Sheet</span></a>
@@ -51,7 +54,7 @@
 @endsection
 
 @section('content')
-@unless(request()->is('reports/export/*'))
+@unless(request()->is('reports/export/*', 'reports/audit-payables'))
 <div class="report-export-actions"><a class="btn btn-outline" href="{{ url('/reports/export/'.request()->segment(2).'/xlsx').'?'.http_build_query(request()->query()) }}">Export Excel</a><a class="btn btn-outline" href="{{ url('/reports/export/'.request()->segment(2).'/pdf').'?'.http_build_query(request()->query()) }}">Export PDF</a></div>
 @endunless
 @yield('report-content')

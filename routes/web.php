@@ -405,6 +405,7 @@ Route::middleware(['auth', AuthorizeWorkspace::class, AtomicWorkspaceWrite::clas
         Route::get('/bank-reconciliation', [ReportController::class, 'bankReconciliation'])->name('reports.bank_reconciliation');
         Route::get('/expense-trend', [ReportController::class, 'expenseTrend'])->name('reports.expense_trend');
         Route::get('/party-ledger', [ReportController::class, 'partyLedger'])->name('reports.party_ledger');
+        Route::get('/audit-payables', [ReportController::class, 'auditPayables'])->name('reports.audit_payables');
         Route::post('/party-ledger/settlement', [ReportController::class, 'recordPartySettlement'])->name('reports.party_settlement');
     });
 
