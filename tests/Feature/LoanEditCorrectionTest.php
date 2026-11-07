@@ -31,6 +31,23 @@ class LoanEditCorrectionTest extends TestCase
         return $id;
     }
 
+    public function test_active_loan_due_date_can_change_or_clear_without_rebuilding_interest(): void
+    {
+        $id = $this->activate();
+        $schedules = DB::table('loan_interest_schedule')->where('loan_id', $id)->get()->toJson();
+        $transactions = DB::table('transactions')->get()->toJson();
+        $this->putJson("/loans/$id", ['maturity_date' => '2027-03-15', 'reminder_days' => 7])->assertRedirect();
+        $this->assertDatabaseHas('loans', ['id' => $id, 'maturity_date' => '2027-03-15', 'reminder_days' => 7]);
+        $this->assertDatabaseHas('reminders', ['reference_id' => $id, 'type' => 'loan', 'due_date' => '2027-03-15', 'notify_before_days' => 7]);
+        $this->putJson("/loans/$id", ['maturity_date' => '2026-10-01'])->assertUnprocessable();
+        $this->putJson("/loans/$id", ['maturity_date' => 'invalid'])->assertUnprocessable();
+        $this->putJson("/loans/$id", ['maturity_date' => null])->assertRedirect();
+        $this->assertDatabaseHas('loans', ['id' => $id, 'maturity_date' => null]);
+        $this->assertDatabaseMissing('reminders', ['reference_id' => $id, 'type' => 'loan']);
+        $this->assertSame($schedules, DB::table('loan_interest_schedule')->where('loan_id', $id)->get()->toJson());
+        $this->assertSame($transactions, DB::table('transactions')->get()->toJson());
+    }
+
     public function test_active_loan_identity_and_principal_can_be_corrected_without_erasing_payments(): void
     {
         $id = $this->activate();

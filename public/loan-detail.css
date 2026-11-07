@@ -132,3 +132,7 @@
 .loan-interest-payment { padding:10px 0; border-top:1px solid var(--border-light); overflow-wrap:anywhere; }
 .loan-interest-payment strong { color:var(--text-heading); font-weight:500; }
 .loan-interest-payment p { margin:5px 0 0; color:var(--text-muted); white-space:pre-wrap; line-height:1.5; }
+.loan-payment-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+.loan-payment-actions form { margin:0; }
+.loan-payment-actions .btn { font-size:12px; }
+.loan-payment-actions .loan-payment-delete { color:var(--danger); }

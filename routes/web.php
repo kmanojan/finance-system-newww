@@ -343,6 +343,8 @@ Route::middleware(['auth', AuthorizeWorkspace::class, AtomicWorkspaceWrite::clas
     Route::post('/loans/{id}/status', [LoanController::class, 'updateStatus']);
     Route::post('/loans/{id}/schedule', [LoanController::class, 'addInterestSchedule']);
     Route::post('/loans/{id}/schedule/{scheduleId}/settle', [LoanController::class, 'settleInterestPeriod']);
+    Route::put('/loans/{id}/schedule/{scheduleId}/payments/{paymentId}', [LoanController::class, 'updateInterestPayment']);
+    Route::delete('/loans/{id}/schedule/{scheduleId}/payments/{paymentId}', [LoanController::class, 'deleteInterestPayment']);
     Route::post('/loans/{id}/schedule/{scheduleId}/edit', [LoanController::class, 'editInterestAmount']);
     Route::post('/loans/{id}/schedule/{scheduleId}/skip', [LoanController::class, 'markInterestNotNeeded']);
     Route::post('/loans/{id}/repayment', [LoanController::class, 'recordPrincipalRepayment']);

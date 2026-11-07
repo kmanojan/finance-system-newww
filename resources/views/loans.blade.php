@@ -1136,7 +1136,7 @@ function autoSetMaturity(prefix) {
     const claimedDateInput = document.getElementById(prefix + '_claimed_date');
     const termInput = document.getElementById(prefix + '_term_months');
     const maturityInput = document.getElementById(prefix + '_maturity_date');
-    if (!claimedDateInput || !termInput || !maturityInput) return;
+    if (!claimedDateInput || !termInput || !maturityInput || termInput.disabled) return;
 
     if (claimedDateInput.value) {
         const d = new Date(claimedDateInput.value);
@@ -1174,7 +1174,7 @@ function setMaturityMonths(prefix, months) {
     if (maturityInput) {
         maturityInput.value = baseDate.toISOString().split('T')[0];
     }
-    if (termInput) {
+    if (termInput && !termInput.disabled) {
         termInput.value = months;
     }
 }
@@ -1216,7 +1216,7 @@ document.addEventListener('DOMContentLoaded', function() {
 function openEditLoanModal(loan) {
     const editForm = document.getElementById('editLoanForm');
     editForm.action = '/loans/' + loan.id;
-    const editable = new Set(['_token', '_method', 'loan_type', 'party_id', 'lender_name', 'principal_amount', 'correction_reason', 'purpose', 'guarantor', 'collateral', 'attachments[]']);
+    const editable = new Set(['_token', '_method', 'loan_type', 'party_id', 'lender_name', 'principal_amount', 'maturity_date', 'reminder_days', 'correction_reason', 'purpose', 'guarantor', 'collateral', 'attachments[]']);
     editForm.querySelectorAll('input, select, textarea').forEach(field => {
         const name = field.name || field.closest('.amount-input-wrapper')?.querySelector('.amount-hidden')?.name;
         field.disabled = loan.status !== 'pending' && !editable.has(name) && !field.closest('.rich-editor-wrapper, .party-selector-wrapper');

@@ -1,7 +1,7 @@
 (() => {
     const editForm = document.querySelector('[data-loan-edit][data-terms-locked="true"]');
     if (editForm) {
-        const editable = new Set(['_token', '_method', 'loan_type', 'party_id', 'lender_name', 'principal_amount', 'correction_reason', 'purpose', 'guarantor', 'collateral', 'attachments[]']);
+        const editable = new Set(['_token', '_method', 'loan_type', 'party_id', 'lender_name', 'principal_amount', 'maturity_date', 'reminder_days', 'correction_reason', 'purpose', 'guarantor', 'collateral', 'attachments[]']);
         editForm.querySelectorAll('input, select, textarea').forEach(field => {
             const name = field.name || field.closest('.amount-input-wrapper')?.querySelector('.amount-hidden')?.name;
             if (!editable.has(name) && !field.closest('.rich-editor-wrapper, .party-selector-wrapper')) field.disabled = true;

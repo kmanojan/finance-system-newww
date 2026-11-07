@@ -74,12 +74,21 @@
                                 {{ $loan->currency }} {{ number_format($paidAmt, 2) }}
                                 @php($payments = $interestPayments->get("LOAN-INT-{$loan->id}-{$sched->id}", collect()))
                                 @if($payments->isNotEmpty())
-                                    <details class="loan-interest-payments">
+                                    <details class="loan-interest-payments" id="interest-payments-{{ $sched->id }}">
                                         <summary>Payment details ({{ $payments->count() }})</summary>
                                         @foreach($payments as $payment)
                                             <div class="loan-interest-payment">
                                                 <strong>{{ $payment->transaction_date }} · {{ $payment->currency }} {{ number_format($payment->amount, 2) }}</strong>
                                                 <p>{{ $payment->description }}</p>
+                                                @if($canManageLoan)
+                                                    <div class="loan-payment-actions">
+                                                        <button type="button" class="btn btn-outline" data-payment="{{ json_encode(['id' => $payment->id, 'schedule_id' => $sched->id, 'amount' => $payment->amount, 'paid_date' => $payment->transaction_date, 'bank_account_id' => $payment->bank_account_id, 'notes' => \App\Services\LoanInterestPaymentService::note($payment)]) }}" onclick="openEditInterestPayment(JSON.parse(this.dataset.payment))">Edit payment</button>
+                                                        <form action="/loans/{{ $loan->id }}/schedule/{{ $sched->id }}/payments/{{ $payment->id }}" method="POST" onsubmit="return confirm('Delete this recorded interest payment? Its ledger entry will be reversed and the unpaid interest restored. A settled loan will reopen if it has an unpaid balance.');">
+                                                            @csrf @method('DELETE')
+                                                            <button type="submit" class="btn btn-outline loan-payment-delete">Delete payment</button>
+                                                        </form>
+                                                    </div>
+                                                @endif
                                             </div>
                                         @endforeach
                                     </details>
@@ -102,6 +111,9 @@
                                 @endif
                             </td>
                             <td>
+                                @if($canManageLoan && $payments->isNotEmpty())
+                                    <button type="button" class="btn btn-outline" onclick="document.getElementById('interest-payments-{{ $sched->id }}').open = true; document.getElementById('interest-payments-{{ $sched->id }}').scrollIntoView({block:'nearest'});">Edit payments</button>
+                                @endif
                                 @if($canManageLoan && in_array($sched->status, ['pending', 'partially_paid', 'overdue']))
                                 <div class="dropdown">
                                     <button type="button" class="action-btn" aria-label="Interest schedule actions" onclick="toggleDropdown('sched-actions-{{ $sched->id }}', event)">
@@ -122,8 +134,9 @@
                                         </form>
                                     </div>
                                 </div>
-                                @else
+                                @elseif(!$canManageLoan || $payments->isEmpty())
                                     <span class="text-muted">{{ in_array($sched->status, ['pending', 'partially_paid', 'overdue']) ? 'View only' : 'Completed' }}</span>
+                                    @if($canManageLoan && $paidAmt > 0)<small class="text-muted" style="display:block;white-space:normal;">No linked payment record. Reconcile imported or upfront interest before changing it.</small>@endif
                                 @endif
                             </td>
                         </tr>
@@ -560,6 +573,25 @@
     </div>
 </div>
 
+@if($canManageLoan)
+<div class="modal-backdrop" id="editInterestPaymentModal">
+    <div class="modal-card">
+        <div class="modal-header"><h3 class="modal-title">Edit interest payment</h3><button type="button" class="btn-close" onclick="closeModal('editInterestPaymentModal')">&times;</button></div>
+        <form id="editInterestPaymentForm" method="POST">
+            @csrf @method('PUT')
+            <div class="modal-body">
+                <p class="text-muted">Changes update this payment and its ledger entry. Reducing a completed payment restores unpaid interest and reopens a settled loan.</p>
+                <div class="form-group"><label class="form-label" for="edit_interest_payment_amount">Amount paid ({{ $loan->currency }})</label><x-amount-input name="paid_amount" id="edit_interest_payment_amount" required="true" /></div>
+                <div class="form-group" style="margin-top:1rem;"><label class="form-label" for="edit_interest_payment_date">Date paid</label><input type="date" class="form-control" name="paid_date" id="edit_interest_payment_date" required></div>
+                <div class="form-group" style="margin-top:1rem;"><label class="form-label">Bank account</label><x-bank-account-selector name="bank_account_id" id="edit_interest_payment_bank" :bankAccounts="$bankAccounts" placeholder="Cash in hand / Unassigned" /></div>
+                <div class="form-group" style="margin-top:1rem;"><label class="form-label" for="edit_interest_payment_notes">Note (optional)</label><textarea class="form-control" name="notes" id="edit_interest_payment_notes" rows="3" maxlength="1000"></textarea></div>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn btn-outline" onclick="closeModal('editInterestPaymentModal')">Cancel</button><button type="submit" class="btn btn-primary-gradient">Save payment changes</button></div>
+        </form>
+    </div>
+</div>
+@endif
+
 <!-- Edit Interest Schedule Modal (Date & Amount) -->
 <div class="modal-backdrop" id="editScheduleModal">
     <div class="modal-card">
@@ -720,6 +752,15 @@ function openSettleModal(id, suggestedAmount, dueDate) {
     openModal('settleModal');
 }
 
+function openEditInterestPayment(payment) {
+    document.getElementById('editInterestPaymentForm').action = "/loans/{{ $loan->id }}/schedule/" + payment.schedule_id + '/payments/' + payment.id;
+    setAmountInputValue('edit_interest_payment_amount', payment.amount);
+    document.getElementById('edit_interest_payment_date').value = payment.paid_date;
+    setBankAccountSelectorValue('edit_interest_payment_bank', payment.bank_account_id || '');
+    document.getElementById('edit_interest_payment_notes').value = payment.notes || '';
+    openModal('editInterestPaymentModal');
+}
+
 function openEditInterestModal(id, currentAmount, currentDate) {
     document.getElementById('editScheduleForm').action = "/loans/{{ $loan->id }}/schedule/" + id + "/edit";
     document.getElementById('edit_sched_due_date').value = currentDate || '';
@@ -781,7 +822,7 @@ function setMaturityMonths(prefix, months) {
     if (maturityInput) {
         maturityInput.value = baseDate.toISOString().split('T')[0];
     }
-    if (termInput) {
+    if (termInput && !termInput.disabled) {
         termInput.value = months;
     }
 }

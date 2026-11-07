@@ -6,6 +6,7 @@ use App\Services\ActivityLogService;
 use App\Services\LedgerPostingService;
 use App\Services\LoanBalanceService;
 use App\Services\LoanFlowService;
+use App\Services\LoanInterestPaymentService;
 use App\Services\LoanPrincipalCorrectionService;
 use App\Services\PeriodLockService;
 use App\Services\TransactionPostingService;
@@ -469,9 +470,14 @@ class LoanController extends Controller
                 'loan_type' => 'sometimes|required|in:interest_separate,principal_and_interest',
                 'party_id' => 'sometimes|nullable|exists:parties,id', 'lender_name' => 'sometimes|nullable|string|max:255',
                 'principal_amount' => 'sometimes|required|numeric|min:0.01|max:9999999999999.99|decimal:0,2',
+                'maturity_date' => 'sometimes|nullable|date_format:Y-m-d',
+                'reminder_days' => 'sometimes|nullable|integer|min:0|max:365',
                 'purpose' => 'nullable|string|max:5000', 'guarantor' => 'nullable|string|max:255', 'collateral' => 'nullable|string|max:5000',
             ]);
             $partyId = array_key_exists('party_id', $metadata) ? $metadata['party_id'] : $loan->party_id;
+            if (! empty($metadata['maturity_date']) && $loan->claimed_date && $metadata['maturity_date'] < substr($loan->claimed_date, 0, 10)) {
+                throw ValidationException::withMessages(['maturity_date' => 'The principal due date must be on or after the claimed date.']);
+            }
             $lender = array_key_exists('lender_name', $metadata) ? $metadata['lender_name'] : $loan->lender_name;
             if (blank($lender)) {
                 $lender = $partyId ? DB::table('parties')->where('id', $partyId)->value('name') : null;
@@ -679,7 +685,7 @@ class LoanController extends Controller
             ->where('type', 'expense')
             ->whereIn('reference_no', $schedules->map(fn ($schedule) => "LOAN-INT-{$id}-{$schedule->id}"))
             ->orderBy('transaction_date')->orderBy('id')
-            ->get(['id', 'reference_no', 'transaction_date', 'amount', 'currency', 'description'])
+            ->get(['id', 'reference_no', 'transaction_date', 'amount', 'currency', 'description', 'bank_account_id'])
             ->groupBy('reference_no');
 
         $principalRecords = DB::table('loan_principal_records')
@@ -906,6 +912,8 @@ class LoanController extends Controller
     {
         $request->validate(['paid_amount' => 'required|numeric|gt:0', 'paid_date' => 'nullable|date_format:Y-m-d', 'notes' => 'nullable|string|max:1000']);
         PeriodLockService::checkLockedDate($request->paid_date ?: date('Y-m-d'));
+        $loan = DB::table('loans')->where('id', $id)->lockForUpdate()->first();
+        abort_unless($loan, 404);
         $period = DB::table('loan_interest_schedule')->where('id', $scheduleId)->where('loan_id', $id)->lockForUpdate()->first();
         abort_unless($period, 404);
         if (round($request->paid_amount + $period->paid_amount, 2) > round($period->interest_amount, 2)) {
@@ -915,8 +923,7 @@ class LoanController extends Controller
         $paidDate = $request->input('paid_date') ?: now()->format('Y-m-d');
         $notes = trim((string) $request->input('notes', ''));
 
-        $schedule = DB::table('loan_interest_schedule')->where('id', $scheduleId)->first();
-        $loan = DB::table('loans')->where('id', $id)->first();
+        $schedule = $period;
         $bankAccountId = $request->input('bank_account_id') ?: ($loan->bank_account_id ?? null);
 
         $newPaidTotal = ($schedule->paid_amount ?? 0) + $paidAmount;
@@ -951,6 +958,28 @@ class LoanController extends Controller
         }
 
         return back()->with('success', 'Interest settled and posted to ledger.');
+    }
+
+    public function updateInterestPayment(Request $request, $id, $scheduleId, $paymentId)
+    {
+        $data = $request->validate([
+            'paid_amount' => 'required|numeric|min:0.01|max:9999999999999.99|decimal:0,2',
+            'paid_date' => 'required|date_format:Y-m-d', 'bank_account_id' => 'nullable|exists:bank_accounts,id',
+            'notes' => 'nullable|string|max:1000',
+        ]);
+        $data['bank_account_id'] ??= null;
+        LoanInterestPaymentService::change((int) $id, (int) $scheduleId, (int) $paymentId, $data);
+        $this->syncLoanMaturityReminder($id);
+
+        return back()->with('success', 'Interest payment updated. Balances and ledger entries have been adjusted.');
+    }
+
+    public function deleteInterestPayment($id, $scheduleId, $paymentId)
+    {
+        LoanInterestPaymentService::change((int) $id, (int) $scheduleId, (int) $paymentId, null);
+        $this->syncLoanMaturityReminder($id);
+
+        return back()->with('success', 'Interest payment deleted and ledger entry reversed. Unpaid interest has been restored.');
     }
 
     public function markInterestNotNeeded($id, $scheduleId)
