@@ -681,12 +681,7 @@
                 <div class="form-row">
                     <div class="form-col">
                         <label class="form-label" style="font-weight:700;">Select Party / Lender</label>
-                        <select name="party_id" id="edit_party_id" class="form-control">
-                            <option value="">-- None / Custom Lender --</option>
-                            @foreach($parties as $p)
-                                <option value="{{ $p->id }}">{{ $p->name }}</option>
-                            @endforeach
-                        </select>
+                        <x-party-selector name="party_id" id="edit_party_id" :parties="$parties" placeholder="Search & select party..." />
                     </div>
                     <div class="form-col">
                         <label class="form-label" style="font-weight:700;">Lender Name / Entity *</label>
@@ -1224,14 +1219,13 @@ function openEditLoanModal(loan) {
     const editable = new Set(['_token', '_method', 'loan_type', 'party_id', 'lender_name', 'principal_amount', 'correction_reason', 'purpose', 'guarantor', 'collateral', 'attachments[]']);
     editForm.querySelectorAll('input, select, textarea').forEach(field => {
         const name = field.name || field.closest('.amount-input-wrapper')?.querySelector('.amount-hidden')?.name;
-        field.disabled = loan.status !== 'pending' && !editable.has(name) && !field.closest('.rich-editor-wrapper');
+        field.disabled = loan.status !== 'pending' && !editable.has(name) && !field.closest('.rich-editor-wrapper, .party-selector-wrapper');
     });
     editForm.querySelector('[name="attachments[]"]').value = '';
     editForm.querySelector('[data-loan-correction]').hidden = loan.status === 'pending';
     editForm.querySelector('[name="correction_reason"]').value = '';
     
-    const partyEl = document.getElementById('edit_party_id');
-    if (partyEl) partyEl.value = loan.party_id || '';
+    setPartySelectorValue('edit_party_id', loan.party_id || '');
     
     const codeEl = document.getElementById('edit_loan_code');
     if (codeEl) codeEl.value = loan.loan_code || ('LN-' + String(loan.id).padStart(4, '0'));

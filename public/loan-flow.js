@@ -4,7 +4,7 @@
         const editable = new Set(['_token', '_method', 'loan_type', 'party_id', 'lender_name', 'principal_amount', 'correction_reason', 'purpose', 'guarantor', 'collateral', 'attachments[]']);
         editForm.querySelectorAll('input, select, textarea').forEach(field => {
             const name = field.name || field.closest('.amount-input-wrapper')?.querySelector('.amount-hidden')?.name;
-            if (!editable.has(name) && !field.closest('.rich-editor-wrapper')) field.disabled = true;
+            if (!editable.has(name) && !field.closest('.rich-editor-wrapper, .party-selector-wrapper')) field.disabled = true;
         });
     }
     const helpButton = document.getElementById('loan-flow-help-toggle');

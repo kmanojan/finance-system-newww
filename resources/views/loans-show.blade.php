@@ -352,12 +352,7 @@
                 <div class="form-row">
                     <div class="form-col">
                         <label class="form-label" style="font-weight:700;">Select Party / Lender</label>
-                        <select name="party_id" id="edit_party_id" class="form-control">
-                            <option value="">-- None / Custom Lender --</option>
-                            @foreach($parties as $p)
-                                <option value="{{ $p->id }}" {{ $loan->party_id == $p->id ? 'selected' : '' }}>{{ $p->name }}</option>
-                            @endforeach
-                        </select>
+                        <x-party-selector name="party_id" id="edit_party_id" :parties="$parties" :selected="$loan->party_id" placeholder="Search & select party..." />
                     </div>
                     <div class="form-col">
                         <label class="form-label" style="font-weight:700;">Lender Name / Entity *</label>

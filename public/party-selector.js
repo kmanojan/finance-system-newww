@@ -30,13 +30,13 @@
             search.focus();
         }
     };
-    window.selectPartyOption = (wrapperId, id, name = '', types = '') => {
+    window.selectPartyOption = (wrapperId, id, name = '', types = '', {silent = false} = {}) => {
         const wrapper = document.getElementById(wrapperId);
         const input = wrapper.querySelector('.party-id-hidden');
         if (input.disabled) return;
         const previous = [...wrapper.querySelectorAll('.party-option-item')].find(option => option.dataset.id === input.value);
         const lender = wrapper.closest('form')?.querySelector('input[name="lender_name"]');
-        if (lender) {
+        if (lender && !silent) {
             if (id) lender.value = name;
             else if (lender.value === previous?.dataset.name) lender.value = '';
         }
@@ -55,11 +55,19 @@
             }
         } else label.textContent = wrapper.dataset.placeholder;
         wrapper.querySelector('.party-clear').hidden = !id;
-        close(wrapper, true);
+        close(wrapper, !silent);
+        if (silent) return;
         input.dispatchEvent(new Event('input', {bubbles: true}));
         input.dispatchEvent(new Event('change', {bubbles: true}));
         const callback = window[wrapper.dataset.onchange];
         if (typeof callback === 'function') callback(id, name);
+    };
+    // Populate a reused edit modal without changing lender text or emitting user-change events.
+    window.setPartySelectorValue = (wrapperId, value) => {
+        const wrapper = document.getElementById(wrapperId);
+        const id = String(value ?? '');
+        const option = [...wrapper.querySelectorAll('.party-option-item')].find(option => option.dataset.id === id);
+        selectPartyOption(wrapperId, id, option?.dataset.name || 'Unavailable party', option?.dataset.types || '', {silent: true});
     };
     wrappers().forEach(wrapper => {
         wrapper.querySelector('.party-select-trigger').addEventListener('click', () => togglePartyDropdown(wrapper.id));
