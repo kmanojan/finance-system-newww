@@ -112,10 +112,11 @@
     <div class="party-kpi-card" style="border-left:4px solid #ef4444;">
         <div style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.05em;">Total Net Payables</div>
         <div style="font-size:1.65rem; font-weight:800; color:#dc2626; margin-top:0.3rem;">LKR {{ number_format($partySummaries->sum('total_payables'), 2) }}</div>
-        <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.25rem;">AP Bills + Loans + Commissions</div>
+        <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.25rem;">AP Bills + Loans + Commissions{{ $canViewPayroll ? ' + Salaries' : '' }}</div>
     </div>
 </div>
 
+@if($canViewPayroll)<p class="ds-notice">Salary payables include approved and completed payrolls, less recorded salary payments. Drafts are excluded. Completing processing does not clear an unpaid salary; EPF, ETF and tax remittances are tracked separately in payroll.</p>@endif
 <!-- Navigation Filter Tabs & Search Bar -->
 <div class="card" style="padding:1rem 1.25rem; margin-bottom:1.5rem; background:var(--bg-card); border:1px solid var(--border); border-radius:14px;">
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
@@ -134,6 +135,7 @@
             <a href="{{ route('reports.party_ledger', ['role' => 'lender']) }}" class="role-tab-btn {{ $roleFilter == 'lender' ? 'active' : '' }}">
                 Lenders & Loans
             </a>
+            @if($canViewPayroll)<a href="{{ route('reports.party_ledger', ['role' => 'employee']) }}" class="role-tab-btn {{ $roleFilter == 'employee' ? 'active' : '' }}">Employees</a>@endif
             <a href="{{ route('reports.party_ledger', ['role' => 'partner']) }}" class="role-tab-btn {{ $roleFilter == 'partner' ? 'active' : '' }}">
                 Project Partners
             </a>
@@ -148,6 +150,21 @@
     </div>
 </div>
 
+@if($canViewPayroll && $selectedPartyId)
+@php
+    $salaryParty = $partySummaries->firstWhere('id', (int) $selectedPartyId);
+    $outstandingSalaries = $payrollItems->where('party_id', (int) $selectedPartyId)->where('balance_cents', '>', 0);
+@endphp
+@if($salaryParty)
+<section class="card" id="salary-payables" style="padding:20px;margin-bottom:24px;overflow:auto">
+<h2 style="font-size:18px;margin:0 0 8px">{{ $salaryParty->name }} · employee payables</h2>
+<p>Salary pending: LKR {{ number_format($salaryParty->salary_balance,2) }} · Loan payable: LKR {{ number_format($salaryParty->loan_total_payable,2) }}</p>
+<table class="data-table"><thead><tr><th>Payroll month / company</th><th style="text-align:right">Net salary</th><th style="text-align:right">Salary paid</th><th style="text-align:right">Salary remaining</th><th>Payment status</th><th>Action</th></tr></thead><tbody>
+@forelse($outstandingSalaries as $salary)<tr><td><a href="/payroll/{{ $salary->run_id }}/employees/{{ $salary->id }}">{{ \Carbon\Carbon::parse($salary->month)->format('F Y') }}</a><small style="display:block">{{ $salary->company_name }} · {{ ucfirst($salary->status) }}</small></td><td style="text-align:right;font-variant-numeric:tabular-nums">{{ number_format($salary->net_cents/100,2) }}</td><td style="text-align:right;font-variant-numeric:tabular-nums">{{ number_format($salary->paid_cents/100,2) }}</td><td style="text-align:right;font-variant-numeric:tabular-nums">{{ number_format($salary->balance_cents/100,2) }}</td><td>{{ $salary->paid_cents ? 'Partially paid' : 'Unpaid' }}</td><td><a href="/payroll/{{ $salary->run_id }}/salary-batches/create?employee_id={{ $salary->employee_id }}">Record salary payment</a></td></tr>@empty<tr><td colspan="6">No unpaid salaries from approved or completed payrolls.</td></tr>@endforelse
+</tbody></table><p style="color:var(--text-muted);font-size:13px">Amounts in LKR. Recording a salary payment updates this original payroll balance. Loan repayments remain under the loan record.</p></section>
+@endif
+@endif
+
 <!-- Master Party Summary Table -->
 <div class="card" style="padding:0; overflow-x:auto; border-radius:14px; border:1px solid var(--border); box-shadow:0 4px 20px rgba(0,0,0,0.02);">
     <table class="data-table" id="masterPartyTable" style="width:100%; margin:0; border-collapse:collapse;">
@@ -158,7 +175,8 @@
                 <th style="padding:1rem; text-align:right; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.04em; color:#7c3aed;">Project Contract Value</th>
                 <th style="padding:1rem; text-align:right; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-muted);">Client Invoiced</th>
                 <th style="padding:1rem; text-align:right; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-muted);">Collections</th>
-                <th style="padding:1rem; text-align:right; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-muted);">Payables (AP/Loans)</th>
+                @if($canViewPayroll)<th style="padding:1rem;text-align:right;color:var(--text-muted)">Salary pending</th>@endif
+                <th style="padding:1rem; text-align:right; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-muted);">Total payables</th>
                 <th style="padding:1rem; text-align:right; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.04em; color:var(--success);">Paids Settled</th>
                 <th style="padding:1rem; text-align:right; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-heading);">Net Balance Position</th>
                 <th style="padding:1rem 1.25rem; text-align:center; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-muted);">Action</th>
@@ -217,6 +235,7 @@
                     {{ $ps->total_collected > 0 ? 'LKR ' . number_format($ps->total_collected, 2) : '-' }}
                 </td>
                 
+                @if($canViewPayroll)<td style="padding:1rem;text-align:right;font-variant-numeric:tabular-nums"><a href="{{ route('reports.party_ledger', ['role'=>'employee','party_id'=>$ps->id,'salary_detail'=>1]) }}#salary-payables">{{ number_format($ps->salary_balance, 2) }}</a><small style="display:block;color:var(--text-muted)">Paid {{ number_format($ps->salary_paid, 2) }}</small></td>@endif
                 <td style="padding:1rem; text-align:right; font-weight:700; color:#dc2626;">
                     {{ $ps->total_payables > 0 ? 'LKR ' . number_format($ps->total_payables, 2) : '-' }}
                 </td>
@@ -248,7 +267,7 @@
             
             @if($partySummaries->isEmpty())
             <tr>
-                <td colspan="8" style="text-align:center; padding:3rem 1rem; color:var(--text-muted);">
+                <td colspan="{{ $canViewPayroll ? 10 : 9 }}" style="text-align:center; padding:3rem 1rem; color:var(--text-muted);">
                     <ion-icon name="documents-outline" style="font-size:2.5rem; opacity:0.4; margin-bottom:0.5rem;"></ion-icon><br>
                     No financial party records found for the selected filter role.
                 </td>
@@ -306,6 +325,7 @@
             <a class="btn btn-outline" id="settleVendors" href="/payables/vendor-bills">Vendor bill payments</a>
             <a class="btn btn-outline" id="settleLoans" href="/loans">Loan repayments and interest</a>
             <a class="btn btn-outline" href="/projects">Project commission payouts</a>
+            @if($canViewPayroll)<a class="btn btn-outline" href="/payroll">Employee salary batches</a>@endif
         </div>
     </div>
 </div>
@@ -316,6 +336,7 @@ const partySummariesData = @json($partySummaries);
 const allPartyTimelinesData = @json($allPartyTimelines);
 const selectedPartyIdOnLoad = "{{ $selectedPartyId }}";
 let currentModalParty = null;
+const ledgerEscape = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 
 function filterPartyMasterTable(query) {
     const q = query.toLowerCase().trim();
@@ -364,9 +385,9 @@ function openPartyLedgerModal(partyId) {
         <div style="background:var(--bg-page); border:1px solid var(--border); border-radius:14px; padding:1.25rem; margin-bottom:1.25rem;">
             <div class="ds-summary-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:1.25rem; align-items:center;">
                 <div>
-                    <div style="font-size:0.72rem; text-transform:uppercase; color:var(--text-muted); font-weight:700; letter-spacing:0.04em;">Invoiced / Borrowed Total</div>
+                    <div style="font-size:0.72rem; text-transform:uppercase; color:var(--text-muted); font-weight:700; letter-spacing:0.04em;">Invoices / Loans / Salary Entitlements</div>
                     <div style="font-size:1.3rem; font-weight:800; color:var(--text-heading); margin-top:0.2rem;">
-                        LKR ${(party.total_invoiced + party.total_loan_borrowed + party.total_commission_owed).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                        LKR ${(party.total_invoiced + party.total_loan_borrowed + party.total_commission_owed + party.salary_owed).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                     </div>
                 </div>
                 <div>
@@ -406,7 +427,7 @@ function openPartyLedgerModal(partyId) {
         html += `
             <tr>
                 <td colspan="6" style="text-align:center; padding:3rem 1rem; color:var(--text-muted);">
-                    No financial ledger transactions recorded for ${party.name}.
+                    No financial ledger transactions recorded for ${ledgerEscape(party.name)}.
                 </td>
             </tr>
         `;
@@ -441,14 +462,14 @@ function openPartyLedgerModal(partyId) {
 
             html += `
                 <tr style="border-bottom: 1px solid var(--border-light);">
-                    <td style="padding:0.85rem 1rem; font-weight:600; font-size:0.88rem;">${tx.date}</td>
+                    <td style="padding:0.85rem 1rem; font-weight:600; font-size:0.88rem;">${ledgerEscape(tx.date)}</td>
                     <td style="padding:0.85rem 1rem;">
                         <span style="font-size:0.75rem; font-weight:700; padding:0.15rem 0.45rem; border-radius:5px; ${typeBadgeStyle}">
-                            ${tx.type}
+                            ${ledgerEscape(tx.type)}
                         </span>
                     </td>
-                    <td style="padding:0.85rem 1rem; font-weight:700; color:var(--text-heading); font-size:0.88rem;">${tx.reference}</td>
-                    <td style="padding:0.85rem 1rem; font-size:0.88rem;">${tx.description}</td>
+                    <td style="padding:0.85rem 1rem; font-weight:700; color:var(--text-heading); font-size:0.88rem;">${ledgerEscape(tx.reference)}</td>
+                    <td style="padding:0.85rem 1rem; font-size:0.88rem;">${ledgerEscape(tx.description)}</td>
                     <td style="padding:0.85rem 1rem; text-align:right;">
                         ${debitCell}
                     </td>
@@ -483,7 +504,7 @@ function openPartyPaymentModal() {
 
 // Auto open modal if selectedPartyId is passed in URL
 document.addEventListener('DOMContentLoaded', function() {
-    if (selectedPartyIdOnLoad && selectedPartyIdOnLoad !== '') {
+    if (!@json((bool) request('salary_detail')) && selectedPartyIdOnLoad && selectedPartyIdOnLoad !== '') {
         openPartyLedgerModal(selectedPartyIdOnLoad);
     }
 });

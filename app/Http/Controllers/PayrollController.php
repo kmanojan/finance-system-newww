@@ -29,6 +29,7 @@ class PayrollController extends Controller
             $r->employee_count = $items->count();
             $r->cost = $items->sum('cost_cents');
             $r->balance = collect(PayrollService::balances($r, $items))->sum('balance');
+            $r->salary_payment = PayrollService::salaryPaymentStatus($r, $items);
         }
 
         return view('payroll.index', ['runs' => $runs, 'companies' => DB::table('companies')->orderBy('name')->get()]);
@@ -175,7 +176,8 @@ class PayrollController extends Controller
 
         return view('payroll.employee', $data + [
             'item' => $record,
-            'advanceBalance' => (SalaryAdvanceService::eligible([$record->employee_id], $data['run']->company_id, $data['run']->currency, $data['run']->month)[$record->employee_id] ?? collect())->sum('remaining_cents') + ($data['run']->status === 'approved' ? $record->advance_cents : 0),
+            'employeePayments' => DB::table('payroll_payment_allocations as a')->join('payroll_payments as p', 'p.id', '=', 'a.payroll_payment_id')->where('a.payroll_item_id', $item)->where('p.kind', 'salary')->select('p.*', 'a.amount_cents as employee_amount_cents')->orderByDesc('p.paid_on')->orderByDesc('p.id')->get(),
+            'advanceBalance' => (SalaryAdvanceService::eligible([$record->employee_id], $data['run']->company_id, $data['run']->currency, $data['run']->month)[$record->employee_id] ?? collect())->sum('remaining_cents') + (in_array($data['run']->status, PayrollService::POSTED_STATUSES) ? $record->advance_cents : 0),
             'history' => DB::table('payroll_items as i')->join('payroll_runs as r', 'r.id', '=', 'i.payroll_run_id')->where('i.employee_id', $record->employee_id)->select('i.id', 'r.id as run_id', 'r.month', 'r.status', 'i.net_cents', 'r.currency')->orderByDesc('r.month')->limit(24)->get(),
         ]);
     }
@@ -194,8 +196,8 @@ class PayrollController extends Controller
 
     public function transition(Request $request, int $id, string $action)
     {
-        abort_unless(in_array($action, ['submit', 'return', 'approve', 'void']), 404);
-        if (in_array($action, ['approve', 'void'])) {
+        abort_unless(in_array($action, ['submit', 'return', 'approve', 'complete', 'void']), 404);
+        if (in_array($action, ['approve', 'complete', 'void'])) {
             abort_unless(in_array(strtolower($request->user()->role), ['admin', 'manager']), 403);
         }
         $data = $action === 'void' ? $request->validate(['reason' => 'required|string|min:5|max:1000', 'date' => 'required|date_format:Y-m-d|before_or_equal:today']) : [];
@@ -213,6 +215,49 @@ class PayrollController extends Controller
         return redirect('/payroll/'.$id.'#payments')->with('success', 'Payment recorded. Outstanding balances have been updated.');
     }
 
+    public function salaryBatchForm(Request $request, int $id)
+    {
+        $data = $this->runData($id);
+        abort_unless(in_array($data['run']->status, PayrollService::POSTED_STATUSES), 422, 'Approve payroll before recording a salary batch.');
+        $data['batchEmployees'] = $data['items']->map(fn ($item) => ['id' => $item->id, 'name' => $item->snapshot['name'], 'code' => $item->snapshot['code'],
+            'net' => (int) $item->net_cents, 'paid' => (int) ($item->paid['salary'] ?? 0), 'balance' => (int) $item->net_cents - (int) ($item->paid['salary'] ?? 0)])->values();
+        $selected = $data['items']->firstWhere('employee_id', $request->integer('employee_id'));
+        $data['initialBatchSearch'] = $selected ? ($selected->snapshot['code'] ?: $selected->snapshot['name']) : '';
+
+        return view('payroll.salary-batch-create', $data + $this->options());
+    }
+
+    public function salaryBatch(Request $request, int $id)
+    {
+        if ($request->filled('entries_json')) {
+            $entries = json_decode($request->input('entries_json'), true);
+            if (! is_array($entries)) {
+                throw ValidationException::withMessages(['entries' => 'The employee payment amounts could not be read. Refresh the batch and try again.']);
+            }
+            $request->merge(['entries' => $entries]);
+        }
+        $rules = $this->paymentRules();
+        unset($rules['amount']);
+        $data = $request->validate($rules + ['entries' => 'required|array|min:1|max:1000']);
+        $payment = PayrollService::salaryBatch($id, $data);
+        $this->receipt($request, $payment);
+
+        return redirect('/payroll/'.$id.'/salary-batches/'.$payment)->with('success', 'Salary batch recorded. Each employee’s remaining salary has been updated.');
+    }
+
+    public function salaryBatchDetail(int $id, int $payment)
+    {
+        $data = $this->runData($id);
+        $record = DB::table('payroll_payments')->where('payroll_run_id', $id)->where('kind', 'salary')->find($payment) ?? abort(404);
+        $allocations = DB::table('payroll_payment_allocations as a')->join('payroll_items as i', 'i.id', '=', 'a.payroll_item_id')
+            ->where('a.payroll_payment_id', $payment)->select('a.*', 'i.snapshot', 'i.employee_id')->orderBy('i.id')->get();
+        foreach ($allocations as $allocation) {
+            $allocation->snapshot = json_decode($allocation->snapshot, true);
+        }
+
+        return view('payroll.salary-batch-detail', $data + ['batch' => $record, 'allocations' => $allocations]);
+    }
+
     public function reverse(Request $request, int $payment)
     {
         abort_unless(in_array(strtolower($request->user()->role), ['admin', 'manager']), 403);
@@ -225,7 +270,7 @@ class PayrollController extends Controller
     {
         $payments = SalaryAdvanceService::payments()->join('employees as e', 'e.id', '=', 'p.employee_id')->join('companies as c', 'c.id', '=', 'p.company_id')->addSelect('e.full_name', 'c.name as company_name')->orderByDesc('p.id')->paginate(30);
         $recoveries = DB::table('payroll_advance_recoveries as a')->join('payroll_items as i', 'i.id', '=', 'a.payroll_item_id')->join('payroll_runs as r', 'r.id', '=', 'i.payroll_run_id')
-            ->whereIn('a.payroll_payment_id', $payments->pluck('id'))->where('r.status', 'approved')
+            ->whereIn('a.payroll_payment_id', $payments->pluck('id'))->whereIn('r.status', PayrollService::POSTED_STATUSES)
             ->select('a.*', 'r.month', 'r.id as run_id')->orderBy('r.month')->get()->groupBy('payroll_payment_id');
         foreach ($payments as $payment) {
             $payment->recoveries = $recoveries[$payment->id] ?? collect();
@@ -267,7 +312,7 @@ class PayrollController extends Controller
     {
         $data = $this->runData($id);
         $record = $data['items']->firstWhere('id', $item) ?? abort(404);
-        abort_unless(in_array($data['run']->status, ['approved', 'void']), 422, 'Payslips are available after approval.');
+        abort_unless(in_array($data['run']->status, [...PayrollService::POSTED_STATUSES, 'void']), 422, 'Payslips are available after approval.');
 
         return Pdf::loadView('payroll.payslip', $data + ['item' => $record, 'salaryPaid' => ($record->paid['salary'] ?? 0)])->download('payslip-'.$id.'-'.$item.'.pdf');
     }
@@ -295,7 +340,7 @@ class PayrollController extends Controller
         $run = PayrollService::run($id);
         $items = PayrollService::items($id);
 
-        return compact('run', 'items') + ['company' => DB::table('companies')->find($run->company_id), 'balances' => PayrollService::balances($run, $items), 'payments' => DB::table('payroll_payments')->where('payroll_run_id', $id)->orderByDesc('id')->get()];
+        return compact('run', 'items') + ['salaryPayment' => PayrollService::salaryPaymentStatus($run, $items), 'company' => DB::table('companies')->find($run->company_id), 'balances' => PayrollService::balances($run, $items), 'payments' => DB::table('payroll_payments')->where('payroll_run_id', $id)->orderByDesc('id')->get()];
     }
 
     private function options(): array

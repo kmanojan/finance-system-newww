@@ -13,7 +13,7 @@ class SalaryAdvanceService
     {
         return DB::table('payroll_payments as p')->where('p.kind', 'advance')->select('p.*')->selectSub(function ($q) {
             $q->from('payroll_advance_recoveries as a')->join('payroll_items as i', 'i.id', '=', 'a.payroll_item_id')->join('payroll_runs as r', 'r.id', '=', 'i.payroll_run_id')
-                ->whereColumn('a.payroll_payment_id', 'p.id')->where('r.status', 'approved')->selectRaw('COALESCE(SUM(a.amount_cents), 0)');
+                ->whereColumn('a.payroll_payment_id', 'p.id')->whereIn('r.status', PayrollService::POSTED_STATUSES)->selectRaw('COALESCE(SUM(a.amount_cents), 0)');
         }, 'recovered_cents');
     }
 

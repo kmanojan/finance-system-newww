@@ -9,6 +9,8 @@ use Illuminate\Validation\ValidationException;
 
 class PayrollService
 {
+    public const POSTED_STATUSES = ['approved', 'completed'];
+
     public const KINDS = ['salary' => 'Salary', 'epf' => 'EPF', 'etf' => 'ETF', 'apit' => 'APIT', 'other' => 'Other deductions & contributions'];
 
     private const ACCOUNTS = [
@@ -132,8 +134,11 @@ class PayrollService
                 PeriodLockService::checkLockedDate(Carbon::parse($r->month)->endOfMonth()->toDateString(), $r->company_id);
                 $journal = $items->sum('cost_cents') > 0 ? LedgerPostingService::postJournal(Carbon::parse($r->month)->endOfMonth()->toDateString(), 'Payroll '.$r->month, self::nonzero($lines), $id, 'Payroll', $r->company_id) : null;
                 $update += ['status' => 'approved', 'approved_by' => auth()->id(), 'approved_at' => now(), 'journal_entry_id' => $journal?->id];
+            } elseif ($action === 'complete') {
+                self::check($r->status === 'approved', 'Approve payroll before completing processing.');
+                $update['status'] = 'completed';
             } elseif ($action === 'void') {
-                self::check(in_array($r->status, ['draft', 'review', 'approved']), 'This payroll is already void.');
+                self::check(in_array($r->status, ['draft', 'review', ...self::POSTED_STATUSES]), 'This payroll is already void.');
                 self::check(! DB::table('payroll_payments')->where('payroll_run_id', $id)->where('status', 'posted')->exists(), 'Reverse all payments before voiding this payroll.');
                 $update += ['status' => 'void', 'active_key' => null, 'void_reason' => $data['reason']];
                 if ($r->journal_entry_id) {
@@ -166,11 +171,21 @@ class PayrollService
         return $result;
     }
 
+    public static function salaryPaymentStatus(object $run, $items): array
+    {
+        $due = (int) $items->sum('net_cents');
+        $paid = (int) $items->sum(fn ($item) => $item->paid['salary'] ?? 0);
+        $balance = $run->status === 'void' ? 0 : max(0, $due - $paid);
+        $state = $run->status === 'void' ? 'void' : (! in_array($run->status, self::POSTED_STATUSES) ? 'not_approved' : ($balance === 0 ? 'paid' : ($paid > 0 ? 'partial' : 'unpaid')));
+
+        return compact('due', 'paid', 'balance', 'state') + ['label' => ['void' => 'Void', 'not_approved' => 'Not approved', 'paid' => 'Paid', 'partial' => 'Partially paid', 'unpaid' => 'Unpaid'][$state]];
+    }
+
     public static function payment(int $runId, array $data): int
     {
         return DB::transaction(function () use ($runId, $data) {
             $r = DB::table('payroll_runs')->where('id', $runId)->lockForUpdate()->first() ?? abort(404);
-            self::check($r->status === 'approved', 'Approve payroll before recording a payment.');
+            self::check(in_array($r->status, self::POSTED_STATUSES), 'Approve payroll before recording a payment.');
             self::check($data['paid_on'] >= Carbon::parse($r->month)->endOfMonth()->toDateString(), 'Payroll payments must be on or after month end. Record earlier salary payments as employee advances.');
             self::check(! DB::table('payroll_payments')->where('request_key', $data['request_key'])->exists(), 'This payment was already recorded. Refresh the page.');
             $items = self::items($runId);
@@ -193,6 +208,41 @@ class PayrollService
             foreach ($allocations as $a) {
                 DB::table('payroll_payment_allocations')->insert($a + ['payroll_payment_id' => $id]);
             }
+
+            return $id;
+        });
+    }
+
+    /** One recorded release with explicit employee amounts; omitted employees remain unpaid. */
+    public static function salaryBatch(int $runId, array $data): int
+    {
+        $data = validator($data, [
+            'entries' => 'required|array|min:1|max:1000', 'entries.*.item_id' => 'required|integer|distinct',
+            'entries.*.amount' => 'required|numeric|min:0.01|max:999999999.99|decimal:0,2',
+            'paid_on' => 'required|date_format:Y-m-d|before_or_equal:today', 'reference' => 'required|string|max:255',
+            'request_key' => 'required|uuid', 'bank_account_id' => 'nullable|integer|exists:bank_accounts,id',
+        ])->validate();
+
+        return DB::transaction(function () use ($runId, $data) {
+            $r = DB::table('payroll_runs')->where('id', $runId)->lockForUpdate()->first() ?? abort(404);
+            self::check(in_array($r->status, self::POSTED_STATUSES), 'Approve payroll before recording a payment batch.');
+            self::check($data['paid_on'] >= Carbon::parse($r->month)->endOfMonth()->toDateString(), 'Payroll payments must be on or after month end. Record earlier salary payments as employee advances.');
+            self::check(! DB::table('payroll_payments')->where('request_key', $data['request_key'])->exists(), 'This payment was already recorded. Refresh the page.');
+            $items = self::items($runId)->keyBy('id');
+            $allocations = [];
+            $total = 0;
+            foreach ($data['entries'] as $entry) {
+                $item = $items->get($entry['item_id']);
+                self::check((bool) $item, 'Every selected employee must belong to this payroll.');
+                $amount = PayrollCalculationService::cents($entry['amount']);
+                self::check($amount <= $item->net_cents - ($item->paid['salary'] ?? 0), $item->snapshot['name'].': payment exceeds the remaining salary. Refresh the balances before retrying.');
+                $allocations[] = ['payroll_item_id' => $item->id, 'amount_cents' => $amount];
+                $total += $amount;
+            }
+            self::check($total > 0 && $total <= 99999999999, 'The batch total must be between 0.01 and 999,999,999.99.');
+            $id = self::cashPayment($r->company_id, $r->department_id, $r->currency, $data + ['kind' => 'salary', 'amount' => $total / 100], $runId);
+            DB::table('payroll_payment_allocations')->insert(array_map(fn ($allocation) => $allocation + ['payroll_payment_id' => $id], $allocations));
+            ActivityLogService::logCreate('PayrollSalaryBatch', $id, ['payroll_run_id' => $runId, 'allocations' => $allocations, 'amount_cents' => $total]);
 
             return $id;
         });
@@ -239,7 +289,7 @@ class PayrollService
     {
         $issued = DB::table('payroll_payments')->where('kind', 'advance')->where('employee_id', $employee)->where('company_id', $company)->where('currency', $currency)->where('status', 'posted')->when($asOf, fn ($q) => $q->where('paid_on', '<=', $asOf))->sum('amount_cents');
         // All approved recoveries reserve this balance, including later payroll, to prevent double recovery.
-        $recovered = DB::table('payroll_items as i')->join('payroll_runs as r', 'r.id', '=', 'i.payroll_run_id')->where('i.employee_id', $employee)->where('r.company_id', $company)->where('r.currency', $currency)->where('r.status', 'approved')->sum('i.advance_cents');
+        $recovered = DB::table('payroll_items as i')->join('payroll_runs as r', 'r.id', '=', 'i.payroll_run_id')->where('i.employee_id', $employee)->where('r.company_id', $company)->where('r.currency', $currency)->whereIn('r.status', self::POSTED_STATUSES)->sum('i.advance_cents');
 
         return max(0, (int) $issued - (int) $recovered);
     }

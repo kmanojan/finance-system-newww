@@ -8,6 +8,7 @@ use App\Models\Project;
 use App\Models\Server;
 use App\Services\FinancialReportingService;
 use App\Services\FinancialReportingService as Finance;
+use App\Services\PayrollPayablesService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -460,6 +461,10 @@ class ReportController extends Controller
         $parties = $partiesQuery->orderBy('name')->get();
 
         $partySummaries = collect();
+        $canViewPayroll = in_array(strtolower($request->user()->role), ['admin', 'manager', 'accountant']);
+        $payrollItems = $canViewPayroll ? PayrollPayablesService::items() : collect();
+        $salaryByParty = $payrollItems->groupBy('party_id');
+        $salaryPaymentsByParty = $canViewPayroll ? PayrollPayablesService::payments()->groupBy('party_id') : collect();
 
         foreach ($parties as $p) {
             // 0. Active Client Projects Contract Value (Contracted Project Budgets + Approved CRs)
@@ -616,8 +621,12 @@ class ReportController extends Controller
             $commissionBalance = max(0, $totalCommissionOwed - $totalCommissionPaid);
 
             // Combined Totals
-            $totalPayables = $apBillsBalance + $loanTotalPayable + $commissionBalance;
-            $totalPaids = $totalVendorPaid + $loanTotalPaid + $totalCommissionPaid;
+            $salaries = $salaryByParty->get($p->id, collect());
+            $salaryOwed = $salaries->sum('net_cents') / 100;
+            $salaryPaid = $salaries->sum('paid_cents') / 100;
+            $salaryBalance = $salaries->sum('balance_cents') / 100;
+            $totalPayables = $apBillsBalance + $loanTotalPayable + $commissionBalance + $salaryBalance;
+            $totalPaids = $totalVendorPaid + $loanTotalPaid + $totalCommissionPaid + $salaryPaid;
             $netBalance = $arBalance - $totalPayables;
 
             $partySummaries->push((object) [
@@ -642,6 +651,9 @@ class ReportController extends Controller
                 'total_commission_owed' => $totalCommissionOwed,
                 'total_commission_paid' => $totalCommissionPaid,
                 'commission_balance' => $commissionBalance,
+                'salary_owed' => $salaryOwed,
+                'salary_paid' => $salaryPaid,
+                'salary_balance' => $salaryBalance,
                 'total_payables' => $totalPayables,
                 'total_paids' => $totalPaids,
                 'net_balance' => $netBalance,
@@ -885,6 +897,18 @@ class ReportController extends Controller
                 }
             }
 
+            foreach ($salaryByParty->get($p->id, collect()) as $salary) {
+                $timeline->push((object) ['date' => Carbon::parse($salary->month)->endOfMonth()->toDateString(), 'type' => 'Salary Entitlement',
+                    'reference' => 'PR-'.$salary->run_id, 'currency' => 'LKR', 'currency_symbol' => 'Rs.',
+                    'original_debit' => 0, 'original_credit' => $salary->net_cents / 100, 'debit' => 0, 'credit' => $salary->net_cents / 100,
+                    'description' => Carbon::parse($salary->month)->format('F Y').' net salary']);
+            }
+            foreach ($salaryPaymentsByParty->get($p->id, collect()) as $payment) {
+                $timeline->push((object) ['date' => $payment->paid_on, 'type' => 'Salary Payment', 'reference' => 'PB-'.$payment->id,
+                    'currency' => 'LKR', 'currency_symbol' => 'Rs.', 'original_debit' => $payment->amount_cents / 100, 'original_credit' => 0,
+                    'debit' => $payment->amount_cents / 100, 'credit' => 0,
+                    'description' => Carbon::parse($payment->month)->format('F Y').' salary · '.$payment->reference]);
+            }
             $allPartyTimelines[$p->id] = $timeline->sortByDesc('date')->values();
         }
 
@@ -892,6 +916,8 @@ class ReportController extends Controller
         $partyTimeline = $selectedPartyId ? ($allPartyTimelines[$selectedPartyId] ?? collect()) : collect();
 
         return view('reports.party_ledger', compact(
+            'canViewPayroll',
+            'payrollItems',
             'from',
             'to',
             'partySummaries',
