@@ -7,6 +7,7 @@ use App\Models\SalaryComponent;
 use App\Services\HistoricalPayrollImportService;
 use App\Services\PayrollCalculationService;
 use App\Services\PayrollService;
+use App\Services\PayrollStatutoryService;
 use App\Services\SalaryAdvanceService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -340,7 +341,7 @@ class PayrollController extends Controller
         $run = PayrollService::run($id);
         $items = PayrollService::items($id);
 
-        return compact('run', 'items') + ['salaryPayment' => PayrollService::salaryPaymentStatus($run, $items), 'company' => DB::table('companies')->find($run->company_id), 'balances' => PayrollService::balances($run, $items), 'payments' => DB::table('payroll_payments')->where('payroll_run_id', $id)->orderByDesc('id')->get()];
+        return compact('run', 'items') + ['statutoryStates' => PayrollStatutoryService::states($run, $items), 'salaryPayment' => PayrollService::salaryPaymentStatus($run, $items), 'company' => DB::table('companies')->find($run->company_id), 'balances' => PayrollService::balances($run, $items), 'payments' => DB::table('payroll_payments')->where('payroll_run_id', $id)->orderByDesc('id')->get()];
     }
 
     private function options(): array

@@ -110,6 +110,12 @@ Route::middleware(['auth', AuthorizeWorkspace::class, AtomicWorkspaceWrite::clas
         Route::get('/create', 'create');
         Route::get('/import-history', 'importHistoryForm');
         Route::post('/import-history', 'importHistory');
+        Route::get('/statutory', [\App\Http\Controllers\PayrollStatutoryController::class, 'index']);
+        Route::get('/statutory/events/{event}/evidence', [\App\Http\Controllers\PayrollStatutoryController::class, 'evidence'])->whereNumber('event');
+        Route::get('/{id}/statutory/{kind}', [\App\Http\Controllers\PayrollStatutoryController::class, 'show'])->whereNumber('id')->where('kind', 'epf|etf|apit');
+        Route::get('/{id}/statutory/{kind}/schedule', [\App\Http\Controllers\PayrollStatutoryController::class, 'schedule'])->whereNumber('id')->where('kind', 'epf|etf|apit');
+        Route::post('/{id}/statutory/{kind}/payment', [\App\Http\Controllers\PayrollStatutoryController::class, 'payment'])->whereNumber('id')->where('kind', 'epf|etf|apit');
+        Route::post('/{id}/statutory/{kind}/{action}', [\App\Http\Controllers\PayrollStatutoryController::class, 'record'])->whereNumber('id')->where('kind', 'epf|etf|apit')->where('action', 'prepared|submitted|reopened');
         Route::get('/employees', 'employees');
         Route::post('/', 'store');
         Route::post('/preview', 'preview');
