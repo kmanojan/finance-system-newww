@@ -5,6 +5,8 @@
 
 This specification is organized on a per-module basis for direct reference during development and architectural review.
 
+For the current implementation, read the **[full feature guide](35-implemented-features.md)** first. It covers all implemented application areas, payroll/loan behavior, access rules, reporting and known limits. The **[route reference](36-route-reference.md)** lists actual endpoints. The original specifications below also contain proposed work; dated release notes remain historical evidence rather than a statement of today's entire feature set.
+
 ## Table of Contents
 
 | File | Feature / Module |
@@ -20,7 +22,7 @@ This specification is organized on a per-module basis for direct reference durin
 | [`09-client-partner-sharing.md`](09-client-partner-sharing.md) | Secure tokenized share links with password and expiry controls |
 | [`10-reports-module.md`](10-reports-module.md) | P&L, Balance Sheet, Budget vs Actual, Tax Summaries, and Cash Flow |
 | [`11-additional-modules.md`](11-additional-modules.md) | Dashboard widgets, payroll-lite, approval inbox, audit viewer |
-| [`12-data-model.md`](12-data-model.md) | Complete database entity list across all 52 system tables |
+| [`12-data-model.md`](12-data-model.md) | Original module catalogue and current employee/payroll table extensions |
 | [`13-build-order.md`](13-build-order.md) | Laravel build sequence and dependency order |
 | [`14-dashboard.md`](14-dashboard.md) | Executive Financial Overview dashboard metrics & chart widgets |
 | [`15-invoice-template.md`](15-invoice-template.md) | Visual Document Template customizer and DomPDF engine integration |
@@ -38,7 +40,15 @@ This specification is organized on a per-module basis for direct reference durin
 | [`27-users-master.md`](27-users-master.md) | User Management Master (Add, Create, Edit, Delete, Status Change) |
 | [`28-pwa-session-security.md`](28-pwa-session-security.md) | PWA, Long-lived Sessions, Password Controls & Reusable Components |
 | [`29-deployment-and-serverless.md`](29-deployment-and-serverless.md) | Vercel Serverless Functions + Supabase PostgreSQL deployment guide |
+| [`29-ui-ux-design-system.md`](29-ui-ux-design-system.md) | Maintained shared design tokens, accessibility and responsive salary advance register |
 | [`30-salary_components_and_payroll.md`](30-salary_components_and_payroll.md) | Salary Components Master, EPF/ETF/APIT, Allowances & Employee Detailing |
+| [`31-remediation-and-release.md`](31-remediation-and-release.md) | Initial remediation scope and release safeguards |
+| [`32-monthly-payroll.md`](32-monthly-payroll.md) | Monthly payroll, salary releases, statutory tracking and salary advance workflows |
+| [`33-production-release-2026-11-06.md`](33-production-release-2026-11-06.md) | 6–7 November production release and recovery history |
+| [`34-salary-advances-release-2026-11-08.md`](34-salary-advances-release-2026-11-08.md) | 8 November historical advance reconciliation and register redesign |
+| [`35-implemented-features.md`](35-implemented-features.md) | Full current feature guide, workflows, permissions and implementation limits |
+| [`36-route-reference.md`](36-route-reference.md) | Complete application endpoint/action catalogue |
+| [`../docs/auditor-payables.md`](../docs/auditor-payables.md) | Auditor payables schedules, recognition basis and exports |
 
 ---
 

@@ -1,6 +1,6 @@
-# 12. Complete Database Data Model (All 52 Entities)
+# 12. Database Data Model
 
-The system consists of **52 database tables** organized across 10 functional modules:
+Sections 1–10 retain the original module catalogue; they are not an exhaustive count of the current schema. Section 11 documents the employee/payroll extensions. Migrations are the source of truth for table definitions.
 
 ---
 
@@ -80,3 +80,17 @@ The system consists of **52 database tables** organized across 10 functional mod
 - `attachments` — Polymorphic file uploads and documents.
 - `tax_types` — Sri Lanka tax engines (VAT, WHT, APIT, CIT rules & rates).
 - `share_links`, `share_link_visits` — Tokenized public sharing links with visitor logging.
+
+### 11. Employee Compensation & Monthly Payroll
+
+- `salary_components` — Earnings, employee deductions and employer contributions, including fixed-display versus monthly-entry settings.
+- `employee_salary_components` — Employee-specific enabled components and rates/amounts.
+- `payroll_runs` — Company/month/currency, processing status, due dates and approval/reversal journals.
+- `payroll_items` — Employee salary snapshots, adjustments, calculations, review flags and integer-cent obligation totals. Imported snapshots retain their salary-sheet source.
+- `payroll_payments` — Actual salary/statutory/advance payments, bank/cash transactions, journals, request keys, private receipt metadata and reversal history. Advances have an independently scheduled `recovery_month`.
+- `payroll_payment_allocations` — Employee shares of salary/statutory payments, supporting multiple partial release batches.
+- `payroll_advance_recoveries` — Amount recovered from a particular advance by a particular payroll item; only posted payroll consumes the balance.
+- `payroll_historical_advance_links` — Unique item/payment links with source hash, sheet, row, cents and operator. Historical advances are reserved for that source payroll, excluded from ordinary proposals and cannot be rescheduled. PostgreSQL RLS is enabled without public client policies.
+- `payroll_statutory_events` — Append-only preparation/submission history, reviewed due dates and private evidence, separate from remittance payments.
+
+The salary advance register is a filtered read model over these tables; the redesign adds no table or migration. See [Monthly payroll](32-monthly-payroll.md) for lifecycle/accounting rules and [the 8 November release](34-salary-advances-release-2026-11-08.md) for migration and verification details.

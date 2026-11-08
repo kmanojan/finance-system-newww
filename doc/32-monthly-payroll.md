@@ -13,6 +13,18 @@ Implemented on 2026-11-06. Entry point: **People → Monthly payroll** (`/payrol
 
 ## Advances and corrections
 
+### Salary advance register
+
+Open **Employees & payroll → Salary advances** (`/payroll/advances`). The register shows employee name/code and company, paid date and bank/cash source, payment reference, paid amount, recovered amount, remaining amount, deduction month and recovery status. Summary totals cover the current filtered view across all pages, grouped by currency. Reversed payments remain visible in history but are excluded from posted totals.
+
+- Search employee name, employee code or payment reference across the full register. Company and deduction month narrow results. Status links retain these filters and reset pagination.
+- **Outstanding** includes unrecovered and partly recovered advances. **Recovered** means fully allocated to approved payroll. **Reversed** identifies reversed payment records. These recovery states are separate from payroll processing and salary-payment status.
+- Results paginate at 25 advances. Employee balances are available below the register. Phone rows become labelled cards; **Filters** opens company/month controls.
+- The row's **…** button opens the full reference and available actions. Eligible unrecovered advances can change deduction month. Managers/admins can reverse an unrecovered posted payment with a date and reason. Historical source advances cannot be rescheduled; recovered payments require correction through their related payroll first.
+- **Record advance** opens employee/allocation, payment-details and payroll-recovery sections. The shared employee selector and retained values support correction after validation errors; an optional receipt stays private. **Cancel** closes without saving. Saving records a payment already made and does not initiate a bank transfer.
+
+See [Salary advance register design](29-ui-ux-design-system.md#salary-advance-register) for shared theme tokens and responsive behavior. The redesign adds read-only filters and summaries; existing services still govern posting, recovery and reversal. No database migration is required for this UI release.
+
 ### Imported historical salary advances
 
 **Salary advances → Import historical advances** lists advance deductions captured in imported salary-sheet snapshots. A manager/admin chooses the company bank account and records a month or all remaining months. For this historical import, the user instructed that each payment/claim is dated the 10th of its source salary month and recovered in that same payroll month. These are records of past transfers, not instructions to transfer money. References identify the salary sheet and row; they do not claim to be original bank transaction references.
@@ -104,7 +116,7 @@ The creation table has a dedicated **Salary advance / Scheduled recovery** colum
 
 Approval allocates actual recovered cents to specific advances, oldest eligible schedule first. Drafts and previews do not consume balances. Later payroll cannot recover the same amount twice. Voiding payroll releases its allocations while retaining history. An advance that has been partly or fully recovered cannot be reversed using some other advance's balance.
 
-Advance payment history shows payment date, scheduled deduction month, original amount, recovered amount, remaining balance and links to the approved payroll months that actually recovered it. Use **Deduction month** in an unrecovered advance's row to reschedule it. The chosen month cannot precede its payment month. Rescheduling an advance used in an unapproved draft forces its eligibility to be rechecked at approval; already approved salaries are not changed.
+The advance register shows payment date, scheduled deduction month, original amount, recovered amount, remaining balance and links to approved payroll months that actually recovered it. Open the row's **…** details, then **Change deduction month → Save month**, to reschedule an eligible unrecovered advance. The chosen month cannot precede its payment month. Historical source advances remain reserved for their own payroll. Rescheduling an advance used in an unapproved draft forces its eligibility to be rechecked at approval; already approved salaries are not changed.
 
 Migration `2026_11_06_000009` adds a nullable recovery month and allocation records. Existing advance payments remain **Not scheduled (legacy)** rather than guessing an intended month. Previously approved recoveries are attributed FIFO without changing payroll amounts or journal entries. An unrecovered legacy advance can be scheduled explicitly; a remaining legacy balance is also available for manual review/recovery. Inconsistent historical balances cause migration to fail for reconciliation instead of silently creating money.
 

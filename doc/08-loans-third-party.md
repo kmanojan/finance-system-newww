@@ -1,5 +1,7 @@
 # 7. Third-Party Loans / Money Claims (Borrowing Module)
 
+For the current cross-system implementation and limits, see the [full feature guide](35-implemented-features.md#loans-and-loan-flow). Earlier design suggestions in this document are not automatically implemented features.
+
 Full lifecycle: claim money → schedule interest → collect reminders every period → settle interest per period → settle principal → close loan. Built to handle your real case: you don't always know/want to calculate a rate — sometimes you just know "I pay 2,000 every 3rd" — so the module supports **both** an interest rate calculation **and** a direct fixed-amount entry, with the rate step skippable.
 
 ---
@@ -79,22 +81,27 @@ Full lifecycle: claim money → schedule interest → collect reminders every pe
 
 ### Interest Schedule table
 Per period row: Due Date, Amount Due (fixed or calculated), Amount Paid, Status (Pending/Paid/Partially Paid/Skipped/Overdue), Paid Date, Actions:
-- **Settle** — enter amount paid + date (pre-fills with that installment's `due_date`); if less than due, remainder stays visible as "Partially Paid" and the reminder keeps firing until fully cleared.
+- **Settle** — enter amount, paid date, bank/payment details and an optional note; partial payments leave the remaining scheduled amount outstanding.
 - **No Longer Needed** — marks the period Skipped/Waived without recording payment; stops that period's reminder permanently.
 - **Edit Amount** — override a single period's due amount (useful for rate-based loans where you negotiated a one-off change, or to correct a fixed amount typo).
-- **Add Attachment** — receipt/cheque photo for that specific period's payment.
+- **Recorded payment corrections** — edit amount, paid date, bank account and nullable note, or delete an eligible recorded interest payment through the guarded correction service. Notes appear as a column. Reconciled, linked cheque/budget or mismatched legacy payments require their links/history to be resolved first. The service checks accounting periods and the schedule's remaining amount, reverses/reposts existing journals as required and recalculates paid amount/date/status.
+- **Documents** — multiple attachments are supported on the loan itself in Loan Details. A separate per-interest-payment receipt upload is not claimed by the current settlement form.
 
 Reminder behavior for each period matches the unified engine (§5): appears N days before due date → if skipped today, reappears tomorrow → stops only on Settle or No Longer Needed.
 
 ### Principal section
 - Outstanding Principal (live figure = Principal + Draws − all principal repayments)
-- **Record Principal Repayment** button — fields: Amount, Date, Payment Mode (Cash/Card/Cheque/Bank Transfer), Attachments. Partial repayments allowed.
+- **Record Principal Repayment** button — amount, date, supported payment-mode/bank details and notes. Partial repayments are allowed; loan-level documents remain available in Loan Details.
 - **Add Additional Draw** button — increases outstanding principal and affects future interest calculations.
 - **Settle Principal Fully** button — modal prompting for payment date and payment mode; settles entire outstanding principal at once. Once principal is 0 and interest is satisfied, status moves to **Settled**.
 
-### Contracted Interest Reconciliation on Settlement
-When calculating Total Paid and Interest Paid across settled loans:
-- If a loan is marked Settled without manual per-period schedule recording (e.g. upfront interest loans, one-shot lump sum settlements, or early principal payouts), the system automatically reconciles the contracted interest based on method (`fixed_amount`, `percentage_rate`, `upfront_interest`, or `total_interest`) so financial KPIs accurately reflect total borrowing cost paid.
+### Paid amounts and full settlement
+
+Total paid is recorded principal repayments plus recorded schedule paid amounts. A settled status alone does not fabricate interest payments. Contracted/unpaid interest is calculated separately from payment history. Full settlement must cover outstanding principal and unpaid scheduled interest for either payable type; source-supported upfront withholding is distinguished from additional cash payment in auditor reporting. Missing or inconsistent legacy payment evidence requires reconciliation rather than inferred settlement.
+
+### Editing an existing loan
+
+Loan edit uses the shared party selector and allows eligible party/lender, principal and optional full-principal maturity-date corrections. An activated-principal change requires a correction reason, respects already recorded repayments/funding and reconciled/closed-period constraints, and corrects a linked disbursement through the accounting service where one exists. Imported loans without an original disbursement do not receive invented cash movements. Additional borrowing should be an additional draw. Changing metadata or payable type does not itself rewrite the interest payment history.
 
 ---
 

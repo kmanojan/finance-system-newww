@@ -2,6 +2,8 @@
 
 The maintained source is `public/design-system.css`, loaded after the legacy stylesheet by the authenticated and shared layouts. `public/design-system.js` supplies common accessibility behavior. `/design-system` is a signed-in component reference.
 
+For all implemented workflows and their limits, see the [full feature guide](35-implemented-features.md); this document governs their interface treatment.
+
 ## Direction
 
 A compact finance workspace: a narrow labelled navigation rail, soft white surfaces, a pale purple balance highlight, purple primary actions, and restrained status colours. The revised direction follows the request for a more contemporary interface without sacrificing workspace width. Lexend Deca remains the product typeface. Data, tasks and clear actions lead each screen; decoration must not compete with money.

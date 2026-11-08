@@ -1,5 +1,7 @@
 # 12. Suggested Laravel Build Order
 
+This is the original proposed build sequence. It is not the current implementation status. See the [full feature guide](35-implemented-features.md), [actual routes](36-route-reference.md) and dated release notes for delivered functionality. Several originally suggested modules, including monthly payroll, are now implemented.
+
 1. **Foundation**: auth, roles/permissions (Spatie), companies/departments middleware scoping, tags & attachments polymorphic packages, activity log (spatie/laravel-activitylog).
 2. **Master Data**: categories, invoice types, bank accounts, document templates, clients/partners.
 3. **Transactions**: daily income/expense + petty cash, with date filters, tags, exports.

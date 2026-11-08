@@ -27,7 +27,7 @@ This document covers the Progressive Web App (PWA) configuration, long-lived aut
   - `theme_color`: `"#8b5cf6"` | `background_color`: `"#1a1d27"`.
   - **Adaptive / Maskable Icons**: High-resolution icons (`192x192`, `512x512`, `icon-maskable.png`, vector `icon.svg`) matching Android's adaptive circle/square icon shapes without generic browser badge overlays.
 - **Service Worker (`/sw.js`)**:
-  - Versioned cache (`finance-system-v2`).
+  - Versioned cache (currently `finance-system-v3`; `public/sw.js` is the source of truth).
   - Pre-caches core static assets and offline fallback page (`/offline.html`).
   - Network-first navigation strategy with automatic fallback to `/offline.html` when network is unavailable.
 - **Dedicated Route Headers (`routes/web.php`)**:

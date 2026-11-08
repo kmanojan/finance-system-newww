@@ -2,6 +2,8 @@
 
 A robust, multi-entity financial management system designed for **Apptimus** and its sub-entities. Built with **Laravel 12**, **PostgreSQL / Supabase**, and modern **Blade + Alpine.js** UI with progressive web app (PWA) capabilities.
 
+Start with the [current full feature guide](doc/35-implemented-features.md) for implemented modules, operating workflows, permissions and known limits. The [route reference](doc/36-route-reference.md) lists declared endpoints. Older module specifications include roadmap ideas and are not an implementation checklist.
+
 ---
 
 ## 🚀 Key Modules & Capabilities
@@ -17,8 +19,9 @@ A robust, multi-entity financial management system designed for **Apptimus** and
   - Per-schedule date and amount editing with thousand-separator inputs.
 - **📊 Budgets & Cost Allocation**: Period-based allocations with real-time actual vs budget tracking.
 - **🔔 Unified Reminders**: Centralized reminder engine for loan interest, milestones, invoices, and cheques.
-- **📈 Comprehensive Reports**: Profit & Loss, Balance Sheet, Party Ledger statements, and Tax summaries.
+- **📈 Financial Reports**: Profit & Loss, Balance Sheet, Cash Flow, aging, project/party statements, and dated auditor payables with PDF/Excel exports.
 - **📱 PWA & Mobile Ergonomics**: Native-like bottom navigation bar, safe-area support, dark/light theme, and offline service worker.
+- **Employees & Monthly Payroll**: Salary components, monthly review/approval, partial salary releases, statutory preparation/remittance tracking, and a searchable salary advance register with scheduled recovery and protected historical source links.
 
 ---
 
@@ -55,8 +58,7 @@ php artisan migrate
 ```
 
 > **For Supabase / Vercel Production**:
-> You can also trigger database migrations via the web route:
-> `https://your-domain.vercel.app/migrate`
+> Apply migrations through the authorized deployment process or the reviewed SQL in `database/releases/`. Browser migration endpoints have been removed. Follow the [deployment guide](doc/29-deployment-and-serverless.md) and release-specific instructions.
 
 ### 4. Run Development Server
 ```bash
@@ -95,6 +97,12 @@ Comprehensive specifications for each module are located in the [`doc/`](doc/00-
 - [`10-reports-module.md`](doc/10-reports-module.md) — Financial Reports
 - [`28-pwa-session-security.md`](doc/28-pwa-session-security.md) — PWA & Session Architecture
 - [`29-ui-ux-design-system.md`](doc/29-ui-ux-design-system.md) — UI/UX Tokens & Blade Components
+- [`30-salary_components_and_payroll.md`](doc/30-salary_components_and_payroll.md) — Employee Compensation & Salary Components
+- [`32-monthly-payroll.md`](doc/32-monthly-payroll.md) — Payroll Approval, Payments & Salary Advance Register
+- [`34-salary-advances-release-2026-11-08.md`](doc/34-salary-advances-release-2026-11-08.md) — Historical Advance Reconciliation & Register Redesign Release
+- [`35-implemented-features.md`](doc/35-implemented-features.md) — Full Current Feature Guide, Permissions & Known Limits
+- [`36-route-reference.md`](doc/36-route-reference.md) — Complete Declared Application Route Catalogue
+- [`auditor-payables.md`](docs/auditor-payables.md) — Auditor Payables Report & Recognition Basis
 
 ---
 

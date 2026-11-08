@@ -1,5 +1,7 @@
 # Production release — 6 November 2026
 
+This document records the 6–7 November releases. For historical salary advance reconciliation and the later register redesign, see [8 November salary advances release](34-salary-advances-release-2026-11-08.md).
+
 Target: GitHub `kmanojan/finance-system-newww`, Vercel `finance-system-newww`, Supabase project `ztqbhrrzpxnndrrchfdt`.
 
 The release includes the shared design system, loan balances/flow/attachments/search, complete monthly payroll and scheduled advances, employee party linking, selectors and the finance integrity/access-control fixes developed in this workspace.

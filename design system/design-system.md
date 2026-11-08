@@ -1,5 +1,7 @@
 # HR Premium Design System
 
+> This is the original HR design reference. The implemented Finance system uses the maintained [Finance UI design system](../doc/29-ui-ux-design-system.md) and `public/design-system.css`, including the narrower navigation, current colours, light/dark themes and salary advance register. Use those maintained rules for new Finance changes; the original values below are historical reference.
+
 A design system for a premium HR/Recruitment web application, built with a two-tier sidebar layout, a card-based main content area, and a responsive data table that converts to cards on mobile.
 
 ---

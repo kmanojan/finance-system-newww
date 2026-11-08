@@ -2,6 +2,8 @@
 
 The monthly payroll workflow is now available at **People → Monthly payroll**. See [Monthly payroll](32-monthly-payroll.md) for preparation, approval, payslips, advances and salary/statutory payment tracking. The employee screens below maintain the salary package; they are not payment records.
 
+Paid salary advances are maintained separately in **Employees & payroll → Salary advances**. The [advance register](32-monthly-payroll.md#salary-advance-register) supports employee/code/reference search, company/month/status filters, recovery balances and source payroll links. Configure the intended deduction month on the payment; do not represent a paid advance by editing a recurring salary component. Historical source advances have their own protected source links and are recovered only in their source payroll.
+
 ## Overview
 This module provides full employee compensation management, including **Salary Components Master** (heads/allowances, statutory employee deductions, and employer contributions), individual **Employee Salary Configuration**, and live net pay / CTC calculation with extensive detailing across the **Employees Index** and **Employee Single View**.
 
