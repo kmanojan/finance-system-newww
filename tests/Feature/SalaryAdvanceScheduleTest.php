@@ -54,6 +54,42 @@ class SalaryAdvanceScheduleTest extends TestCase
         $this->postJson('/payroll/preview', ['employee_ids' => [$this->employee->id], 'company_id' => 1, 'month' => $month])->assertOk()->assertJsonPath('employees.'.$this->employee->id.'.advance', $expected);
     }
 
+    public function test_register_filters_search_all_pages_and_keep_currency_totals_separate(): void
+    {
+        for ($n = 0; $n < 27; $n++) {
+            $this->advance('2026-03', 100);
+        }
+        DB::table('payroll_payments')->where('id', 1)->update(['reference' => 'Oldest bank reference']);
+        $this->get('/payroll/advances')->assertOk()->assertViewHas('payments', fn ($p) => $p->count() === 25 && $p->total() === 27)
+            ->assertViewHas('summaries', fn ($s) => (int) $s->first()->remaining === 270000);
+        $this->get('/payroll/advances?q=oldest')->assertOk()->assertViewHas('payments', fn ($p) => $p->total() === 1 && $p->first()->id === 1);
+        $this->get('/payroll/advances?q=adv-1&recovery_month=2026-03')->assertOk()->assertViewHas('payments', fn ($p) => $p->total() === 27);
+        $this->get('/payroll/advances?recovery_month=2026-04')->assertOk()->assertSee('No matching advances');
+        DB::table('payroll_payments')->where('id', 1)->update(['currency' => 'USD']); // Isolated legacy-currency display fixture.
+        $this->get('/payroll/advances')->assertOk()->assertViewHas('summaries', fn ($s) => $s->count() === 2 && (int) $s->where('currency', 'LKR')->first()->issued === 260000 && (int) $s->where('currency', 'USD')->first()->issued === 10000);
+    }
+
+    public function test_register_distinguishes_partial_recovery_full_recovery_and_reversals(): void
+    {
+        $this->advance('2026-03', 15000);
+        $run = $this->draft('2026-03');
+        $this->review($run);
+        $this->post("/payroll/$run/approve")->assertRedirect();
+        $this->get('/payroll/advances?status=outstanding')->assertOk()->assertSee('Partly recovered')
+            ->assertViewHas('summaries', fn ($s) => (int) $s->first()->remaining === 500000 && (int) $s->first()->recovered === 1000000);
+        $this->get('/payroll/advances?status=recovered')->assertOk()->assertViewHas('payments', fn ($p) => $p->total() === 0);
+        $april = $this->draft('2026-04');
+        $this->review($april);
+        $this->post("/payroll/$april/approve")->assertRedirect();
+        $this->get('/payroll/advances?status=recovered')->assertOk()->assertViewHas('payments', fn ($p) => $p->total() === 1);
+        $reverse = $this->advance('2026-05', 300);
+        PayrollService::reversePayment($reverse, ['date' => '2026-11-06', 'reason' => 'Incorrect advance record']);
+        $this->get('/payroll/advances?status=reversed')->assertOk()->assertViewHas('payments', fn ($p) => $p->total() === 1)
+            ->assertViewHas('summaries', fn ($s) => $s->isEmpty());
+        $this->get('/payroll/advances?status=unknown')->assertRedirect();
+        $this->get('/payroll/advances?recovery_month=wrong')->assertRedirect();
+    }
+
     public function test_february_payment_deducts_in_march_only_and_never_twice(): void
     {
         $advance = $this->advance();

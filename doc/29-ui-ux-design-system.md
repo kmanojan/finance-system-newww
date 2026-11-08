@@ -63,6 +63,14 @@ The primary rail and section menu close independently. Use their chevron buttons
 
 The current navigation revision is verified with DOM-only browser checks; do not generate screenshots.
 
+## Salary advance register
+
+`/payroll/advances` uses shared Lexend Deca, theme colours, 20px surfaces, 10px controls, and a pale purple remaining-balance panel. The register leads; employee balance detail and the paid-advance form are secondary disclosures. Keep paid, recovered and remaining amounts in separate numeric columns, with currencies explicit and totals grouped by currency. Reversed records remain in history and are excluded from posted balance totals.
+
+Search covers employee name/code and payment reference across all pages. Company, deduction month and recovery status apply to the register and summary; status counts retain the other filters. Paginate at 25 rows, preserve filters in links, and aggregate balances in SQL rather than querying each employee. Desktop tables have a sticky employee column/header and a bounded scroll region. At phone widths, every field stays in labelled cards, company/month filters move into a popover, and payment details open in a native dialog. Full references are readable there. Dialog and popover shadows are intentional floating-surface exceptions.
+
+`salary-advances.css` and `salary-advances.js` are scoped to this page and versioned by content hash. Preserve the shared employee selector and existing posting/recovery services. Historical advances retain their source-payroll link and cannot be rescheduled; recovered payments do not offer reversal. UI review uses DOM measurements at 1440, 1280, 768 and 390px in both themes, with no screenshots.
+
 
 ## Sign-in screen
 

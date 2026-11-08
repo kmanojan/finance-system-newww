@@ -277,21 +277,45 @@ class PayrollController extends Controller
         return back()->with('success', 'Payment reversed with a balancing ledger entry.');
     }
 
-    public function advances()
+    public function advances(Request $request)
     {
-        $payments = SalaryAdvanceService::payments()->join('employees as e', 'e.id', '=', 'p.employee_id')->join('companies as c', 'c.id', '=', 'p.company_id')->addSelect('e.full_name', 'c.name as company_name')->orderByDesc('p.id')->paginate(30);
+        $filters = $request->validate(['q' => 'nullable|string|max:150', 'company_id' => 'nullable|integer|exists:companies,id',
+            'recovery_month' => 'nullable|date_format:Y-m', 'status' => 'nullable|in:all,outstanding,recovered,reversed']);
+        $filters['status'] = $filters['status'] ?? 'all';
+        $source = SalaryAdvanceService::payments()->join('employees as e', 'e.id', '=', 'p.employee_id')->join('companies as c', 'c.id', '=', 'p.company_id')
+            ->leftJoin('bank_accounts as b', 'b.id', '=', 'p.bank_account_id')
+            ->addSelect('e.full_name', 'e.employee_code', 'c.name as company_name', 'b.bank_name');
+        $base = DB::query()->fromSub($source, 'a')
+            ->when($filters['company_id'] ?? null, fn ($q, $company) => $q->where('company_id', $company))
+            ->when($filters['recovery_month'] ?? null, fn ($q, $month) => $q->where('recovery_month', $month.'-01'))
+            ->when(trim($filters['q'] ?? ''), function ($q, $search) {
+                $q->where(fn ($q) => $q->whereRaw('LOWER(full_name) LIKE ?', ['%'.mb_strtolower($search).'%'])
+                    ->orWhereRaw('LOWER(employee_code) LIKE ?', ['%'.mb_strtolower($search).'%'])
+                    ->orWhereRaw('LOWER(reference) LIKE ?', ['%'.mb_strtolower($search).'%']));
+            });
+        $counts = (clone $base)->selectRaw("COUNT(*) as total, COALESCE(SUM(CASE WHEN status = 'posted' AND amount_cents > recovered_cents THEN 1 ELSE 0 END),0) as outstanding, COALESCE(SUM(CASE WHEN status = 'posted' AND amount_cents <= recovered_cents THEN 1 ELSE 0 END),0) as recovered, COALESCE(SUM(CASE WHEN status = 'reversed' THEN 1 ELSE 0 END),0) as reversed")->first();
+        $register = clone $base;
+        if ($filters['status'] === 'reversed') {
+            $register->where('status', 'reversed');
+        } elseif ($filters['status'] !== 'all') {
+            $register->where('status', 'posted')->whereColumn('amount_cents', $filters['status'] === 'outstanding' ? '>' : '<=', 'recovered_cents');
+        }
+        $summaries = (clone $register)->where('status', 'posted')->select('currency')
+            ->selectRaw('SUM(amount_cents) as issued, SUM(recovered_cents) as recovered, SUM(amount_cents - recovered_cents) as remaining, COUNT(DISTINCT employee_id) as employees')
+            ->groupBy('currency')->orderBy('currency')->get();
+        $balances = (clone $register)->where('status', 'posted')->select('employee_id', 'company_id', 'currency', 'full_name', 'company_name')
+            ->selectRaw('SUM(amount_cents - recovered_cents) as balance')->groupBy('employee_id', 'company_id', 'currency', 'full_name', 'company_name')
+            ->havingRaw('SUM(amount_cents - recovered_cents) > 0')->orderBy('full_name')->get();
+        $payments = (clone $register)->orderByDesc('paid_on')->orderByDesc('id')->paginate(25)->withQueryString();
         $recoveries = DB::table('payroll_advance_recoveries as a')->join('payroll_items as i', 'i.id', '=', 'a.payroll_item_id')->join('payroll_runs as r', 'r.id', '=', 'i.payroll_run_id')
             ->whereIn('a.payroll_payment_id', $payments->pluck('id'))->whereIn('r.status', PayrollService::POSTED_STATUSES)
             ->select('a.*', 'r.month', 'r.id as run_id')->orderBy('r.month')->get()->groupBy('payroll_payment_id');
         foreach ($payments as $payment) {
             $payment->recoveries = $recoveries[$payment->id] ?? collect();
         }
-        $balances = DB::table('payroll_payments as p')->join('employees as e', 'e.id', '=', 'p.employee_id')->join('companies as c', 'c.id', '=', 'p.company_id')->where('p.kind', 'advance')->select('p.employee_id', 'p.company_id', 'p.currency', 'e.full_name', 'c.name as company_name')->distinct()->get();
-        foreach ($balances as $b) {
-            $b->balance = PayrollService::advanceBalance($b->employee_id, $b->company_id, $b->currency);
-        }
 
-        return view('payroll.advances', $this->options() + ['employees' => Employee::orderBy('full_name')->get(), 'payments' => $payments, 'balances' => $balances]);
+        return view('payroll.advances', $this->options() + ['employees' => Employee::orderBy('full_name')->get(),
+            'payments' => $payments, 'balances' => $balances, 'summaries' => $summaries, 'counts' => $counts, 'filters' => $filters]);
     }
 
     public function historicalAdvances(Request $request)
