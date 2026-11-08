@@ -1,0 +1,19 @@
+@php
+    $reviewEmployees = $items->map(fn ($item) => [
+        'id' => $item->id, 'name' => $item->snapshot['name'], 'code' => $item->snapshot['code'] ?? '',
+        'gross' => $item->gross_cents, 'net' => $item->net_cents, 'reviewed' => (bool) $item->reviewed,
+        'version' => \App\Services\PayrollReviewService::version($item),
+    ])->values();
+@endphp
+<section class="pr-panel" id="employee-payroll">
+<div class="pr-panel-head"><div><h2>Employee payroll</h2><p class="pr-hint">Check the figures, then mark selected employees reviewed together.</p></div><span class="pr-muted">{{ $items->where('reviewed', true)->count() }} of {{ $items->count() }} reviewed</span></div>
+<form method="post" action="/payroll/{{ $run->id }}/bulk-review" data-payroll-review>
+@csrf<input type="hidden" name="selection_json" value="[]" data-review-selection>
+<div class="pr-review-toolbar"><div class="pr-field"><label for="review-search">Search employees</label><input type="search" id="review-search" placeholder="Name or employee code" data-review-search></div><div class="pr-field"><label for="review-filter">Review status</label><select id="review-filter" data-review-filter><option value="all">All employees</option><option value="needs_review">Needs review</option><option value="reviewed">Reviewed</option></select></div><button type="button" class="pr-btn" data-review-all>Select all employees</button><button type="button" class="pr-btn" data-review-clear disabled>Clear selection</button></div>
+<div class="pr-table-wrap pr-review-table" role="region" aria-label="Select employees for payroll review" tabindex="0"><table class="pr-table"><thead><tr><th class="pr-review-checkbox"><label class="pr-review-check"><input type="checkbox" data-review-page aria-label="Select all employees on this page"></label></th><th>Employee</th><th class="pr-number">Gross · {{ $run->currency }}</th><th class="pr-number">Net salary · {{ $run->currency }}</th><th>Review status</th><th>Details</th></tr></thead><tbody data-review-rows></tbody></table></div>
+<div class="pr-review-pagination"><span data-review-range></span><div class="pr-actions"><button type="button" class="pr-btn" data-review-prev>Previous</button><button type="button" class="pr-btn" data-review-next>Next</button></div></div>
+<div class="pr-review-footer"><div><strong data-review-count role="status" aria-live="polite">0 employees selected</strong><p class="pr-hint" data-review-message>Selection is retained across searches and pages.</p></div><div class="pr-field"><label for="review-note">Shared review note <span class="pr-muted">(optional)</span></label><input type="text" id="review-note" name="review_note" maxlength="2000" value="{{ old('review_note') }}" placeholder="For example: checked against the monthly salary sheet"></div><div class="pr-actions"><button type="submit" class="pr-btn pr-btn-primary" name="reviewed" value="1" data-review-save disabled>Mark reviewed</button><button type="submit" class="pr-btn" name="reviewed" value="0" data-review-reset disabled>Mark needs review</button></div><p class="pr-hint pr-full">Marking reviewed confirms you checked the selected employees’ salary, adjustments, contributions, tax and payment details. Approval remains a separate step.</p></div>
+<noscript><div class="pr-body"><p>Enable JavaScript for bulk selection, or review employees individually:</p><ul>@foreach($items as $item)<li><a href="/payroll/{{ $run->id }}/employees/{{ $item->id }}">{{ $item->snapshot['name'] }} · {{ $item->reviewed ? 'Reviewed' : 'Needs review' }}</a></li>@endforeach</ul></div></noscript>
+</form>
+<script type="application/json" id="payroll-review-data">{!! json_encode(['runId' => $run->id, 'employees' => $reviewEmployees], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}</script>
+</section>

@@ -136,6 +136,14 @@ An optional `source_note` preserves a reviewed explanation of incomplete source 
 
 ## Salary payment batches and completing processing
 
+### Review employees in bulk
+
+On a draft payroll, **Review employees** jumps to a searchable register with 50 employees per page. Select individual employees, use the header checkbox for the current page, or choose **Select all matching employees** for every search/status match across pages. Selections persist when searching, filtering or paging; the selected count includes hidden selections, with a separate warning count outside the current filter. **Clear selection** starts again.
+
+Click **Mark reviewed** or **Mark needs review**, with an optional shared review note. This changes only the selected payroll review flags and records the operator, affected payroll item IDs, count, note and timestamp in the activity log. Existing employee calculation notes, earnings, deductions, payments and payroll status are preserved. Only draft runs accept changes; submission and manager/admin approval remain separate. Historical import reconciliation requirements continue to apply.
+
+Selection is submitted as one JSON field for up to 1,000 employees, avoiding PHP's input-variable limit. Signed versions bind each selection to the displayed payroll figures, including same-second edits. The payroll and selected rows are locked before validation/update; a stale, duplicated, tampered or wrong-payroll selection rejects the whole change. Nothing is automatically marked reviewed during deployment or UI verification.
+
 An approved payroll can be released in any number of salary batches. **Record salary batch** opens a searchable employee table with net salary, previously paid, remaining salary, and **Pay in this batch**. Enter actual amounts for the employees paid in that release; leave others blank. The table displays 50 rows at a time and retains amounts across searches/pages. **Fill balances on this page** affects only the current page. The batch total and selected-employee count include entries on other pages.
 
 Each recorded batch has a stable `PB-` payment ID, date, bank/cash account, reference, optional private receipt, and explicit employee allocations. The server recalculates the aggregate, validates each employee belongs to this payroll, and checks current remaining balances under the payroll lock. Duplicate requests, duplicate employees, overpayments, excessive precision, foreign banks and closed accounting periods are rejected transactionally. The submission uses a JSON field so large batches avoid PHP input-count truncation. This records a release already made externally; it does not initiate bank transfers.

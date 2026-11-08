@@ -128,6 +128,7 @@ Route::middleware(['auth', AuthorizeWorkspace::class, AtomicWorkspaceWrite::clas
         Route::get('/{id}/export', 'export')->whereNumber('id');
         Route::get('/{id}/employees/{item}', 'employee')->whereNumber(['id','item']);
         Route::post('/{id}/employees/{item}', 'update')->whereNumber(['id','item']);
+        Route::post('/{id}/bulk-review', 'bulkReview')->whereNumber('id');
         Route::get('/{id}/employees/{item}/payslip', 'payslip')->whereNumber(['id','item']);
         Route::post('/{id}/payments', 'payment')->whereNumber('id');
         Route::get('/{id}/salary-batches/create', 'salaryBatchForm')->whereNumber('id');

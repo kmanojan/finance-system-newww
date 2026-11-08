@@ -6,6 +6,7 @@ use App\Models\Employee;
 use App\Models\SalaryComponent;
 use App\Services\HistoricalPayrollImportService;
 use App\Services\PayrollCalculationService;
+use App\Services\PayrollReviewService;
 use App\Services\PayrollService;
 use App\Services\PayrollStatutoryService;
 use App\Services\SalaryAdvanceService;
@@ -168,6 +169,14 @@ class PayrollController extends Controller
     public function show(int $id)
     {
         return view('payroll.show', $this->runData($id) + $this->options());
+    }
+
+    public function bulkReview(Request $request, int $id)
+    {
+        $count = PayrollReviewService::update($id, $request->only('selection_json', 'reviewed', 'review_note'));
+        $label = $request->boolean('reviewed') ? 'reviewed' : 'needing review';
+
+        return redirect('/payroll/'.$id.'#employee-payroll')->with('success', $count.' employee'.($count === 1 ? '' : 's').' marked '.$label.'.');
     }
 
     public function employee(int $id, int $item)

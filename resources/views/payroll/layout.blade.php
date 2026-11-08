@@ -14,4 +14,5 @@
 @section('scripts')
 <script src="{{ asset('payroll.js') }}?v={{ filemtime(public_path('payroll.js')) }}" defer></script>
 <script src="{{ asset('payroll-create.js') }}?v={{ filemtime(public_path('payroll-create.js')) }}" defer></script>
+<script src="{{ asset('payroll-review.js') }}?v={{ filemtime(public_path('payroll-review.js')) }}" defer></script>
 @endsection
