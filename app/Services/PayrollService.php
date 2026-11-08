@@ -119,9 +119,8 @@ class PayrollService
                 $update['status'] = 'draft';
             } elseif ($action === 'approve') {
                 self::check($r->status === 'review', 'Submit this payroll for review before approval.');
-                self::check(! $items->contains(fn ($item) => isset($item->snapshot['historical_source'])
-                    && (($item->snapshot['historical_source']['loan'] ?? 0) > 0 || ($item->snapshot['historical_source']['advance'] ?? 0) > 0)),
-                    'Historical loan and salary advance deductions need opening-balance reconciliation before approval. These drafts are available for comparison and review.');
+                self::check(! $items->contains(fn ($item) => ($item->snapshot['historical_source']['loan'] ?? 0) > 0),
+                    'Historical employee loan deductions still need opening-balance reconciliation before approval. Salary advances are reconciled separately.');
                 foreach ($items as $i) {
                     Employee::whereKey($i->employee_id)->lockForUpdate()->first();
                     SalaryAdvanceService::allocate($r, $i);

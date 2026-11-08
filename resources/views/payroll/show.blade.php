@@ -12,6 +12,7 @@
 <section class="pr-panel"><div class="pr-statline"><div><dl><dt>Employees</dt><dd>{{ $items->count() }}</dd></dl></div><div><dl><dt>Gross salary · {{ $run->currency }}</dt><dd>{{ number_format($items->sum('gross_cents')/100,2) }}</dd></dl></div><div><dl><dt>Net salaries</dt><dd>{{ number_format($items->sum('net_cents')/100,2) }}</dd></dl></div><div><dl><dt>Total employer cost</dt><dd>{{ number_format($items->sum('cost_cents')/100,2) }}</dd></dl></div></div></section>
 <section class="pr-panel"><div class="pr-statline"><div><dl><dt>Salary paid · {{ $run->currency }}</dt><dd>{{ number_format($salaryPayment['paid']/100,2) }}</dd></dl></div><div><dl><dt>Salary remaining</dt><dd>{{ number_format($salaryPayment['balance']/100,2) }}</dd></dl></div><div><dl><dt>Salary payment status</dt><dd>{{ $salaryPayment['label'] }}</dd></dl></div></div></section>
 @include('payroll.source-comparison')
+@if($items->contains(fn ($item) => ($item->snapshot['historical_source']['advance'] ?? 0) > 0))<p class="pr-hint"><a href="/payroll/advances/import-history?company_id={{ $run->company_id }}">Reconcile historical salary advances</a> · Source-sheet advance deductions must have matching bank-payment records before approval. Separate employee loan deductions require their own reconciliation.</p>@endif
 @if($run->status === 'draft')
 @include('payroll.review-grid')
 @else

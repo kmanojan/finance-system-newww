@@ -13,6 +13,14 @@ Implemented on 2026-11-06. Entry point: **People → Monthly payroll** (`/payrol
 
 ## Advances and corrections
 
+### Imported historical salary advances
+
+**Salary advances → Import historical advances** lists advance deductions captured in imported salary-sheet snapshots. A manager/admin chooses the company bank account and records a month or all remaining months. For this historical import, the user instructed that each payment/claim is dated the 10th of its source salary month and recovered in that same payroll month. These are records of past transfers, not instructions to transfer money. References identify the salary sheet and row; they do not claim to be original bank transaction references.
+
+Each advance posts the existing advance-asset/bank journal and links uniquely to its source payroll item. Payroll amounts, review flags and run status remain unchanged. Retrying validates existing links without creating duplicate payments. A matching manually recorded advance stops the month for reconciliation rather than creating another. Each month is atomic; completed months remain saved if a later month fails.
+
+Historical advances are reserved for their source payroll, excluded from ordinary recovery proposals, and cannot be rescheduled. Approval recovers the exact linked advance even when months are approved out of order. Missing, reversed or changed source/payment records block approval. Voiding a payroll releases its recovery while keeping the historical advance reserved. The separate salary-sheet Loan column still requires employee-loan opening-balance reconciliation; it is not converted into salary advances.
+
 **Salary advances** records actual advance payments and the remaining employee receivable. Recoveries are entered on monthly payroll and take effect at approval. The recurring `SALARY_ADVANCE` component is deliberately excluded from payroll calculation to prevent untracked or duplicate recovery. An advance issued after payroll month end cannot fund that month's recovery.
 
 Payroll payments must be dated on or after the salary month's end. Earlier payments should be recorded as advances and recovered in the monthly run. Future payment dates are rejected.

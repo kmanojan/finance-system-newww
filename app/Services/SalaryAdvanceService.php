@@ -14,7 +14,10 @@ class SalaryAdvanceService
         return DB::table('payroll_payments as p')->where('p.kind', 'advance')->select('p.*')->selectSub(function ($q) {
             $q->from('payroll_advance_recoveries as a')->join('payroll_items as i', 'i.id', '=', 'a.payroll_item_id')->join('payroll_runs as r', 'r.id', '=', 'i.payroll_run_id')
                 ->whereColumn('a.payroll_payment_id', 'p.id')->whereIn('r.status', PayrollService::POSTED_STATUSES)->selectRaw('COALESCE(SUM(a.amount_cents), 0)');
-        }, 'recovered_cents');
+        }, 'recovered_cents')->selectSub(function ($q) {
+            $q->from('payroll_historical_advance_links as h')->join('payroll_items as hi', 'hi.id', '=', 'h.payroll_item_id')
+                ->whereColumn('h.payroll_payment_id', 'p.id')->select('hi.payroll_run_id')->limit(1);
+        }, 'historical_payroll_run_id');
     }
 
     public static function eligible(array $employees, int $company, string $currency, string $month, bool $scheduledOnly = false)
@@ -22,6 +25,7 @@ class SalaryAdvanceService
         $month = Carbon::parse($month)->startOfMonth();
 
         return self::payments()->where('p.status', 'posted')->whereIn('p.employee_id', $employees)->where('p.company_id', $company)->where('p.currency', $currency)
+            ->whereNotExists(fn ($q) => $q->selectRaw('1')->from('payroll_historical_advance_links as h')->whereColumn('h.payroll_payment_id', 'p.id'))
             ->where('p.paid_on', '<=', $month->copy()->endOfMonth()->toDateString())
             ->where(function ($q) use ($month, $scheduledOnly) {
                 $q->where('p.recovery_month', '<=', $month->toDateString());
@@ -58,6 +62,15 @@ class SalaryAdvanceService
     public static function allocate(object $run, object $item): void
     {
         $remaining = (int) $item->advance_cents;
+        if ((int) (HistoricalSalaryAdvanceService::source($item)['advance'] ?? 0) > 0) {
+            $payment = HistoricalSalaryAdvanceService::linkedPayment($run, $item);
+            if ((int) $payment->recovered_cents !== 0) {
+                throw ValidationException::withMessages(['advance' => 'This historical salary advance has already been recovered.']);
+            }
+            DB::table('payroll_advance_recoveries')->insert(['payroll_payment_id' => $payment->id, 'payroll_item_id' => $item->id, 'amount_cents' => $remaining, 'created_at' => now(), 'updated_at' => now()]);
+
+            return;
+        }
         $payments = self::eligible([$item->employee_id], $run->company_id, $run->currency, $run->month)[$item->employee_id] ?? collect();
         foreach ($payments as $payment) {
             $amount = min($remaining, $payment->remaining_cents);
@@ -76,6 +89,9 @@ class SalaryAdvanceService
         DB::transaction(function () use ($id, $month) {
             $p = DB::table('payroll_payments')->where('id', $id)->lockForUpdate()->first() ?? abort(404);
             abort_unless($p->kind === 'advance', 404);
+            if (DB::table('payroll_historical_advance_links')->where('payroll_payment_id', $id)->exists()) {
+                throw ValidationException::withMessages(['recovery_month' => 'Historical salary-sheet advances are reserved for their source payroll month.']);
+            }
             Employee::whereKey($p->employee_id)->lockForUpdate()->firstOrFail();
             $record = self::payments()->where('p.id', $id)->first();
             if ($p->status !== 'posted' || $record->recovered_cents > 0) {

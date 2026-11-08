@@ -120,6 +120,8 @@ Route::middleware(['auth', AuthorizeWorkspace::class, AtomicWorkspaceWrite::clas
         Route::post('/', 'store');
         Route::post('/preview', 'preview');
         Route::get('/advances', 'advances');
+        Route::get('/advances/import-history', 'historicalAdvances');
+        Route::post('/{id}/historical-advances', 'importHistoricalAdvances')->whereNumber('id');
         Route::post('/advances', 'storeAdvance');
         Route::post('/advances/{payment}/schedule', 'scheduleAdvance')->whereNumber('payment');
         Route::post('/payments/{payment}/reverse', 'reverse')->whereNumber('payment');

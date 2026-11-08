@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Employee;
 use App\Models\SalaryComponent;
 use App\Services\HistoricalPayrollImportService;
+use App\Services\HistoricalSalaryAdvanceService;
 use App\Services\PayrollCalculationService;
 use App\Services\PayrollReviewService;
 use App\Services\PayrollService;
@@ -291,6 +292,24 @@ class PayrollController extends Controller
         }
 
         return view('payroll.advances', $this->options() + ['employees' => Employee::orderBy('full_name')->get(), 'payments' => $payments, 'balances' => $balances]);
+    }
+
+    public function historicalAdvances(Request $request)
+    {
+        $request->validate(['company_id' => 'nullable|integer|exists:companies,id']);
+        $companyId = $request->integer('company_id') ?: DB::table('companies')->value('id');
+        $plan = HistoricalSalaryAdvanceService::plan($companyId);
+
+        return view('payroll.historical-advances', $this->options() + compact('plan', 'companyId'));
+    }
+
+    public function importHistoricalAdvances(Request $request, int $id)
+    {
+        abort_unless(in_array(strtolower($request->user()->role), ['admin', 'manager']), 403);
+        $data = $request->validate(['bank_account_id' => 'required|integer|exists:bank_accounts,id', 'version' => 'required|string|size:64']);
+        $result = HistoricalSalaryAdvanceService::import($id, $data['bank_account_id'], $data['version']);
+
+        return response()->json($result);
     }
 
     public function storeAdvance(Request $request)
