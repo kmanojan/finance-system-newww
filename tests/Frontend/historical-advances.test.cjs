@@ -19,6 +19,7 @@ function fixture({ failSecondOnce = false } = {}) {
     const states = months.map(() => new Element());
     const map = { bank, start, status, progress };
     const root = { querySelector(selector) {
+        if (selector === 'input[name="_token"]') return { value: 'csrf-test' };
         const match = selector.match(/data-history-month-status="(\d+)"/);
         return match ? states[Number(match[1]) - 1] : map[selector.match(/data-history-(.+)\]/)[1]];
     }, querySelectorAll() { return buttons; } };
@@ -28,7 +29,7 @@ function fixture({ failSecondOnce = false } = {}) {
         if (failSecondOnce && url.includes('/2/') && !failed) { failed = true; return { ok: false, json: async () => ({ errors: { source: ['Source changed.'] } }) }; }
         return { ok: true, json: async () => ({ created: url.includes('/1/') ? 2 : 1, existing: 0, total: 10000 }) };
     };
-    const document = { querySelector(selector) { return selector.includes('csrf-token') ? { content: 'csrf-test' } : selector.includes('recorded') ? recorded : root; }, getElementById() { return { textContent: JSON.stringify({ months }) }; } };
+    const document = { querySelector(selector) { return selector.includes('csrf-token') ? null : selector.includes('recorded') ? recorded : root; }, getElementById() { return { textContent: JSON.stringify({ months }) }; } };
     vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../../public/payroll-historical-advances.js'), 'utf8'), { document, fetch });
     return { bank, start, status, progress, recorded, buttons, requests, states };
 }

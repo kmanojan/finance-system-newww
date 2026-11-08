@@ -5,6 +5,7 @@
     const bank = root.querySelector('[data-history-bank]'), start = root.querySelector('[data-history-start]');
     const status = root.querySelector('[data-history-status]'), progress = root.querySelector('[data-history-progress]');
     const buttons = [...root.querySelectorAll('[data-history-run]')];
+    const csrf = root.querySelector('input[name="_token"]').value;
     let busy = false;
     const controls = () => {
         bank.disabled = busy;
@@ -22,7 +23,7 @@
             for (const month of queue) {
                 status.textContent = `Recording payroll #${month.id}. ${progress.value} of ${queue.length} months complete…`;
                 const response = await fetch(`/payroll/${month.id}/historical-advances`, { method: 'POST', credentials: 'same-origin',
-                    headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
+                    headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-TOKEN': csrf },
                     body: JSON.stringify({ bank_account_id: bankId, version: month.version }) });
                 const data = await response.json();
                 if (!response.ok) throw new Error(Object.values(data.errors || {}).flat()[0] || data.message || 'Unable to record this month.');

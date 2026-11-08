@@ -70,7 +70,8 @@ class HistoricalSalaryAdvanceTest extends TestCase
         $this->assertDatabaseCount('payroll_payments', 1);
         $this->assertDatabaseCount('transactions', 1);
         $this->assertDatabaseCount('journal_entries', 1);
-        $this->get('/payroll/advances/import-history?company_id=1')->assertOk()->assertSee('1 of 1')->assertSee('2025-01-10')->assertSee('20,000.00');
+        $this->get('/payroll/advances/import-history?company_id=1')->assertOk()->assertSee('1 of 1')->assertSee('2025-01-10')->assertSee('20,000.00')
+            ->assertSee('name="_token"', false)->assertSee('value="'.csrf_token().'"', false);
     }
 
     public function test_recovery_uses_its_exact_source_month_even_when_approved_out_of_order_and_is_not_proposed_again(): void
