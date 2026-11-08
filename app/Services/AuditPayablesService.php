@@ -39,7 +39,7 @@ class AuditPayablesService
             if ($date && $date > $asOf) {
                 continue;
             }
-            $code = $loan->loan_code ?: 'LN-'.$loan->id;
+            $code = ($loan->loan_code ?: 'LN-'.$loan->id).' (#'.$loan->id.')';
             $currency = $loan->currency;
             $included = (bool) $date && $loan->status !== 'pending';
             $reason = ! $date ? 'Borrowing date missing; excluded from totals' : ($loan->status === 'pending' ? 'Not activated; excluded from totals' : '');

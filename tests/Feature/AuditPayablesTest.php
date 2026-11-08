@@ -190,7 +190,7 @@ class AuditPayablesTest extends TestCase
     public function test_salary_privacy_date_validation_and_exports_share_the_same_cutoff(): void
     {
         $this->createRun();
-        $this->loan(['loan_code' => 'AUD-0001', 'lender_name' => 'Audit Export Lender']);
+        $loanId = $this->loan(['loan_code' => 'AUD-0001', 'lender_name' => 'Audit Export Lender']);
         foreach (['viewer', 'employee'] as $role) {
             $this->actingAs(User::factory()->create(['role' => $role, 'is_active' => true]));
             foreach (['/reports/audit-payables', '/reports/export/audit-payables/pdf', '/reports/export/audit-payables/xlsx'] as $path) {
@@ -211,7 +211,7 @@ class AuditPayablesTest extends TestCase
         $xml = $zip->getFromName('xl/worksheets/sheet1.xml');
         $this->assertStringContainsString('2026-02-28', $xml);
         $this->assertStringContainsString('Review Employee', $xml);
-        $this->assertStringContainsString('AUD-0001 Audit Export Lender', $xml);
+        $this->assertStringContainsString('AUD-0001 (#'.$loanId.') Audit Export Lender', $xml);
         $this->assertStringContainsString('Unapproved payrolls', $xml);
         $this->assertStringContainsString('<c t="n" s="1"><v>26600.00</v></c>', $xml);
         $zip->close();
@@ -231,5 +231,20 @@ class AuditPayablesTest extends TestCase
         $this->assertStringStartsWith('%PDF-', $pdf);
         $this->assertGreaterThan(50000, strlen($pdf));
         $this->assertDatabaseCount('payroll_items', 1);
+    }
+
+    public function test_duplicate_saved_loan_codes_have_distinct_references_in_every_schedule(): void
+    {
+        $first = $this->loan(['loan_code' => 'DUP-001']);
+        $second = $this->loan(['loan_code' => 'DUP-001']);
+        foreach ([$first, $second] as $id) {
+            DB::table('loan_interest_schedule')->insert(['loan_id' => $id, 'due_date' => '2026-01-31', 'interest_amount' => 1000, 'paid_amount' => 0, 'status' => 'pending']);
+        }
+        $report = AuditPayablesService::build('2026-02-28');
+        $expected = ['DUP-001 (#'.$first.')', 'DUP-001 (#'.$second.')'];
+        $this->assertSame($expected, array_column($report['loans'], 'code'));
+        $this->assertSame($expected, array_column($report['interestSchedule'], 'code'));
+        $this->assertSame($expected, array_column($report['loanActivity'], 'code'));
+        $this->assertSame(20200000, $report['summary']['LKR']['total']);
     }
 }

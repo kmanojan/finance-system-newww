@@ -7,7 +7,7 @@ The report reads source records without approving payroll, posting journals, rec
 ## Included schedules
 
 1. Recorded payables by currency: outstanding principal, scheduled interest due by cutoff, approved net salaries, EPF, ETF, APIT and other payroll obligations.
-2. Every loan borrowed by cutoff, including fully repaid loans. Original principal, additional draws, principal repayments, interest payments, remaining balances and dated payment references are separate. Pending/unactivated loans and loans without borrowing dates appear for review but are excluded from totals.
+2. Every loan borrowed by cutoff, including fully repaid loans. Saved loan codes are accompanied by internal record IDs in all schedules, so duplicate codes cannot merge separate borrowings. Original principal, additional draws, principal repayments, interest payments, remaining balances and dated payment references are separate. Pending/unactivated loans and loans without borrowing dates appear for review but are excluded from totals.
 3. Approved payroll monthly reconciliation and unpaid salary by employee. Employee portions of each salary release support partial payments and multiple batches, even when the employee has no linked party.
 4. Statutory obligations by payroll month, with preparation, payment and document submission shown independently. EPF includes employee and employer portions. A document submission does not reduce the payable.
 5. Payroll payment and reversal history. Payments reversed after cutoff still count at cutoff. Payroll voided after cutoff remains included until its dated reversal takes effect.
