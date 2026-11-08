@@ -13,7 +13,7 @@ class Element {
     fire(type, extra = {}) { const event = { prevented: false, preventDefault() { this.prevented = true; }, ...extra }; this.events[type]?.(event); return event; }
 }
 function fixture(count = 1000) {
-    const elements = Object.fromEntries(['search','filter','rows','page','prev','next','save','reset','count','message','clear','all','range','selection'].map(key => [key, new Element()]));
+    const elements = Object.fromEntries(['search','filter','rows','page','prev','next','save','reset','count','message','clear','all','range','selection','action'].map(key => [key, new Element()]));
     elements.filter.value = 'all';
     const form = new Element('form');
     form.querySelector = selector => elements[selector.match(/data-review-(.+)\]/)[1]];
@@ -39,6 +39,9 @@ test('review selection survives pagination and search across 1,000 employees', (
     assert.equal(f.elements.count.textContent, '3 employees selected');
     assert.equal(f.form.fire('submit').prevented, false);
     assert.deepEqual(JSON.parse(f.elements.selection.value), [{ item_id: 1, version: 'version-1' }, { item_id: 51, version: 'version-51' }, { item_id: 1000, version: 'version-1000' }]);
+    assert.equal(f.elements.action.value, '1');
+    f.form.fire('submit', { submitter: { dataset: { reviewValue: '0' } } });
+    assert.equal(f.elements.action.value, '0');
 });
 
 test('select page and all matching employees have distinct scopes and can be cleared', () => {

@@ -121,7 +121,8 @@ class PayrollBulkReviewTest extends TestCase
     public function test_viewers_are_blocked_and_reviewing_does_not_bypass_historical_deduction_reconciliation(): void
     {
         $run = $this->createRun();
-        $this->get('/payroll/'.$run)->assertOk()->assertSee('data-payroll-review', false)->assertSee('Shared review note');
+        $this->get('/payroll/'.$run)->assertOk()->assertSee('data-payroll-review', false)->assertSee('Shared review note')
+            ->assertSee('name="reviewed" value="1" data-review-action', false)->assertSee('data-review-value="0" data-review-reset', false);
         $payload = $this->payload($run);
         $this->actingAs(User::factory()->create(['role' => 'viewer', 'is_active' => true]));
         $this->postJson('/payroll/'.$run.'/bulk-review', $payload)->assertForbidden();

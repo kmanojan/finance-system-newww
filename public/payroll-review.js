@@ -64,6 +64,8 @@
     find('clear').addEventListener('click', () => { selected.clear(); render(); });
     form.addEventListener('submit', event => {
         if (!selected.size) { event.preventDefault(); return; }
+        // The shared loading handler disables submit buttons; keep the action in a hidden field.
+        find('action').value = event.submitter?.dataset.reviewValue === '0' ? '0' : '1';
         find('selection').value = JSON.stringify(employees.filter(employee => selected.has(employee.id)).map(employee => ({ item_id: employee.id, version: employee.version })));
     });
     render();
