@@ -39,7 +39,11 @@ class ReportExportController extends Controller
                 }
                 $cells = [];
                 foreach ($xpath->query('./th|./td', $node) as $cell) {
-                    $value = preg_replace('/\s+/u', ' ', trim($cell->textContent));
+                    $parts = [];
+                    foreach ($cell->childNodes as $child) {
+                        $parts[] = trim($child->textContent);
+                    }
+                    $value = preg_replace('/\s+/u', ' ', trim(implode(' ', $parts)));
                     $numeric = $cell->nodeName === 'td' && str_contains($cell->getAttribute('class'), 'num')
                         && preg_match('/^-?\d[\d,]*(?:\.\d{2})?$/', $value);
                     $cells[] = $numeric ? ['number' => str_replace(',', '', $value), 'money' => str_contains($value, '.')] : $value;

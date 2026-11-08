@@ -190,6 +190,7 @@ class AuditPayablesTest extends TestCase
     public function test_salary_privacy_date_validation_and_exports_share_the_same_cutoff(): void
     {
         $this->createRun();
+        $this->loan(['loan_code' => 'AUD-0001', 'lender_name' => 'Audit Export Lender']);
         foreach (['viewer', 'employee'] as $role) {
             $this->actingAs(User::factory()->create(['role' => $role, 'is_active' => true]));
             foreach (['/reports/audit-payables', '/reports/export/audit-payables/pdf', '/reports/export/audit-payables/xlsx'] as $path) {
@@ -210,6 +211,7 @@ class AuditPayablesTest extends TestCase
         $xml = $zip->getFromName('xl/worksheets/sheet1.xml');
         $this->assertStringContainsString('2026-02-28', $xml);
         $this->assertStringContainsString('Review Employee', $xml);
+        $this->assertStringContainsString('AUD-0001 Audit Export Lender', $xml);
         $this->assertStringContainsString('Unapproved payrolls', $xml);
         $this->assertStringContainsString('<c t="n" s="1"><v>26600.00</v></c>', $xml);
         $zip->close();
