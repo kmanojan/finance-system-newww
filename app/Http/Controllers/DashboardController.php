@@ -239,9 +239,7 @@ class DashboardController extends Controller
         // Rollups
         $companies = DB::table('companies')->get();
         $departments = DB::table('departments')->get();
-        if ($companyId) {
-            $departments = $departments->where('company_id', $companyId);
-        }
+        // Keep every department available so switching company can update options without a reload.
 
         // Today's Payment Milestones
         $todayMilestones = DB::table('payment_milestones')

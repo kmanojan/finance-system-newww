@@ -72,6 +72,23 @@ class FinanceIntegrityTest extends TestCase
         $this->get('/dashboard')->assertOk();
     }
 
+    public function test_dashboard_keeps_company_switching_options_and_historical_due_labels(): void
+    {
+        $this->travelTo(\Carbon\Carbon::parse('2026-11-09'));
+        DB::table('companies')->insert(['id' => 2, 'name' => 'Other company', 'base_currency' => 'LKR']);
+        DB::table('departments')->insert(['id' => 2, 'company_id' => 2, 'name' => 'Other department']);
+        $this->invoice(['invoice_no' => 'HISTORIC', 'issue_date' => '2026-10-01', 'due_date' => '2026-10-30']);
+        $this->invoice(['invoice_no' => 'OTHER-SCOPE', 'department_id' => 2]);
+
+        $response = $this->get('/dashboard?date_range=custom&start_date=2026-10-01&end_date=2026-10-31&company_id=1');
+        $response->assertOk()->assertViewHas('departments', fn ($rows) => $rows->pluck('id')->all() === [1, 2])
+            ->assertViewHas('outstandingReceivables', 10000)
+            ->assertSee('1 day overdue')->assertDontSee('10 days overdue')
+            ->assertSee('/invoices?search=HISTORIC', false)
+            ->assertSee('/reports/cash-flow?from=2026-10-01&amp;to=2026-10-31&amp;company_id=1', false);
+        $this->travelBack();
+    }
+
     public function test_viewer_cannot_escalate_privileges_or_write_money(): void
     {
         $this->actingAs(User::factory()->create(['role' => 'viewer', 'is_active' => true]));

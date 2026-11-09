@@ -1,5 +1,24 @@
 # Finance Dashboard (Main Overview Screen)
 
+## Dashboard redesign (9 November 2026)
+
+The financial overview uses the shared Apptimus type, colour, action, balance and radius tokens, with scoped `dashboard.css` and `dashboard.js` assets versioned by content hash. Taste direction: achromatic-ledger composition, seed 733794221, retaining the existing palette, typography and compact navigation. The primary question is “What is our cash position, and what needs attention?”
+
+- The summary leads with cash at bank as of the selected end date, outstanding receivables at period end, and net cash movement for the selected period. Net cash movement is not labelled profit.
+- Cash received and spent are shown beside a grouped bar chart, with Compare / Received / Spent controls and an exact-value data table. Reduced-motion preferences are respected. If Chart.js is unavailable, the same figures remain available in the automatically opened table. Zero activity has an explicit empty state.
+- Collections list up to five unpaid invoices with client, reference, due date, outstanding amount and due-status text. Each row searches its invoice reference. Due status uses the earlier of today and the reporting end date; undated invoices say “No due date.”
+- Today's work retains approvals, reminders, milestones and over-budget counts, plus direct links to monthly payroll and EPF/ETF/tax payments. Current commitments remain below the period-based panels and explicitly state their all-company scope.
+- Period presets, custom dates, company and department filters remain available. Custom dates are enabled only when selected; switching company clears an incompatible department without losing other companies' options. Filters start collapsed on phones unless a filter is already applied.
+- Cash-flow, operating-expense and bank-reconciliation report links retain supported date/company/department parameters. Operating expenses exclude financing; the dashboard spending list includes all cash outflows. The receivables summary opens the invoice register; individual rows search by reference.
+- On phones, the cash balance spans the width, secondary figures sit below, work links move above the chart, and the exact-value table scrolls within its panel. Long client names and large amounts wrap without page overflow. Light/dark styles use existing theme tokens and focus indicators.
+
+No schema migration or financial posting changes. Validation: 29 finance tests / 165 assertions, production asset build, Taste source lint, browser controls and populated/empty states, company/date switching, light/dark themes, and 320/390/768/1024/1440-width geometry checks. No screenshots were generated.
+
+
+## Original product specification (planned scope)
+
+The sections below retain the original roadmap. They do not describe every currently implemented control: tag/currency controls, extra charts, sticky/reorderable tiles, embedded reminder/transaction tables and dashboard export remain planned. The current UI and actual filter boundaries are described above.
+
 A single landing screen giving a cross-company snapshot of cash position, income/expense trends, budgets, invoices, payments, and reminders — combining **tiles (KPIs)**, **charts**, and **tables** so nothing important requires digging into a module to notice.
 
 Supports the standard cross-cutting filters: **Date Range**, **Company**, **Department**, and **Tag** — every tile/chart/table on this page reacts to the same filter bar at the top.
