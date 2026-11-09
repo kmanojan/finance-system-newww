@@ -15,7 +15,7 @@ class Element {
     fire(type) { const event = { prevented: false, preventDefault() { this.prevented = true; } }; event.pending = this.events[type]?.(event); return event; }
 }
 function fixture(count = 1000, response = { ok: true, json: async () => ({ redirect: '/payroll/1/salary-batches/9' }) }) {
-    const selectors = ['entries', 'rows', 'search', 'prev', 'next', 'save', 'message', 'count', 'total', 'range', 'fill', 'clear'];
+    const selectors = ['entries', 'rows', 'search', 'prev', 'next', 'save', 'message', 'count', 'total', 'selected-total', 'after', 'range', 'fill', 'clear'];
     const elements = Object.fromEntries(selectors.map(key => [key, new Element()]));
     elements.entries.value = '[]';
     const form = new Element('form');
@@ -55,6 +55,8 @@ test('employee amounts survive pagination and search across 1,000 employees', ()
     f.setAmount('0.01');
     assert.equal(f.elements.count.textContent, '3 employees selected');
     assert.equal(f.elements.total.textContent, 'LKR 30,000.01');
+    assert.equal(f.elements['selected-total'].textContent, '30,000.01');
+    assert.equal(f.elements.after.textContent, '29,969,999.99');
     const event = f.form.fire('submit');
     assert.equal(event.prevented, true); // AJAX owns submission and displays errors in place.
     assert.deepEqual(JSON.parse(f.elements.entries.value), [{ item_id: 1, amount: '20000.00' }, { item_id: 51, amount: '10000.00' }, { item_id: 1000, amount: '0.01' }]);
@@ -129,4 +131,24 @@ test('bank options are not mistaken for company selectors', () => {
     vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../../public/payroll.js'), 'utf8'), { document });
     assert.equal(bank.value, '1');
     assert.ok(options.every(option => !option.hidden && !option.disabled));
+});
+
+test('checkbox selection fills balances, clears amounts and updates remaining preview', () => {
+    const f = fixture(2);
+    const checkbox = f.elements.rows.children[0].children[0].children[0].children[0].children[0];
+    assert.equal(f.elements.after.textContent, '60,000.00');
+    checkbox.checked = true; checkbox.fire('change');
+    assert.equal(f.input().value, '30000.00');
+    assert.equal(f.elements['selected-total'].textContent, '30,000.00');
+    assert.equal(f.elements.after.textContent, '30,000.00');
+    f.setAmount('10000');
+    assert.equal(checkbox.checked, true);
+    assert.equal(f.elements.after.textContent, '50,000.00');
+    f.setAmount('30000.01');
+    assert.equal(f.elements.after.textContent, '—');
+    assert.equal(f.elements.total.textContent, 'Check amounts');
+    checkbox.checked = false; checkbox.fire('change');
+    assert.equal(f.input().value, '');
+    assert.equal(f.elements.after.textContent, '60,000.00');
+    assert.equal(f.elements.save.disabled, true);
 });

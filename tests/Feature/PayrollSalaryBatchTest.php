@@ -103,6 +103,9 @@ class PayrollSalaryBatchTest extends TestCase
         $this->assertSame(0, PayrollPayablesService::items()->firstWhere('employee_id', $this->employees[0]->id)->balance_cents);
         $pending = $this->get('/payroll/'.$run.'/salary-batches/create')->assertOk();
         $this->assertSame([$items[1]->id, $items[2]->id], $pending->viewData('batchEmployees')->pluck('id')->all());
+        $this->assertSame(6500000, $pending->viewData('salaryPayment')['due']);
+        $this->assertSame(3500000, $pending->viewData('salaryPayment')['paid']);
+        $pending->assertSee('65,000.00')->assertSee('35,000.00')->assertSee('Pending after this batch');
         $this->assertSame([1500000, 1500000], $pending->viewData('batchEmployees')->pluck('balance')->all());
         $paidEmployee = $this->get('/payroll/'.$run.'/salary-batches/create?employee_id='.$this->employees[0]->id)->assertOk();
         $this->assertSame('', $paidEmployee->viewData('initialBatchSearch'));

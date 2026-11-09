@@ -95,3 +95,9 @@ Use the Employees submenu label **EPF, ETF & tax**. Keep pending monthly obligat
 ### Loan settlement reference editing
 
 Reuse the rich-editor component for settlement notes, preserving shared light/dark tokens, formatting controls and slash search. Loan flow uses the existing card design for referenced transactions, dashed lines for context and solid lines for actual funding allocations. Keep notes in their table column and guidance behind the existing help icon. Flow counts include both referenced transactions and related loans. Use content hashes for the flow CSS/JavaScript assets.
+
+### Salary batch workspace and live totals
+
+The salary batch form shows whole-payroll net amount, already-paid salaries and pending balance, including employees whose salaries are fully paid. Only employees with outstanding salary appear in the selectable table. Selecting an employee fills their remaining balance; entering a smaller positive amount records a partial release. Selected payment amount and pending-after-batch preview update across search and all 50-row pages. Invalid amounts suppress the preview and block recording. Select this page affects the current filtered page; Clear selection resets the whole batch.
+
+The layout uses the existing finance type and theme tokens with a shared totals strip, fixed employee column, bounded scrolling table, larger amount inputs and a separate payment-details section. Light/dark and 1440/768/390/320 layouts were checked using browser DOM geometry without screenshots. The design-taste app direction was Achromatic ledger (seed 850163138), adapted to retain the requested existing brand; its inset row marker indicates selection rather than elevation. The main question is how much this release pays and what remains payable. No new financial posting behavior is introduced.

@@ -28,13 +28,16 @@
     const pageEmployees = () => filtered().slice(page * pageSize, (page + 1) * pageSize);
     const summary = () => {
         let total = 0, count = 0, invalid = 0;
+        const outstanding = employees.reduce((sum, employee) => sum + employee.balance, 0);
         entries.forEach((value, id) => {
             const amount = cents(value), employee = byId.get(id);
             if (amount === null || amount > employee.balance || amount > 99999999999) invalid++;
             else if (amount > 0) { total += amount; count++; }
         });
         form.querySelector('[data-batch-count]').textContent = `${count} employee${count === 1 ? '' : 's'} selected`;
-        form.querySelector('[data-batch-total]').textContent = `LKR ${money(total)}`;
+        form.querySelector('[data-batch-total]').textContent = invalid ? 'Check amounts' : `LKR ${money(total)}`;
+        form.querySelector('[data-batch-selected-total]').textContent = invalid ? 'Check amounts' : money(total);
+        form.querySelector('[data-batch-after]').textContent = invalid ? '—' : money(outstanding - total);
         save.disabled = submitting || invalid > 0 || total <= 0 || total > 99999999999;
         message.textContent = invalid ? `${invalid} amount${invalid === 1 ? '' : 's'} must be corrected. Use up to two decimals and stay within each employee’s remaining salary.` : total > 99999999999 ? 'The batch exceeds the maximum total of LKR 999,999,999.99.' : 'Only the entered amounts will be recorded. Other employees and unpaid balances stay payable.';
     };
@@ -47,7 +50,12 @@
             const identity = document.createElement('td');
             const name = document.createElement('strong'); name.textContent = employee.name;
             const code = document.createElement('small'); code.textContent = employee.code || '—';
-            identity.append(name, code); row.append(identity);
+            const person = document.createElement('div'); person.className = 'pr-batch-person';
+            const toggleLabel = document.createElement('label'); toggleLabel.className = 'pr-batch-select';
+            const toggle = document.createElement('input'); toggle.type = 'checkbox'; toggle.setAttribute('aria-label', `Select ${employee.name}`);
+            toggleLabel.append(toggle);
+            const personText = document.createElement('span'); personText.append(name, code); person.append(toggleLabel, personText);
+            identity.append(person); row.append(identity);
             [employee.net, employee.paid, employee.balance].forEach(value => { const cell = document.createElement('td'); cell.className = 'pr-number'; cell.textContent = money(value); row.append(cell); });
             const cell = document.createElement('td'); cell.className = 'pr-number';
             const input = document.createElement('input');
@@ -55,8 +63,9 @@
             input.className = 'pr-batch-amount'; input.setAttribute('aria-label', `Pay in this batch for ${employee.name}`);
             input.value = entries.get(employee.id) || '';
             const after = document.createElement('small');
-            const update = () => { const value = cents(input.value); const invalid = value === null || value > employee.balance || value > 99999999999; input.setAttribute('aria-invalid', String(invalid)); after.textContent = invalid ? `Maximum ${money(employee.balance)}` : value > 0 ? `After batch: ${money(employee.balance - value)}` : ''; };
+            const update = () => { const value = cents(input.value); const invalid = value === null || value > employee.balance || value > 99999999999; input.setAttribute('aria-invalid', String(invalid)); toggle.checked = !!input.value.trim() && value !== 0; row.setAttribute('data-selected', String(toggle.checked)); after.textContent = invalid ? `Maximum ${money(employee.balance)}` : value > 0 ? `After batch: ${money(employee.balance - value)}` : ''; };
             input.addEventListener('input', () => { if (input.value.trim()) entries.set(employee.id, input.value); else entries.delete(employee.id); update(); summary(); });
+            toggle.addEventListener('change', () => { if (toggle.checked) entries.set(employee.id, (employee.balance / 100).toFixed(2)); else entries.delete(employee.id); input.value = entries.get(employee.id) || ''; update(); summary(); });
             update(); cell.append(input, after); row.append(cell); rows.append(row);
         });
         if (!matches.length) { const row = document.createElement('tr'); const cell = document.createElement('td'); cell.colSpan = 5; cell.textContent = 'No pending employees match this search.'; row.append(cell); rows.append(row); }
