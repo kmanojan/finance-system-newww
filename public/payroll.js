@@ -2,7 +2,7 @@
     document.querySelectorAll('[data-confirm]').forEach(form => form.addEventListener('submit', event => {
         if (!window.confirm(form.dataset.confirm)) event.preventDefault();
     }));
-    document.querySelectorAll('[data-company]').forEach(company => {
+    document.querySelectorAll('select[data-company]').forEach(company => {
         const form = company.closest('form');
         const update = () => {
             form.querySelectorAll('[data-department], [data-bank]').forEach(select => {

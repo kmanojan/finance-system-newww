@@ -13,8 +13,8 @@
 <noscript><div class="pr-body">Enable JavaScript to select employee amounts. You can also record an individual salary payment from the payroll page.</div></noscript>
 </section>
 <section class="pr-panel"><div class="pr-panel-head"><h2>Release details</h2><strong class="pr-number" data-batch-total>{{ $run->currency }} 0.00</strong></div><div class="pr-body pr-form-grid">
-@include('payroll.payment-fields', ['paymentCompany' => $run->company_id, 'paymentCurrency' => $run->currency, 'hideAmount' => true])
-</div><div class="pr-footer"><button class="pr-btn pr-btn-primary" data-batch-save disabled>Record salary batch</button><a class="pr-btn" href="/payroll/{{ $run->id }}">Cancel</a><p class="pr-hint" role="status" data-batch-message>Enter the payments made in this release. This records a completed payment; it does not send money.</p></div></section>
+@include('payroll.payment-fields', ['paymentCompany' => $run->company_id, 'paymentCurrency' => $run->currency, 'hideAmount' => true, 'paymentEarliest' => \Carbon\Carbon::parse($run->month)->startOfMonth()->toDateString()])
+</div><div class="pr-footer"><button type="submit" class="pr-btn pr-btn-primary" data-batch-save data-no-spinner disabled>Record salary batch</button><a class="pr-btn" href="/payroll/{{ $run->id }}">Cancel</a><p class="pr-hint" role="status" aria-live="polite" tabindex="-1" data-batch-message>Enter the payments made in this release. This records a completed payment; it does not send money.</p></div></section>
 </form>
 <script id="salary-batch-data" type="application/json">@json($batchEmployees)</script>
 <script src="{{ asset('payroll-batch.js') }}?v={{ filemtime(public_path('payroll-batch.js')) }}" defer></script>

@@ -11,6 +11,7 @@
     const previous = form.querySelector('[data-batch-prev]'), next = form.querySelector('[data-batch-next]');
     const save = form.querySelector('[data-batch-save]'), message = form.querySelector('[data-batch-message]');
     let page = 0;
+    let submitting = false;
     const pageSize = 50;
     const money = cents => (cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const cents = value => {
@@ -34,7 +35,7 @@
         });
         form.querySelector('[data-batch-count]').textContent = `${count} employee${count === 1 ? '' : 's'} selected`;
         form.querySelector('[data-batch-total]').textContent = `LKR ${money(total)}`;
-        save.disabled = invalid > 0 || total <= 0 || total > 99999999999;
+        save.disabled = submitting || invalid > 0 || total <= 0 || total > 99999999999;
         message.textContent = invalid ? `${invalid} amount${invalid === 1 ? '' : 's'} must be corrected. Use up to two decimals and stay within each employee’s remaining salary.` : total > 99999999999 ? 'The batch exceeds the maximum total of LKR 999,999,999.99.' : 'Only the entered amounts will be recorded. Other employees and unpaid balances stay payable.';
     };
     const render = () => {
@@ -66,11 +67,34 @@
     previous.addEventListener('click', () => { page--; render(); }); next.addEventListener('click', () => { page++; render(); });
     form.querySelector('[data-batch-fill]').addEventListener('click', () => { pageEmployees().filter(employee => employee.balance > 0).forEach(employee => entries.set(employee.id, (employee.balance / 100).toFixed(2))); render(); });
     form.querySelector('[data-batch-clear]').addEventListener('click', () => { entries.clear(); render(); });
-    form.addEventListener('submit', event => {
+    form.addEventListener('invalid', () => { message.textContent = 'Check the highlighted payment field before recording this batch.'; }, true);
+    form.addEventListener('submit', async event => {
+        event.preventDefault();
+        if (submitting) return;
         summary();
-        if (save.disabled) { event.preventDefault(); message.focus(); return; }
+        if (save.disabled) { message.focus(); return; }
         hidden.value = JSON.stringify([...entries].filter(([, value]) => cents(value) > 0).map(([id, value]) => ({ item_id: id, amount: value.trim() })));
+        const originalLabel = save.textContent;
+        submitting = true;
         save.disabled = true;
+        save.textContent = 'Recording batch…';
+        message.textContent = 'Saving this salary batch. Please wait.';
+        try {
+            const response = await fetch(form.action, { method: 'POST', body: new FormData(form), credentials: 'same-origin', headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                const validation = Object.values(data.errors || {}).flat().join(' ');
+                throw new Error(response.status === 419 ? 'Your session expired. Refresh this page and try again.' : validation || 'The batch could not be saved. Check the payroll payment history before retrying.');
+            }
+            if (!data.redirect) throw new Error('The save response was incomplete. Check the payroll payment history before retrying.');
+            window.location.assign(data.redirect);
+        } catch (error) {
+            submitting = false;
+            save.textContent = originalLabel;
+            summary();
+            message.textContent = error instanceof TypeError ? 'The connection was interrupted. Check the payroll payment history before retrying.' : error.message;
+            message.focus();
+        }
     });
     window.addEventListener('pageshow', event => {
         if (event.persisted) window.location.reload();

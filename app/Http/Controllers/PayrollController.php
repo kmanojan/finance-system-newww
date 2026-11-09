@@ -286,6 +286,10 @@ class PayrollController extends Controller
         $payment = PayrollService::salaryBatch($id, $data);
         $this->receipt($request, $payment);
 
+        if ($request->expectsJson()) {
+            return response()->json(['redirect' => '/payroll/'.$id.'/salary-batches/'.$payment]);
+        }
+
         return redirect('/payroll/'.$id.'/salary-batches/'.$payment)->with('success', 'Salary batch recorded. Each employee’s remaining salary has been updated.');
     }
 

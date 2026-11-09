@@ -192,7 +192,8 @@ class PayrollTest extends TestCase
         $this->approve($run);
         DB::table('bank_accounts')->insert(['id' => 2, 'company_id' => 2, 'bank_name' => 'Wrong bank', 'account_no' => '22', 'currency' => 'LKR']);
         $this->pay($run, 'salary', 1000, ['bank_account_id' => 2])->assertUnprocessable();
-        $this->pay($run, 'salary', 1000, ['paid_on' => '2026-10-30'])->assertUnprocessable();
+        $this->pay($run, 'salary', 1000, ['paid_on' => '2026-09-30'])->assertUnprocessable();
+        $this->pay($run, 'epf', 1000, ['paid_on' => '2026-10-30'])->assertUnprocessable();
         $this->assertDatabaseCount('transactions', 0);
         $year = DB::table('financial_years')->insertGetId(['company_id' => 1, 'title' => '2026', 'start_date' => '2026-01-01', 'end_date' => '2026-12-31']);
         DB::table('fiscal_periods')->insert(['financial_year_id' => $year, 'period_name' => 'November', 'start_date' => '2026-11-01', 'end_date' => '2026-11-30', 'status' => 'hard_closed']);

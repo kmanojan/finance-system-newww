@@ -185,7 +185,8 @@ class PayrollService
         return DB::transaction(function () use ($runId, $data) {
             $r = DB::table('payroll_runs')->where('id', $runId)->lockForUpdate()->first() ?? abort(404);
             self::check(in_array($r->status, self::POSTED_STATUSES), 'Approve payroll before recording a payment.');
-            self::check($data['paid_on'] >= Carbon::parse($r->month)->endOfMonth()->toDateString(), 'Payroll payments must be on or after month end. Record earlier salary payments as employee advances.');
+            $earliestPayment = $data['kind'] === 'salary' ? Carbon::parse($r->month)->startOfMonth() : Carbon::parse($r->month)->endOfMonth();
+            self::check($data['paid_on'] >= $earliestPayment->toDateString(), $data['kind'] === 'salary' ? 'Salary payments cannot predate the payroll month. Record earlier payments as employee advances.' : 'Statutory payments must be on or after payroll month end.');
             self::check(! DB::table('payroll_payments')->where('request_key', $data['request_key'])->exists(), 'This payment was already recorded. Refresh the page.');
             $items = self::items($runId);
             if (! empty($data['item_id'])) {
@@ -225,7 +226,7 @@ class PayrollService
         return DB::transaction(function () use ($runId, $data) {
             $r = DB::table('payroll_runs')->where('id', $runId)->lockForUpdate()->first() ?? abort(404);
             self::check(in_array($r->status, self::POSTED_STATUSES), 'Approve payroll before recording a payment batch.');
-            self::check($data['paid_on'] >= Carbon::parse($r->month)->endOfMonth()->toDateString(), 'Payroll payments must be on or after month end. Record earlier salary payments as employee advances.');
+            self::check($data['paid_on'] >= Carbon::parse($r->month)->startOfMonth()->toDateString(), 'Salary payments cannot predate the payroll month. Record earlier payments as employee advances.');
             self::check(! DB::table('payroll_payments')->where('request_key', $data['request_key'])->exists(), 'This payment was already recorded. Refresh the page.');
             $items = self::items($runId)->keyBy('id');
             $allocations = [];
