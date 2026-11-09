@@ -247,7 +247,7 @@ class AuditPayablesTest extends TestCase
             $this->assertSame($expected[$sheet->getAttribute('data-currency')], $total);
             $this->assertSame($total, $parts);
         }
-        $this->assertCount(6, $xpath->query('//details[contains(@class, "audit-disclosure") and not(@open)]'));
+        $this->assertCount(5, $xpath->query('//details[contains(@class, "audit-disclosure") and not(@open)]'));
         $ids = [];
         foreach ($xpath->query('//*[@id]') as $node) {
             $ids[] = $node->getAttribute('id');
@@ -276,8 +276,69 @@ class AuditPayablesTest extends TestCase
         DB::table('loan_principal_records')->insert(['loan_id' => $loan, 'record_type' => 'repayment', 'amount' => 100000, 'record_date' => '2026-02-01']);
         $this->get('/reports/audit-payables?as_of=2026-02-28')->assertOk()
             ->assertSee('data-audit-total="0"', false)
-            ->assertSee('Settled by recorded payments')
+            ->assertDontSee('Settled by recorded payments')->assertSee('No remaining loan balances')
             ->assertDontSee('No confirmed balances for this date');
+    }
+
+    public function test_remaining_view_omits_paid_items_but_preserves_totals_and_historical_cutoff(): void
+    {
+        $settled = $this->loan(['loan_code' => 'PAID-LOAN', 'status' => 'settled']);
+        $partial = $this->loan(['loan_code' => 'PARTIAL-LOAN']);
+        foreach ([$settled => 100000, $partial => 20000] as $id => $amount) {
+            DB::table('loan_principal_records')->insert(['loan_id' => $id, 'record_type' => 'repayment', 'amount' => $amount, 'record_date' => '2026-02-01']);
+        }
+        $run = $this->createRun();
+        $this->pay($run, 'salary', 26600, '2026-02-01');
+        $this->pay($run, 'epf', 2000, '2026-02-01');
+        $this->pay($run, 'etf', 900, '2026-02-01');
+        $all = AuditPayablesService::build('2026-02-28');
+        $remaining = AuditPayablesService::build('2026-02-28', true);
+        $this->assertSame($all['summary'], $remaining['summary']);
+        $this->assertSame([$partial], array_column($remaining['loans'], 'id'));
+        $this->assertSame(8000000, $remaining['loans'][0]['principal']);
+        $this->assertSame([], $remaining['payrollMonths']);
+        $this->assertSame([], $remaining['payments']);
+        $this->assertSame([], $remaining['salaryPayments']);
+        $this->assertSame([], $remaining['loanActivity']);
+        $this->assertSame(['epf', 'apit'], array_column($remaining['statutory'], 'kind'));
+        $this->assertSame(400000, $remaining['statutory'][0]['balance']);
+        $jan = AuditPayablesService::build('2026-01-31', true);
+        $this->assertCount(2, $jan['loans']);
+        $this->assertCount(1, $jan['payrollMonths']);
+        $this->assertCount(3, $jan['statutory']);
+        $page = $this->get('/reports/audit-payables?as_of=2026-02-28')->assertOk();
+        $page->assertViewHas('report', fn ($r) => $r['remainingOnly'] && count($r['loans']) === 1)
+            ->assertSee('view=remaining')->assertDontSee('PAID-LOAN')->assertDontSee('id="audit-payments"', false);
+        $this->get('/reports/audit-payables?as_of=2026-02-28&view=all')->assertOk()->assertSee('PAID-LOAN')->assertSee('view=all');
+        $html = view('reports.partials.audit-payables-schedules', ['report' => $remaining, 'pdf' => true])->render();
+        $this->assertStringNotContainsString('PAID-LOAN', $html);
+        $this->assertStringNotContainsString('Employee salary payment allocations', $html);
+        $xlsx = $this->get('/reports/export/audit-payables/xlsx?as_of=2026-02-28')->assertOk();
+        $zip = new \ZipArchive;
+        $this->assertTrue($zip->open($xlsx->baseResponse->getFile()->getPathname()));
+        $xml = $zip->getFromName('xl/worksheets/sheet1.xml');
+        $this->assertStringContainsString('PARTIAL-LOAN', $xml);
+        $this->assertStringNotContainsString('PAID-LOAN', $xml);
+        $this->assertStringNotContainsString('Recorded payroll payments and reversals', $xml);
+        $zip->close();
+        $this->get('/reports/audit-payables?view=invalid')->assertSessionHasErrors('view');
+    }
+
+    public function test_remaining_view_keeps_future_interest_and_reopened_statutory_balances(): void
+    {
+        $loan = $this->loan(['status' => 'settled']);
+        DB::table('loan_principal_records')->insert(['loan_id' => $loan, 'record_type' => 'repayment', 'amount' => 100000, 'record_date' => '2026-02-01']);
+        DB::table('loan_interest_schedule')->insert(['loan_id' => $loan, 'due_date' => '2026-04-01', 'interest_amount' => 500, 'paid_amount' => 0, 'status' => 'pending']);
+        $run = $this->createRun();
+        $payment = $this->pay($run, 'etf', 900, '2026-02-01');
+        PayrollService::reversePayment($payment, ['date' => '2026-03-01', 'reason' => 'Test remittance returned']);
+        $feb = AuditPayablesService::build('2026-02-28', true);
+        $this->assertCount(1, $feb['loans']);
+        $this->assertSame(50000, $feb['loans'][0]['futureInterest']);
+        $this->assertCount(1, $feb['interestSchedule']);
+        $this->assertNotContains('etf', array_column($feb['statutory'], 'kind'));
+        $march = AuditPayablesService::build('2026-03-31', true);
+        $this->assertContains('etf', array_column($march['statutory'], 'kind'));
     }
 
     public function test_pdf_handles_a_thousand_employee_rows_and_unbroken_evidence_references(): void

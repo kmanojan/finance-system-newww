@@ -8,14 +8,27 @@ use Illuminate\Support\Facades\DB;
 /** A read-only, dated subledger schedule. Amounts stay in original currency, in cents. */
 class AuditPayablesService
 {
-    public static function build(string $asOf): array
+    public static function build(string $asOf, bool $remainingOnly = false): array
     {
-        return DB::transaction(function () use ($asOf) {
+        return DB::transaction(function () use ($asOf, $remainingOnly) {
             if (DB::getDriverName() === 'pgsql' && DB::transactionLevel() === 1) {
                 DB::statement('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY');
             }
 
-            return self::snapshot($asOf);
+            $report = self::snapshot($asOf);
+            $report['remainingOnly'] = $remainingOnly;
+            if ($remainingOnly) {
+                // Filter after dated reconciliation: current status alone cannot prove settlement.
+                $report['loans'] = array_values(array_filter($report['loans'], fn ($row) => $row['included'] && $row['balance'] + $row['futureInterest'] + $row['unscheduledInterest'] > 0));
+                $loanIds = array_column($report['loans'], 'id');
+                $report['interestSchedule'] = array_values(array_filter($report['interestSchedule'], fn ($row) => in_array($row['loan_id'], $loanIds) && $row['balance'] > 0 && $row['classification'] !== 'Skipped / review waiver'));
+                foreach (['payrollMonths', 'salaries', 'statutory'] as $section) {
+                    $report[$section] = array_values(array_filter($report[$section], fn ($row) => $row['balance'] > 0));
+                }
+                $report['loanActivity'] = $report['payments'] = $report['salaryPayments'] = [];
+            }
+
+            return $report;
         });
     }
 

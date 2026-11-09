@@ -3,6 +3,7 @@
 @section('report-content')
 <link rel="stylesheet" href="{{ asset('audit-payables.css') }}?v={{ hash_file('sha256', public_path('audit-payables.css')) }}">
 @php
+    $remainingOnly = $report['remainingOnly'] ?? false;
     $money = fn ($cents) => number_format($cents / 100, 2);
     $reportDate = \Carbon\CarbonImmutable::parse($report['asOf'])->format('j M Y');
     $payrollDate = \Carbon\CarbonImmutable::parse($report['periodEnd'])->format('j M Y');
@@ -19,6 +20,7 @@
         'review' => ['Unapproved payrolls & missing months', 'Amounts that need confirmation before they can be included.', $draftCount.' unapproved'],
         'exceptions' => ['Checks before sharing', 'Source records to verify and the final review checklist.', $countLabel($exceptionCount, 'check')],
     ];
+    if ($remainingOnly) unset($sections['payments']);
 @endphp
 <div class="audit-report">
     <header class="audit-header">
@@ -26,15 +28,17 @@
             <h1>Auditor payables</h1>
             <p>Money still to pay for loans and payroll.</p>
         </div>
-        <div class="audit-actions" aria-label="Download complete report">
-            <a class="btn btn-outline" href="{{ url('/reports/export/audit-payables/pdf').'?'.http_build_query(['as_of' => $report['asOf']]) }}">Download PDF</a>
-            <a class="btn btn-outline" href="{{ url('/reports/export/audit-payables/xlsx').'?'.http_build_query(['as_of' => $report['asOf']]) }}">Export Excel</a>
+        <div class="audit-actions" aria-label="Download selected report view">
+            <a class="btn btn-outline" href="{{ url('/reports/export/audit-payables/pdf').'?'.http_build_query(['as_of' => $report['asOf'], 'view' => $remainingOnly ? 'remaining' : 'all']) }}">Download PDF</a>
+            <a class="btn btn-outline" href="{{ url('/reports/export/audit-payables/xlsx').'?'.http_build_query(['as_of' => $report['asOf'], 'view' => $remainingOnly ? 'remaining' : 'all']) }}">Export Excel</a>
         </div>
     </header>
 
     <form method="get" class="audit-filter">
         <label for="audit-as-of">Balances as at</label>
         <input type="date" name="as_of" id="audit-as-of" required max="{{ \App\Services\PayrollStatutoryService::today() }}" value="{{ $report['asOf'] }}" aria-describedby="audit-period">
+        <label for="audit-view">Show</label>
+        <select id="audit-view" name="view"><option value="remaining" @selected($remainingOnly)>Remaining only</option><option value="all" @selected(!$remainingOnly)>All records & payment history</option></select>
         <button class="btn btn-primary" type="submit">Update report</button>
         <span id="audit-period">All companies · Payroll through {{ $payrollDate }}</span>
     </form>
@@ -130,7 +134,7 @@
     <section class="audit-details" aria-labelledby="audit-details-title">
         <div class="audit-section-heading">
             <h2 id="audit-details-title">Look into the amounts</h2>
-            <span>Open a section for the supporting records</span>
+            <span>{{ $remainingOnly ? 'Outstanding items only · fully paid items hidden' : 'All records, including settled items' }}</span>
         </div>
         @foreach($sections as $key => [$label, $description, $count])
             <details class="audit-disclosure" id="audit-{{ $key }}">
@@ -153,7 +157,7 @@
                 <div><dt>Reporting date</dt><dd>Loans and recorded payments are counted through {{ $reportDate }}. Payroll includes only whole months ended by {{ $payrollDate }}, with no daily estimate for an unfinished month.</dd></div>
                 <div><dt>What to verify</dt><dd>Check bank payments, lender balances and authority receipts before sharing. Preparing or submitting documents does not count as payment. Draft payrolls, missing records, supplier bills, penalties and unrecorded interest are outside the total.</dd></div>
             </dl>
-            <p>This report reads current records. Later edits can change a past report, so keep a dated export with its supporting documents. PDF and Excel include the complete audit schedules.</p>
+            <p>This report reads current records. Later edits can change a past report, so keep a dated export with its supporting documents. PDF and Excel use the selected view. Remaining only hides fully paid items and payment-history tables; original and paid amounts remain alongside each outstanding balance. Choose All records & payment history for the full audit trail.</p>
         </div>
     </details>
     <footer class="audit-footer">Generated {{ $report['generatedAt'] }} · Confidential payroll information</footer>

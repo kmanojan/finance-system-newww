@@ -46,3 +46,12 @@ Six native expandable sections retain the complete loan, salary, statutory, paym
 The page retains the shared typography, light/dark tokens and responsive navigation. Phone summaries stack; detailed audit tables scroll inside their own frames. The page assets use content hashes. Verification: 12 auditor report tests / 122 assertions, production build, source design lint, and DOM-only browser checks at 1440, 1280, 768, 390 and 320px in both themes. Browser checks covered disclosures, keyboard activation, drilldown focus, empty dates, the glossary and export cutoff links with isolated synthetic data. No production records were changed and no screenshots were captured.
 
 Release validation against GitHub main (`ccd9635`) passed 200 backend tests / 2,129 assertions, 22 frontend tests, PHP formatting, JavaScript syntax and the production build. The release contains only the report redesign, its tests and documentation; it requires no database migration.
+
+
+### Remaining-only auditor payables (9 November 2026)
+
+Auditor Payables now defaults to **Show → Remaining only**. Loans appear when principal, scheduled unpaid interest or a separately identified unscheduled interest estimate remains at the reporting cutoff. Fully paid loans, zero-balance salary months, and fully paid EPF, ETF, APIT and other payroll obligations are omitted. Employee salary rows remain limited to unpaid balances. Positive future interest remains separately identified, outside the current recorded-payables total; a current “settled” status does not hide an amount still outstanding by dated evidence.
+
+Original, paid and remaining figures stay visible for partially paid items. Standalone borrowing/payment histories and employee payment-allocation tables are hidden in this view. **All records & payment history** restores the complete audit trail. Both PDF and Excel inherit the selected view and reporting date. Source exceptions, draft payrolls and missing-month warnings remain available; filtering settled items does not imply that missing records are zero. Currency totals and accounting calculations are unchanged, and genuine zero totals remain visible.
+
+Implementation filters the completed dated report snapshot, with no database writes or migration. Verification: 14 audit-report tests / 157 assertions cover partial/full payments, future-interest-only loans, historical cutoffs, reversed statutory payments, unchanged totals, privacy and exports. Browser checks verified mode switching, export query parameters, omitted history and 320px layout without screenshots.

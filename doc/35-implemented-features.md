@@ -472,3 +472,12 @@ The financial overview uses the shared Apptimus type, colour, action, balance an
 - On phones, the cash balance spans the width, secondary figures sit below, work links move above the chart, and the exact-value table scrolls within its panel. Long client names and large amounts wrap without page overflow. Light/dark styles use existing theme tokens and focus indicators.
 
 No schema migration or financial posting changes. Validation: 29 finance tests / 165 assertions, production asset build, Taste source lint, browser controls and populated/empty states, company/date switching, light/dark themes, and 320/390/768/1024/1440-width geometry checks. No screenshots were generated.
+
+
+### Remaining-only auditor payables (9 November 2026)
+
+Auditor Payables now defaults to **Show → Remaining only**. Loans appear when principal, scheduled unpaid interest or a separately identified unscheduled interest estimate remains at the reporting cutoff. Fully paid loans, zero-balance salary months, and fully paid EPF, ETF, APIT and other payroll obligations are omitted. Employee salary rows remain limited to unpaid balances. Positive future interest remains separately identified, outside the current recorded-payables total; a current “settled” status does not hide an amount still outstanding by dated evidence.
+
+Original, paid and remaining figures stay visible for partially paid items. Standalone borrowing/payment histories and employee payment-allocation tables are hidden in this view. **All records & payment history** restores the complete audit trail. Both PDF and Excel inherit the selected view and reporting date. Source exceptions, draft payrolls and missing-month warnings remain available; filtering settled items does not imply that missing records are zero. Currency totals and accounting calculations are unchanged, and genuine zero totals remain visible.
+
+Implementation filters the completed dated report snapshot, with no database writes or migration. Verification: 14 audit-report tests / 157 assertions cover partial/full payments, future-interest-only loans, historical cutoffs, reversed statutory payments, unchanged totals, privacy and exports. Browser checks verified mode switching, export query parameters, omitted history and 320px layout without screenshots.

@@ -22,9 +22,9 @@ class ReportController extends Controller
     public function auditPayables(Request $request)
     {
         abort_unless($request->user()?->isAdmin() || in_array(strtolower($request->user()?->role ?? ''), ['manager', 'accountant']), 403, 'Employee salary details are restricted to authorised finance staff.');
-        $request->validate(['as_of' => 'nullable|date_format:Y-m-d|before_or_equal:'.PayrollStatutoryService::today()]);
+        $request->validate(['as_of' => 'nullable|date_format:Y-m-d|before_or_equal:'.PayrollStatutoryService::today(), 'view' => 'nullable|in:remaining,all']);
         $asOf = $request->input('as_of') ?: PayrollStatutoryService::today();
-        $report = AuditPayablesService::build($asOf);
+        $report = AuditPayablesService::build($asOf, $request->input('view', 'remaining') !== 'all');
 
         return view('reports.audit-payables', compact('report'));
     }
