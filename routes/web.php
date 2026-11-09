@@ -122,6 +122,7 @@ Route::middleware(['auth', AuthorizeWorkspace::class, AtomicWorkspaceWrite::clas
         Route::get('/advances', 'advances');
         Route::get('/advances/import-history', 'historicalAdvances');
         Route::post('/{id}/historical-advances', 'importHistoricalAdvances')->whereNumber('id');
+        Route::post('/{id}/historical-loans/{item}', 'reconcileHistoricalLoan')->whereNumber(['id', 'item']);
         Route::post('/advances', 'storeAdvance');
         Route::post('/advances/{payment}/schedule', 'scheduleAdvance')->whereNumber('payment');
         Route::post('/payments/{payment}/reverse', 'reverse')->whereNumber('payment');

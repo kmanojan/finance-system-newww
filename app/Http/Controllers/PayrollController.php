@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Employee;
 use App\Models\SalaryComponent;
+use App\Services\HistoricalEmployeeLoanService;
 use App\Services\HistoricalPayrollImportService;
 use App\Services\HistoricalSalaryAdvanceService;
 use App\Services\PayrollCalculationService;
@@ -169,7 +170,30 @@ class PayrollController extends Controller
 
     public function show(int $id)
     {
-        return view('payroll.show', $this->runData($id) + $this->options());
+        $data = $this->runData($id);
+        $loanRows = HistoricalEmployeeLoanService::rows($data['run'], $data['items']);
+
+        return view('payroll.show', $data + $this->options() + [
+            'loanRows' => $loanRows,
+            'unreconciledLoans' => $loanRows->where('valid', false)->count(),
+        ]);
+    }
+
+    public function reconcileHistoricalLoan(Request $request, int $id, int $item)
+    {
+        abort_unless(in_array(strtolower($request->user()->role), ['admin', 'manager']), 403);
+        $data = $request->validateWithBag('historicalLoan'.$item, [
+            'journal_line_id' => 'required|integer',
+            'source_reference' => 'required|string|max:255',
+            'balance' => 'required|numeric|min:0.01|max:999999999.99|decimal:0,2',
+        ]);
+        try {
+            HistoricalEmployeeLoanService::save($id, $item, $data);
+        } catch (ValidationException $error) {
+            return redirect('/payroll/'.$id.'#loan-'.$item)->withInput()->withErrors($error->errors(), 'historicalLoan'.$item);
+        }
+
+        return redirect('/payroll/'.$id.'#loan-'.$item)->with('success', 'Employee loan reconciliation saved.');
     }
 
     public function bulkReview(Request $request, int $id)

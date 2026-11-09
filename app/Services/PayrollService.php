@@ -119,8 +119,7 @@ class PayrollService
                 $update['status'] = 'draft';
             } elseif ($action === 'approve') {
                 self::check($r->status === 'review', 'Submit this payroll for review before approval.');
-                self::check(! $items->contains(fn ($item) => ($item->snapshot['historical_source']['loan'] ?? 0) > 0),
-                    'Historical employee loan deductions still need opening-balance reconciliation before approval. Salary advances are reconciled separately.');
+                $loanRecoveries = HistoricalEmployeeLoanService::allocate($r, $items);
                 foreach ($items as $i) {
                     Employee::whereKey($i->employee_id)->lockForUpdate()->first();
                     SalaryAdvanceService::allocate($r, $i);
@@ -130,6 +129,7 @@ class PayrollService
                     $lines[] = self::line($kind, $items->sum(self::column($kind)), false, $r->currency);
                 }
                 $lines[] = self::line('advance', $items->sum('advance_cents'), false, $r->currency);
+                array_push($lines, ...$loanRecoveries);
                 PeriodLockService::checkLockedDate(Carbon::parse($r->month)->endOfMonth()->toDateString(), $r->company_id);
                 $journal = $items->sum('cost_cents') > 0 ? LedgerPostingService::postJournal(Carbon::parse($r->month)->endOfMonth()->toDateString(), 'Payroll '.$r->month, self::nonzero($lines), $id, 'Payroll', $r->company_id) : null;
                 $update += ['status' => 'approved', 'approved_by' => auth()->id(), 'approved_at' => now(), 'journal_entry_id' => $journal?->id];

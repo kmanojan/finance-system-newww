@@ -7,6 +7,7 @@ use App\Models\EmployeeSalaryComponent;
 use App\Models\SalaryComponent;
 use App\Models\User;
 use App\Services\HistoricalPayrollImportService;
+use App\Services\LedgerPostingService;
 use App\Services\PayrollService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -116,6 +117,60 @@ class HistoricalPayrollImportTest extends TestCase
         $this->assertSame(0, $fields['Net']['difference']);
         $this->assertSame(100, $fields['Tax']['difference']);
         $this->assertSame(-100, $fields['Advance']['difference']);
+    }
+
+    public function test_verified_loan_opening_entry_unlocks_approval_and_recovers_the_receivable(): void
+    {
+        $payload = $this->payload();
+        $payload['rows'][0]['net'] += $payload['rows'][0]['advance'];
+        $payload['rows'][0]['advance'] = 0;
+        $second = $payload['rows'][0];
+        $second['month'] = '2025-02';
+        $second['sheet'] = 'February';
+        $payload['rows'][] = $second;
+        [$january, $february] = HistoricalPayrollImportService::import($payload, 1, 1);
+        $item = PayrollService::items($january)->first();
+        $next = PayrollService::items($february)->first();
+        DB::table('payroll_items')->update(['reviewed' => true]);
+        PayrollService::transition($january, 'submit');
+        PayrollService::transition($february, 'submit');
+
+        $lines = [
+            ['account_name' => 'Employee loans receivable', 'account_type' => 'asset', 'debit' => 15000],
+            ['account_name' => 'Opening balances', 'account_type' => 'equity', 'credit' => 15000],
+        ];
+        $wrong = LedgerPostingService::postJournal('2024-12-31', 'Employee loan opening [EMP-10]', $lines);
+        $opening = LedgerPostingService::postJournal('2024-12-31', 'Employee loan opening [EMP-1]', $lines);
+        $line = $opening->lines()->where('debit', '>', 0)->firstOrFail();
+        $path = "/payroll/{$january}/historical-loans/{$item->id}";
+        $data = ['journal_line_id' => $line->id, 'source_reference' => 'Employee loan register E-001', 'balance' => '15000'];
+
+        $this->get('/payroll/'.$january)->assertOk()->assertSee('Reconcile employee loans')->assertDontSee('Approve payroll');
+        $this->post($path, array_replace($data, ['journal_line_id' => $wrong->lines()->where('debit', '>', 0)->value('id')]))
+            ->assertSessionHasErrorsIn('historicalLoan'.$item->id, ['historical_loan']);
+        $this->post($path, $data)->assertSessionHasNoErrors();
+        $this->post("/payroll/{$february}/historical-loans/{$next->id}", $data)->assertSessionHasNoErrors();
+        $this->get('/payroll/'.$january)->assertOk()->assertSee('1 of 1 reconciled')->assertSee('Approve payroll');
+        $this->assertDatabaseCount('journal_entries', 2);
+
+        $this->post('/payroll/'.$january.'/approve')->assertRedirect()->assertSessionHasNoErrors();
+        $run = PayrollService::run($january);
+        $this->assertSame('approved', $run->status);
+        $this->assertDatabaseHas('journal_entry_lines', [
+            'journal_entry_id' => $run->journal_entry_id, 'account_id' => $line->account_id, 'credit' => 10000,
+        ]);
+        $this->assertDatabaseHas('payroll_items', ['id' => $item->id, 'net_cents' => $item->net_cents, 'other_cents' => 0]);
+        $this->assertSame(0, HistoricalPayrollImportService::comparison(PayrollService::items($january)->first())['Loan']['difference']);
+        $this->post('/payroll/'.$february.'/approve')->assertSessionHasErrors('payroll');
+        $this->assertSame('review', PayrollService::run($february)->status);
+        $this->assertDatabaseCount('journal_entries', 3);
+
+        PayrollService::transition($january, 'void', ['reason' => 'Opening corrected', 'date' => '2025-01-31']);
+        $this->assertDatabaseHas('journal_entry_lines', [
+            'journal_entry_id' => PayrollService::run($january)->reversal_journal_id, 'account_id' => $line->account_id, 'debit' => 10000,
+        ]);
+        $this->post('/payroll/'.$february.'/approve')->assertSessionHasNoErrors();
+        $this->assertSame('approved', PayrollService::run($february)->status);
     }
 
     public function test_upload_requires_confirmed_mapping_and_conflicting_source_is_rejected(): void
