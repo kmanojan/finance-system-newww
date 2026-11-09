@@ -114,3 +114,8 @@
     .sr-overview { margin-bottom: 16px; }
     .sr-register-heading { padding-block: 14px; }
 }
+
+/* Shared payroll highlight, including light/dark balance colours. */
+.sr-workspace { --pi-inset: 24px; }
+.sr-balance.pi-highlight { background: var(--balance-surface); color: var(--balance-ink); }
+.sr-balance.pi-highlight :is(p, strong small) { color: inherit; }

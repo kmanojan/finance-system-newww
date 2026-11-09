@@ -1,11 +1,12 @@
 @extends('payroll.layout')
 @section('title', 'EPF, ETF & tax payments')
 @section('payroll-content')
+<link rel="stylesheet" href="{{ asset('people-register.css') }}?v={{ hash_file('sha256', public_path('people-register.css')) }}">
 <link rel="stylesheet" href="{{ asset('statutory-register.css') }}?v={{ hash_file('sha256', public_path('statutory-register.css')) }}">
 <div class="sr-workspace">
 <header class="pr-header"><div><h1>EPF, ETF & tax payments</h1><p>Monthly contributions, payments and document submissions.</p></div><a class="pr-btn pr-btn-primary" href="/payroll/statutory/batches/create">Record payment batch</a></header>
 <section class="sr-overview" aria-label="Totals for matching obligations">
-    <div class="sr-balance"><span>Outstanding</span><strong><small>LKR</small> {{ number_format($summary->balance_cents/100,2) }}</strong><p>Still to pay across the selected obligations.</p></div>
+    <div class="sr-balance pi-highlight"><span>Outstanding</span><strong><small>LKR</small> {{ number_format($summary->balance_cents/100,2) }}</strong><p>Still to pay across the selected obligations.</p></div>
     <dl class="sr-metrics">
         <div><dt>Recorded paid <span>· LKR</span></dt><dd>{{ number_format($summary->paid_cents/100,2) }}</dd></div>
         <div><dt>Paid · submission not recorded</dt><dd>{{ $summary->paid_unsubmitted_count }}</dd></div>
