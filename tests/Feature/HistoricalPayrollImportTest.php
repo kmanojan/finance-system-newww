@@ -67,6 +67,25 @@ class HistoricalPayrollImportTest extends TestCase
         $this->assertDatabaseCount('payroll_items', 2);
     }
 
+    public function test_comparison_is_hidden_after_approval_but_source_data_is_preserved(): void
+    {
+        $payload = $this->payload();
+        $payload['rows'][0]['advance'] = 0;
+        $payload['rows'][0]['loan'] = 0;
+        $payload['rows'][0]['net'] += 3000000;
+        $id = HistoricalPayrollImportService::import($payload, 1, 1)[0];
+        $this->get('/payroll/'.$id)->assertOk()->assertSee('Salary sheet comparison');
+        $source = PayrollService::items($id)->first()->snapshot['historical_source'];
+        DB::table('payroll_items')->where('payroll_run_id', $id)->update(['reviewed' => true]);
+        PayrollService::transition($id, 'submit');
+        $this->get('/payroll/'.$id)->assertOk()->assertSee('Salary sheet comparison');
+        PayrollService::transition($id, 'approve');
+        $this->get('/payroll/'.$id)->assertOk()->assertSee('Salary batches')->assertDontSee('Salary sheet comparison');
+        $this->assertSame($source, PayrollService::items($id)->first()->snapshot['historical_source']);
+        PayrollService::transition($id, 'complete');
+        $this->get('/payroll/'.$id)->assertOk()->assertDontSee('Salary sheet comparison');
+    }
+
     public function test_source_difference_or_duplicate_employee_rolls_back_whole_import(): void
     {
         $payload = $this->payload();

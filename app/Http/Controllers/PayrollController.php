@@ -172,8 +172,16 @@ class PayrollController extends Controller
     {
         $data = $this->runData($id);
         $loanRows = HistoricalEmployeeLoanService::rows($data['run'], $data['items']);
+        $salaryBatches = $data['payments']->where('kind', 'salary')->values();
+        $employeeCounts = DB::table('payroll_payment_allocations')->whereIn('payroll_payment_id', $salaryBatches->pluck('id'))
+            ->selectRaw('payroll_payment_id, COUNT(DISTINCT payroll_item_id) as employee_count')
+            ->groupBy('payroll_payment_id')->pluck('employee_count', 'payroll_payment_id');
+        foreach ($salaryBatches as $batch) {
+            $batch->employee_count = (int) ($employeeCounts[$batch->id] ?? 0);
+        }
 
         return view('payroll.show', $data + $this->options() + [
+            'salaryBatches' => $salaryBatches,
             'loanRows' => $loanRows,
             'unreconciledLoans' => $loanRows->where('valid', false)->count(),
         ]);
@@ -254,9 +262,10 @@ class PayrollController extends Controller
     {
         $data = $this->runData($id);
         abort_unless(in_array($data['run']->status, PayrollService::POSTED_STATUSES), 422, 'Approve payroll before recording a salary batch.');
-        $data['batchEmployees'] = $data['items']->map(fn ($item) => ['id' => $item->id, 'name' => $item->snapshot['name'], 'code' => $item->snapshot['code'],
+        $pendingItems = $data['items']->filter(fn ($item) => $item->net_cents > (int) ($item->paid['salary'] ?? 0));
+        $data['batchEmployees'] = $pendingItems->map(fn ($item) => ['id' => $item->id, 'name' => $item->snapshot['name'], 'code' => $item->snapshot['code'],
             'net' => (int) $item->net_cents, 'paid' => (int) ($item->paid['salary'] ?? 0), 'balance' => (int) $item->net_cents - (int) ($item->paid['salary'] ?? 0)])->values();
-        $selected = $data['items']->firstWhere('employee_id', $request->integer('employee_id'));
+        $selected = $pendingItems->firstWhere('employee_id', $request->integer('employee_id'));
         $data['initialBatchSearch'] = $selected ? ($selected->snapshot['code'] ?: $selected->snapshot['name']) : '';
 
         return view('payroll.salary-batch-create', $data + $this->options());

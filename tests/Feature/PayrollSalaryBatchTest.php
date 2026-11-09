@@ -84,6 +84,14 @@ class PayrollSalaryBatchTest extends TestCase
         $this->assertDatabaseCount('journal_entries', 2); // Approval plus first bank release; completion posts nothing.
         $this->batch($run, [['item_id' => $items[0]->id, 'amount' => '10000.00']])->assertRedirect();
         $this->assertSame(0, PayrollPayablesService::items()->firstWhere('employee_id', $this->employees[0]->id)->balance_cents);
+        $pending = $this->get('/payroll/'.$run.'/salary-batches/create')->assertOk();
+        $this->assertSame([$items[1]->id, $items[2]->id], $pending->viewData('batchEmployees')->pluck('id')->all());
+        $this->assertSame([1500000, 1500000], $pending->viewData('batchEmployees')->pluck('balance')->all());
+        $paidEmployee = $this->get('/payroll/'.$run.'/salary-batches/create?employee_id='.$this->employees[0]->id)->assertOk();
+        $this->assertSame('', $paidEmployee->viewData('initialBatchSearch'));
+        $overview = $this->get('/payroll/'.$run)->assertOk()->assertSee('Salary batches')->assertSee('Batch bank');
+        $this->assertSame([1, 2], $overview->viewData('salaryBatches')->pluck('employee_count')->all());
+        $this->assertSame([1000000, 2500000], $overview->viewData('salaryBatches')->pluck('amount_cents')->map(fn ($amount) => (int) $amount)->all());
         $this->batch($run, [['item_id' => $items[1]->id, 'amount' => '15000.00'], ['item_id' => $items[2]->id, 'amount' => '15000.00']])->assertRedirect();
         $this->assertSame('paid', $this->summary($run)['state']);
         $this->assertSame(0, $this->summary($run)['balance']);
@@ -91,6 +99,7 @@ class PayrollSalaryBatchTest extends TestCase
         $this->assertDatabaseCount('payroll_payments', 3);
         $this->assertEquals(65000, $this->ledger('5210'));
         $this->assertEquals(0, $this->ledger('2310'));
+        $this->get('/payroll/'.$run.'/salary-batches/create')->assertOk()->assertSee('All salaries are paid')->assertDontSee('data-salary-batch', false);
         $this->get('/payroll/'.$run)->assertOk()->assertSee('Processing: Completed')->assertSee('Salary: Paid');
         $this->get('/payroll/'.$run.'/employees/'.$items[0]->id)->assertOk()->assertSee('Salary payment batches')->assertSee('20,000.00')->assertSee('10,000.00');
         $this->get('/payroll/'.$run.'/employees/'.$items[0]->id.'/payslip')->assertOk();
@@ -123,15 +132,19 @@ class PayrollSalaryBatchTest extends TestCase
     {
         $run = $this->createRun();
         $items = PayrollService::items($run);
-        $this->batch($run, [['item_id' => $items[0]->id, 'amount' => 20000], ['item_id' => $items[1]->id, 'amount' => 5000]])->assertRedirect();
+        $this->batch($run, [['item_id' => $items[0]->id, 'amount' => 30000], ['item_id' => $items[1]->id, 'amount' => 5000]])->assertRedirect();
         $payment = DB::table('payroll_payments')->first();
         PayrollService::transition($run, 'complete');
-        $this->get('/payroll/'.$run.'/salary-batches/'.$payment->id)->assertOk()->assertSee('20,000.00')->assertSee('5,000.00');
+        $this->get('/payroll/'.$run.'/salary-batches/'.$payment->id)->assertOk()->assertSee('30,000.00')->assertSee('5,000.00');
+        $this->assertCount(2, $this->get('/payroll/'.$run.'/salary-batches/create')->viewData('batchEmployees'));
         $this->postJson('/payroll/payments/'.$payment->id.'/reverse', ['date' => '2026-02-02', 'reason' => 'Bank returned this salary batch'])->assertRedirect();
         $this->assertSame('unpaid', $this->summary($run)['state']);
         $this->assertSame(6500000, PayrollPayablesService::items()->sum('balance_cents'));
         $this->assertSame(0, PayrollPayablesService::payments()->count());
         $this->assertDatabaseHas('payroll_runs', ['id' => $run, 'status' => 'completed']);
+        $this->assertCount(3, $this->get('/payroll/'.$run.'/salary-batches/create')->viewData('batchEmployees'));
+        $overview = $this->get('/payroll/'.$run)->assertOk()->assertSee('Reversed');
+        $this->assertSame('reversed', $overview->viewData('salaryBatches')->first()->status);
         $this->get('/payroll/'.$run.'/salary-batches/'.$payment->id)->assertOk()->assertSee('Reversed on');
         $this->postJson('/payroll/'.$run.'/void', ['date' => '2026-02-02', 'reason' => 'Correct completed payroll amounts'])->assertRedirect();
         $this->assertSame(0, PayrollPayablesService::items()->count());

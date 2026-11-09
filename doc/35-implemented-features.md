@@ -236,6 +236,8 @@ Creation paginates employees and batches previews; JSON submissions avoid PHP's 
 
 ### Pay in batches
 
+Salary batch entry lists only employees with unpaid salary, retaining partially paid employees and excluding fully paid or zero-net employees. The payroll detail page lists recorded batches with dates, bank/cash source, employee counts, amounts, status and allocation links. Reversals restore eligibility and remain visible in history. Source salary comparisons remain available for draft/review and are hidden after approval without deleting source data.
+
 Approved payroll supports multiple salary releases with explicit employee allocations. Each batch records actual date, bank/cash source, reference, optional private receipt and employee amounts. A search/paginated table retains off-page amounts; **Fill balances on this page** affects only visible rows. Server-side locks and remaining-balance checks reject overpayments, duplicate/invalid requests and foreign entries.
 
 For example, a hypothetical 30,000 net salary can be recorded as 20,000 and later 10,000. The first batch leaves 10,000 payable; employees skipped by a batch retain their balances. Statutory payments do not reduce salary owed to employees.

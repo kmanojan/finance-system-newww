@@ -58,7 +58,7 @@
             input.addEventListener('input', () => { if (input.value.trim()) entries.set(employee.id, input.value); else entries.delete(employee.id); update(); summary(); });
             update(); cell.append(input, after); row.append(cell); rows.append(row);
         });
-        if (!matches.length) { const row = document.createElement('tr'); const cell = document.createElement('td'); cell.colSpan = 5; cell.textContent = 'No employees match this search.'; row.append(cell); rows.append(row); }
+        if (!matches.length) { const row = document.createElement('tr'); const cell = document.createElement('td'); cell.colSpan = 5; cell.textContent = 'No pending employees match this search.'; row.append(cell); rows.append(row); }
         form.querySelector('[data-batch-range]').textContent = matches.length ? `${page * pageSize + 1}–${Math.min((page + 1) * pageSize, matches.length)} of ${matches.length} employees · entered amounts are retained across pages` : '0 employees';
         previous.disabled = page === 0; next.disabled = (page + 1) * pageSize >= matches.length; summary();
     };
@@ -72,6 +72,9 @@
         hidden.value = JSON.stringify([...entries].filter(([, value]) => cents(value) > 0).map(([id, value]) => ({ item_id: id, amount: value.trim() })));
         save.disabled = true;
     });
-    window.addEventListener('pageshow', summary);
+    window.addEventListener('pageshow', event => {
+        if (event.persisted) window.location.reload();
+        else summary();
+    });
     render();
 })();

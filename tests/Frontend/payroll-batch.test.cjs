@@ -22,11 +22,21 @@ function fixture(count = 1000) {
     form.querySelector = selector => elements[selector.match(/data-batch-(.+)\]/)[1]];
     const employees = Array.from({ length: count }, (_, index) => ({ id: index + 1, name: `Payroll employee ${index + 1}`, code: `EMP-${index + 1}`, net: 3000000, paid: 0, balance: 3000000 }));
     const document = { querySelector: () => form, getElementById: () => ({ textContent: JSON.stringify(employees) }), createElement: tag => new Element(tag) };
-    vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../../public/payroll-batch.js'), 'utf8'), { document, window: { addEventListener() {} } });
+    const windowEvents = {};
+    let reloads = 0;
+    vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../../public/payroll-batch.js'), 'utf8'), { document, window: { addEventListener(type, callback) { windowEvents[type] = callback; }, location: { reload() { reloads++; } } } });
     const input = () => elements.rows.children[0].children[4].children[0];
     const setAmount = value => { input().value = value; input().fire('input'); };
-    return { elements, form, input, setAmount };
+    return { elements, form, input, setAmount, windowEvents, reloads: () => reloads };
 }
+
+test('returning through the back-forward cache refreshes employee balances', () => {
+    const f = fixture(3);
+    f.windowEvents.pageshow({ persisted: false });
+    assert.equal(f.reloads(), 0);
+    f.windowEvents.pageshow({ persisted: true });
+    assert.equal(f.reloads(), 1);
+});
 
 test('employee amounts survive pagination and search across 1,000 employees', () => {
     const f = fixture();
