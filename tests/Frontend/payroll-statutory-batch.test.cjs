@@ -14,7 +14,7 @@ class Element {
 function fixture(response = {ok: true, json: async () => ({redirect: '/payroll/statutory/batches/1'})}) {
     const elements = Object.fromEntries(['all', 'save', 'message', 'total', 'paid_on', 'entries_json'].map(key => [key, new Element()]));
     const rows = [1, 2].map(id => {
-        const row = new Element(); row.dataset = {run: String(id), balance: '600000', earliest: id === 1 ? '2026-01-31' : '2026-02-28'};
+        const row = new Element(); row.dataset = {run: String(id), balance: '600000', earliest: id === 1 ? '2026-01-01' : '2026-02-01'};
         row.select = new Element(); row.amount = new Element(); row.amount.disabled = true;
         row.querySelector = selector => selector.includes('select') ? row.select : row.amount;
         return row;
@@ -35,12 +35,12 @@ test('selection fills balances, totals partial payments and updates latest allow
     const f = fixture();
     f.elements.all.checked = true; f.elements.all.fire('change');
     assert.equal(f.rows[0].amount.value, '6000.00');
-    assert.equal(f.elements.paid_on.min, '2026-02-28');
+    assert.equal(f.elements.paid_on.min, '2026-02-01');
     f.rows[1].amount.value = '2000.00'; f.rows[1].amount.fire('input');
     assert.equal(f.elements.total.textContent, '2 months · LKR 8,000.00');
     assert.equal(f.scope.fire('submit').prevented, true);
     f.rows[1].select.checked = false; f.rows[1].select.fire('change');
-    assert.equal(f.elements.paid_on.min, '2026-01-31');
+    assert.equal(f.elements.paid_on.min, '2026-01-01');
     assert.equal(f.elements.all.indeterminate, true);
     await f.form.fire('submit').pending;
     assert.deepEqual(JSON.parse(f.requests[0].body.entries_json), [{run_id: 1, amount: '6000.00'}]);

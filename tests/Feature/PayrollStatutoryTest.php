@@ -212,6 +212,41 @@ class PayrollStatutoryTest extends TestCase
         ]);
     }
 
+    public function test_actual_remittances_keep_dates_within_the_payroll_month(): void
+    {
+        $run = $this->createRun('2025-01');
+        foreach (['epf' => 6000, 'etf' => 900, 'apit' => 1000] as $kind => $amount) {
+            $url = '/payroll/'.$run.'/statutory/'.$kind.'/payment';
+            $data = ['amount' => $amount, 'paid_on' => '2025-01-30', 'reference' => 'January bank remittance', 'bank_account_id' => 1, 'request_key' => (string) Str::uuid()];
+            $this->postJson($url, array_replace($data, ['paid_on' => '2024-12-31']))->assertUnprocessable();
+            $this->postJson($url, array_replace($data, ['paid_on' => '2026-11-10']))->assertUnprocessable();
+            $this->postJson($url, $data)->assertRedirect();
+            $this->assertSame(0, $this->state($run, $kind)['balance']);
+            $payment = DB::table('payroll_payments')->where('kind', $kind)->first();
+            $this->assertSame('2025-01-30', $payment->paid_on);
+            $this->assertDatabaseHas('transactions', ['id' => $payment->transaction_id, 'transaction_date' => '2025-01-30']);
+            $this->postJson($url, $data)->assertUnprocessable();
+        }
+        $this->assertDatabaseCount('payroll_payments', 3);
+        $this->assertDatabaseCount('transactions', 3);
+        $this->get('/payroll/'.$run.'/statutory/epf')->assertOk()->assertSee('2025-01-30');
+    }
+
+    public function test_batch_accepts_latest_selected_month_start_and_rejects_earlier_dates_atomically(): void
+    {
+        $jan = $this->createRun();
+        $feb = $this->createRun('2026-02');
+        $entries = [['run_id' => $jan, 'amount' => 100], ['run_id' => $feb, 'amount' => 100]];
+        $this->statutoryBatch($entries, ['paid_on' => '2026-01-30'])->assertUnprocessable();
+        $this->assertDatabaseCount('payroll_payments', 0);
+        $this->assertDatabaseCount('transactions', 0);
+        $this->statutoryBatch($entries, ['paid_on' => '2026-02-01'])->assertOk();
+        $this->assertDatabaseCount('payroll_payments', 2);
+        $this->assertSame(2, DB::table('transactions')->where('transaction_date', '2026-02-01')->count());
+        $this->get('/payroll/statutory/batches/create?company_id=1&kind=epf')->assertOk()->assertSee('data-earliest="2026-02-01"', false);
+        $this->get('/payroll/'.$feb.'/statutory/epf')->assertOk()->assertSee('min="2026-02-01"', false)->assertSee('Use the actual remittance date');
+    }
+
     public function test_multiple_month_batch_partial_balances_history_and_reversal(): void
     {
         $jan = $this->createRun();
@@ -256,7 +291,7 @@ class PayrollStatutoryTest extends TestCase
         $this->statutoryBatch([['run_id' => $jan, 'amount' => 1], ['run_id' => $jan, 'amount' => 1]])->assertUnprocessable();
         $this->statutoryBatch([['run_id' => $jan, 'amount' => '1.001']])->assertUnprocessable();
         $this->statutoryBatch([['run_id' => $jan, 'amount' => 1]], ['kind' => 'salary'])->assertUnprocessable();
-        $this->statutoryBatch([['run_id' => $jan, 'amount' => 1]], ['paid_on' => '2026-01-30'])->assertUnprocessable();
+        $this->statutoryBatch([['run_id' => $jan, 'amount' => 1]], ['paid_on' => '2025-12-31'])->assertUnprocessable();
         $this->statutoryBatch([['run_id' => $jan, 'amount' => 1]], ['paid_on' => '2026-11-09'])->assertUnprocessable();
         DB::table('companies')->insert(['id' => 2, 'name' => 'Other company', 'base_currency' => 'LKR']);
         DB::table('bank_accounts')->insert(['id' => 2, 'company_id' => 2, 'bank_name' => 'Other bank', 'account_no' => 'WRONG', 'currency' => 'LKR']);
