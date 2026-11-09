@@ -17,6 +17,6 @@
 </div><div class="pr-footer"><button type="submit" class="pr-btn pr-btn-primary" data-batch-save data-no-spinner disabled>Record salary batch</button><a class="pr-btn" href="/payroll/{{ $run->id }}">Cancel</a><p class="pr-hint" role="status" aria-live="polite" tabindex="-1" data-batch-message>Enter the payments made in this release. This records a completed payment; it does not send money.</p></div></section>
 </form>
 <script id="salary-batch-data" type="application/json">@json($batchEmployees)</script>
-<script src="{{ asset('payroll-batch.js') }}?v={{ filemtime(public_path('payroll-batch.js')) }}" defer></script>
+<script src="{{ asset('payroll-batch.js') }}?v={{ hash_file('sha256',public_path('payroll-batch.js')) }}" defer></script>
 @endif
 @endsection
