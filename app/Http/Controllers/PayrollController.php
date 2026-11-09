@@ -23,10 +23,23 @@ class PayrollController extends Controller
 {
     public function index(Request $request)
     {
-        $runs = DB::table('payroll_runs as r')->join('companies as c', 'c.id', '=', 'r.company_id')
+        $filters = $request->validate(['month' => 'nullable|date_format:Y-m', 'company_id' => 'nullable|integer|exists:companies,id',
+            'status' => 'nullable|in:all,draft,review,approved,completed,void', 'q' => 'nullable|string|max:150']);
+        $search = trim($filters['q'] ?? '');
+        $query = DB::table('payroll_runs as r')->join('companies as c', 'c.id', '=', 'r.company_id')
             ->select('r.*', 'c.name as company_name')
             ->when($request->filled('month'), fn ($q) => $q->where('r.month', $request->month.'-01'))
             ->when($request->filled('company_id'), fn ($q) => $q->where('r.company_id', $request->company_id))
+            ->when($search !== '', function ($q) use ($search) {
+                $q->where(function ($q) use ($search) {
+                    $q->whereLike('c.name', '%'.$search.'%');
+                    if (preg_match('/^(?:PR-)?0*(\d+)$/i', trim($search), $match)) {
+                        $q->orWhere('r.id', (int) $match[1]);
+                    }
+                });
+            });
+        $statusCounts = (clone $query)->reorder()->select('r.status')->selectRaw('COUNT(*) as total')->groupBy('r.status')->pluck('total', 'status');
+        $runs = $query->when(! empty($filters['status']) && $filters['status'] !== 'all', fn ($q) => $q->where('r.status', $filters['status']))
             ->orderByDesc('r.month')->orderByDesc('r.id')->paginate(20)->withQueryString();
         foreach ($runs as $r) {
             $items = PayrollService::items($r->id);
@@ -36,7 +49,7 @@ class PayrollController extends Controller
             $r->salary_payment = PayrollService::salaryPaymentStatus($r, $items);
         }
 
-        return view('payroll.index', ['runs' => $runs, 'companies' => DB::table('companies')->orderBy('name')->get()]);
+        return view('payroll.index', ['runs' => $runs, 'companies' => DB::table('companies')->orderBy('name')->get(), 'statusCounts' => $statusCounts]);
     }
 
     public function create(Request $request)

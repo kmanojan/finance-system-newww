@@ -25,35 +25,20 @@ class EmployeeController extends Controller
     {
         $employees = $this->employeeQuery($request)->orderBy('full_name')->orderBy('id')->paginate(20)->withQueryString();
         $integration = ApiIntegration::first();
-        $salaryComponents = SalaryComponent::active()->orderBy('sort_order')->get();
-
-        // Calculate KPI rollups across all active employees
-        $allActiveEmployees = Employee::active()->with(['salaryComponents.component'])->get();
-        $totalBasicPayroll = 0.0;
-        $totalGrossPayroll = 0.0;
-        $totalNetPayable = 0.0;
-        $totalEmployerEpfEtf = 0.0;
-        $totalCtc = 0.0;
-
-        foreach ($allActiveEmployees as $emp) {
-            $b = $emp->salary_breakdown;
-            $totalBasicPayroll += $b['basic_salary'];
-            $totalGrossPayroll += $b['gross_salary'];
-            $totalNetPayable += $b['net_salary'];
-            $totalEmployerEpfEtf += $b['total_employer_cost'];
-            $totalCtc += $b['ctc'];
+        $activeEmployees = Employee::active()->with(['salaryComponents.component'])->get();
+        $amounts = ['basic_salary', 'gross_salary', 'net_salary', 'total_employer_cost', 'ctc'];
+        $salaryTotals = [];
+        foreach ($activeEmployees as $employee) {
+            $salary = $employee->salary_breakdown;
+            $currency = $salary['currency'];
+            foreach ($amounts as $amount) {
+                $salaryTotals[$currency][$amount] = ($salaryTotals[$currency][$amount] ?? 0) + (int) round($salary[$amount] * 100);
+            }
         }
+        ksort($salaryTotals);
+        $activeCount = $activeEmployees->count();
 
-        $kpis = [
-            'total_employees' => $allActiveEmployees->count(),
-            'total_basic_payroll' => $totalBasicPayroll,
-            'total_gross_payroll' => $totalGrossPayroll,
-            'total_net_payable' => $totalNetPayable,
-            'total_employer_epf_etf' => $totalEmployerEpfEtf,
-            'total_ctc' => $totalCtc,
-        ];
-
-        return view('employees.index', compact('employees', 'integration', 'salaryComponents', 'kpis'));
+        return view('employees.index', compact('employees', 'integration', 'salaryTotals', 'activeCount'));
     }
 
     private function employeeQuery(Request $request)

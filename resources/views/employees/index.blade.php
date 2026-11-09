@@ -1,301 +1,130 @@
 @extends('layouts.app')
-@section('title', 'Employees & Salary Management')
+@section('title', 'Employees')
 
 @section('secondary-sidebar')
 @include('navigation.people')
 @endsection
 
 @section('content')
-<div class="employee-directory">
-    <!-- Page Header -->
-    <header class="page-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; flex-wrap:wrap; gap:1rem;">
-        <div>
-            <h1 style="font-size:1.75rem; font-weight:700; color:var(--text-heading); margin-bottom:0.25rem;">Employees & Salary Management</h1>
-            <p style="color:var(--text-muted); font-size:0.9rem;">Configure employee basic salary, allowances, EPF 8%/12%, ETF 3%, APIT tax, and net payroll.</p>
-        </div>
-        <div style="display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap;">
-            <a href="/employees/create" class="btn btn-primary"><ion-icon name="add-outline" aria-hidden="true"></ion-icon><span>Add employee</span></a>
-            <a href="/payroll" class="btn btn-primary"><ion-icon name="calendar-outline" aria-hidden="true"></ion-icon><span>Monthly payroll</span></a>
-            <a href="/master/salary-components" class="btn btn-outline" style="display:flex; align-items:center; gap:0.5rem; border-radius:8px; padding:0.6rem 1rem; text-decoration:none;">
-                <ion-icon name="options-outline"></ion-icon>
-                <span>Salary Heads Master</span>
-            </a>
-            <button onclick="openModal('apiSetupModal')" class="btn btn-primary" style="display:flex; align-items:center; gap:0.5rem; border-radius:8px; padding:0.6rem 1rem;">
-                <ion-icon name="sync-outline"></ion-icon>
-                <span>Sync HR Employees</span>
-            </button>
+<link rel="stylesheet" href="{{ asset('people-register.css') }}?v={{ hash_file('sha256', public_path('people-register.css')) }}">
+@php
+    $hasFilters = request()->filled('search') || request()->filled('status');
+    $money = fn ($amount) => number_format($amount, 2);
+    $metrics = ['net_salary' => 'Take-home pay', 'ctc' => 'Employer cost'];
+    $moreMetrics = ['basic_salary' => 'Basic pay', 'gross_salary' => 'Gross pay', 'total_employer_cost' => 'Employer contributions'];
+@endphp
+<div class="pi-page pi-employees" data-employee-register>
+    <header class="pi-header">
+        <div><h1>Employees</h1><p>Find an employee and review their monthly salary profile.</p></div>
+        <div class="pi-actions">
+            <details class="pi-menu">
+                <summary class="pi-button">More actions <ion-icon name="chevron-down-outline" aria-hidden="true"></ion-icon></summary>
+                <div class="pi-menu-links">
+                    <a href="/payroll">Monthly payroll</a>
+                    <a href="/master/salary-components">Salary components</a>
+                    <button type="button" onclick="openModal('apiSetupModal')">Sync HR employees</button>
+                </div>
+            </details>
+            <a class="pi-button pi-primary" href="/employees/create"><ion-icon name="add-outline" aria-hidden="true"></ion-icon> Add employee</a>
         </div>
     </header>
 
-    @if(session('success'))
-    <div style="background: rgba(16, 185, 129, 0.15); color: var(--success); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; border: 1px solid rgba(16, 185, 129, 0.3);">
-        {{ session('success') }}
-    </div>
-    @endif
+    @if(session('success'))<p class="pi-notice" role="status">{{ session('success') }}</p>@endif
 
-    <!-- Top Executive Payroll KPI Tiles -->
-    <div class="ds-summary-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:1rem; margin-bottom:1.5rem;">
-        <!-- Active Employees -->
-        <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:1.1rem;">
-            <div style="font-size:0.75rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; display:flex; align-items:center; gap:0.4rem;">
-                <ion-icon name="people-outline" style="color:var(--primary); font-size:1.1rem;"></ion-icon>
-                Active Team
-            </div>
-            <div class="tabular-nums" style="font-size:1.6rem; font-weight:700; color:var(--text-heading); margin-top:0.4rem;">
-                {{ $kpis['total_employees'] ?? $employees->total() }}
-            </div>
-            <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.2rem;">Headcount</div>
+    <section class="pi-overview pi-employee-overview" aria-label="Active employee salary estimates">
+        <div class="pi-highlight">
+            <span>Active employees</span>
+            <strong>{{ number_format($activeCount) }}</strong>
+            <p>Across the employee directory</p>
         </div>
-
-        <!-- Total Basic Payroll -->
-        <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:1.1rem;">
-            <div style="font-size:0.75rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; display:flex; align-items:center; gap:0.4rem;">
-                <ion-icon name="cash-outline" style="color:var(--text-muted); font-size:1.1rem;"></ion-icon>
-                Total Basic
-            </div>
-            <div class="tabular-nums" style="font-size:1.45rem; font-weight:700; color:var(--text-heading); margin-top:0.4rem;">
-                {{ number_format($kpis['total_basic_payroll'] ?? 0, 0) }}
-            </div>
-            <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.2rem;">LKR Monthly</div>
-        </div>
-
-        <!-- Total Gross Payroll -->
-        <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:1.1rem;">
-            <div style="font-size:0.75rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; display:flex; align-items:center; gap:0.4rem;">
-                <ion-icon name="add-circle-outline" style="color:var(--success); font-size:1.1rem;"></ion-icon>
-                Gross Payroll
-            </div>
-            <div class="tabular-nums" style="font-size:1.45rem; font-weight:700; color:var(--text-heading); margin-top:0.4rem;">
-                {{ number_format($kpis['total_gross_payroll'] ?? 0, 0) }}
-            </div>
-            <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.2rem;">Basic + Allowances</div>
-        </div>
-
-        <!-- Net Take-Home (Payable) -->
-        <div style="background:rgba(16, 185, 129, 0.08); border:1px solid rgba(16, 185, 129, 0.3); border-radius:10px; padding:1.1rem;">
-            <div style="font-size:0.75rem; color:var(--success); font-weight:700; text-transform:uppercase; display:flex; align-items:center; gap:0.4rem;">
-                <ion-icon name="wallet-outline" style="color:var(--success); font-size:1.1rem;"></ion-icon>
-                Net Take-Home
-            </div>
-            <div class="tabular-nums" style="font-size:1.55rem; font-weight:800; color:var(--success); margin-top:0.4rem;">
-                {{ number_format($kpis['total_net_payable'] ?? 0, 0) }}
-            </div>
-            <div style="font-size:0.75rem; color:var(--success); margin-top:0.2rem;">After EPF 8% & Tax</div>
-        </div>
-
-        <!-- Statutory Employer EPF & ETF (15%) -->
-        <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:1.1rem;">
-            <div style="font-size:0.75rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; display:flex; align-items:center; gap:0.4rem;">
-                <ion-icon name="shield-checkmark-outline" style="color:var(--primary); font-size:1.1rem;"></ion-icon>
-                Employer EPF/ETF
-            </div>
-            <div class="tabular-nums" style="font-size:1.45rem; font-weight:700; color:var(--primary); margin-top:0.4rem;">
-                {{ number_format($kpis['total_employer_epf_etf'] ?? 0, 0) }}
-            </div>
-            <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.2rem;">15% Statutory Cost</div>
-        </div>
-
-        <!-- Total Monthly Cost to Company (CTC) -->
-        <div style="background:rgba(139, 92, 246, 0.08); border:1px solid rgba(139, 92, 246, 0.3); border-radius:10px; padding:1.1rem;">
-            <div style="font-size:0.75rem; color:var(--primary); font-weight:700; text-transform:uppercase; display:flex; align-items:center; gap:0.4rem;">
-                <ion-icon name="business-outline" style="color:var(--primary); font-size:1.1rem;"></ion-icon>
-                Total CTC
-            </div>
-            <div class="tabular-nums" style="font-size:1.55rem; font-weight:800; color:var(--primary); margin-top:0.4rem;">
-                {{ number_format($kpis['total_ctc'] ?? 0, 0) }}
-            </div>
-            <div style="font-size:0.75rem; color:var(--primary); margin-top:0.2rem;">Total Company Cost</div>
-        </div>
-    </div>
-
-    <!-- Filter Bar -->
-    <div class="filter-bar" style="background:var(--bg-card); padding:1rem; border-radius:12px; border:1px solid var(--border); margin-bottom:1.5rem;">
-        <form action="" method="GET" style="display:flex; flex-wrap:wrap; gap:0.75rem; width:100%;">
-            <input type="search" name="search" aria-label="Search employees" value="{{ request('search') }}" class="form-control" maxlength="200" placeholder="Search name, employee code, job title, or role..." style="flex:1; min-width:200px; padding:0.6rem;">
-            <select name="status" aria-label="Employee status" class="form-control" style="width:160px; min-width:140px; padding:0.6rem;">
-                <option value="">All Statuses</option>
-                <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Active Only</option>
-                <option value="inactive" {{ request('status') === 'inactive' ? 'selected' : '' }}>Inactive</option>
-            </select>
-            <button type="submit" class="btn btn-primary" style="padding:0.6rem 1.25rem;">Filter</button>
-            @if(request('search') || request('status'))
-                <a href="/employees" class="btn btn-outline" style="padding:0.6rem 1rem; text-decoration:none;">Reset</a>
+        <div class="pi-estimates">
+            <h2>Monthly salary estimates</h2>
+            <p>From current salary profiles for active employees.</p>
+            @forelse($salaryTotals as $currency => $totals)
+                <dl class="pi-metrics" aria-label="Monthly estimates in {{ $currency }}">
+                    @foreach($metrics as $key => $label)
+                        <div><dt>{{ $label }}</dt><dd><small>{{ $currency }}</small> {{ $money($totals[$key] / 100) }}</dd></div>
+                    @endforeach
+                </dl>
+            @empty
+                <p class="pi-estimate-empty">Salary estimates appear when employees are active.</p>
+            @endforelse
+            @if($salaryTotals)
+                <details class="pi-estimate-details">
+                    <summary>More salary totals</summary>
+                    @foreach($salaryTotals as $currency => $totals)
+                        <dl class="pi-metrics" aria-label="Additional estimates in {{ $currency }}">
+                            @foreach($moreMetrics as $key => $label)
+                                <div><dt>{{ $label }}</dt><dd><small>{{ $currency }}</small> {{ $money($totals[$key] / 100) }}</dd></div>
+                            @endforeach
+                        </dl>
+                    @endforeach
+                </details>
             @endif
+        </div>
+    </section>
+
+    <section class="pi-register" aria-labelledby="employee-register-title">
+        <header class="pi-register-header">
+            <h2 id="employee-register-title">Employee directory</h2>
+            <p>{{ number_format($employees->total()) }} {{ Str::plural('employee', $employees->total()) }}{{ $hasFilters ? ' matching your filters' : ' in total' }}</p>
+        </header>
+        <form method="get" action="/employees" class="pi-filters" aria-label="Filter employees">
+            <div class="pi-field pi-search"><label for="employee-search">Find an employee</label><input id="employee-search" name="search" type="search" maxlength="200" placeholder="Name or code" value="{{ request('search') }}"></div>
+            <div class="pi-field"><label for="employee-status">Employment status</label><select name="status" id="employee-status"><option value="">All statuses</option><option value="active" @selected(request('status') === 'active')>Active</option><option value="inactive" @selected(request('status') === 'inactive')>Inactive</option></select></div>
+            <div class="pi-actions pi-filter-actions">
+                <button type="submit" class="pi-button">Apply filters</button>
+                @if($hasFilters)<a href="/employees" class="pi-button pi-quiet">Clear filters</a>@endif
+            </div>
         </form>
-    </div>
-
-    <!-- Employees & Salary Details Table -->
-    <div class="data-table-container" style="background:var(--bg-card); border-radius:12px; border:1px solid var(--border); overflow-x:auto;">
-        <table class="data-table employee-table" style="width:100%; border-collapse:collapse; min-width:1050px;">
-            <thead style="background:var(--bg-page); border-bottom:1px solid var(--border);">
-                <tr>
-                    <th style="padding:1rem; text-align:left; font-weight:600; color:var(--text-muted); width:240px;">Employee</th>
-                    <th style="padding:1rem; text-align:right; font-weight:600; color:var(--text-muted);">Basic Salary</th>
-                    <th style="padding:1rem; text-align:right; font-weight:600; color:var(--text-muted);">Allowances (+)</th>
-                    <th style="padding:1rem; text-align:right; font-weight:600; color:var(--text-muted);">Gross Salary</th>
-                    <th style="padding:1rem; text-align:right; font-weight:600; color:var(--text-muted);">Deductions (-)</th>
-                    <th style="padding:1rem; text-align:right; font-weight:600; color:var(--text-muted); background:rgba(16, 185, 129, 0.04);">Net Take-Home</th>
-                    <th style="padding:1rem; text-align:right; font-weight:600; color:var(--text-muted);">Employer (15%)</th>
-                    <th style="padding:1rem; text-align:right; font-weight:600; color:var(--text-muted); background:rgba(139, 92, 246, 0.04);">Total CTC</th>
-                    <th style="padding:1rem; text-align:center; font-weight:600; color:var(--text-muted); width:130px;">Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse($employees as $emp)
-                @php
-                    $breakdown = $emp->salary_breakdown;
-                @endphp
-                <tr style="border-bottom:1px solid var(--border-light);">
-                    <!-- Employee Column -->
-                    <td data-label="Employee" style="padding:0.9rem 1rem;"><div class="employee-cell-value">
-                        <div style="display:flex; align-items:center; gap:0.75rem;">
-                            <img src="{{ $emp->profile_picture_url ?? 'https://ui-avatars.com/api/?name='.urlencode($emp->full_name).'&background=8b5cf6&color=fff' }}" 
-                                 style="width:38px; height:38px; border-radius:50%; object-fit:cover; flex-shrink:0;">
-                            <div>
-                                <a href="/employees/{{ $emp->id }}" style="font-weight:600; color:var(--text-heading); text-decoration:none;">
-                                    {{ $emp->full_name }}
-                                </a>
-                                <div style="font-size:0.75rem; color:var(--text-muted); display:flex; flex-wrap:wrap; gap:0.4rem; align-items:center; margin-top:2px;">
-                                    <span>{{ $emp->employee_code ?? 'EMP-'.$emp->id }}</span>
-                                    <span>•</span>
-                                    <span>{{ $emp->job_position ?? 'Staff' }}</span>
-                                    <span class="badge {{ $emp->status === 'active' ? 'badge-success' : 'badge-draft' }}">{{ ucfirst($emp->status) }}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div></td>
-
-                    <!-- Basic Salary -->
-                    <td data-label="Basic Salary" style="padding:0.9rem 1rem; text-align:right;" class="tabular-nums"><div class="employee-cell-value">
-                        <span style="font-weight:600; color:var(--text-heading); font-size:0.95rem;">
-                            {{ number_format($breakdown['basic_salary'], 2) }}
-                        </span>
-                        <div style="font-size:0.75rem; color:var(--text-muted);">{{ $breakdown['currency'] }}</div>
-                    </div></td>
-
-                    <!-- Allowances -->
-                    <td data-label="Allowances (+)" style="padding:0.9rem 1rem; text-align:right;" class="tabular-nums"><div class="employee-cell-value">
-                        @if($breakdown['total_allowances'] > 0)
-                            <span style="font-weight:600; color:var(--success); font-size:0.95rem;">
-                                + {{ number_format($breakdown['total_allowances'], 2) }}
-                            </span>
-                            <div style="font-size:0.75rem; color:var(--text-muted);">
-                                {{ count($breakdown['earnings']) }} item(s)
-                            </div>
-                        @else
-                            <span style="color:var(--text-light); font-size:0.85rem;">-</span>
-                        @endif
-                    </div></td>
-
-                    <!-- Gross Salary -->
-                    <td data-label="Gross Salary" style="padding:0.9rem 1rem; text-align:right;" class="tabular-nums"><div class="employee-cell-value">
-                        <span style="font-weight:700; color:var(--text-heading); font-size:0.95rem;">
-                            {{ number_format($breakdown['gross_salary'], 2) }}
-                        </span>
-                        <div style="font-size:0.75rem; color:var(--text-muted);" title="EPF Base Earnings">
-                            EPF: {{ number_format($breakdown['epf_base_salary'], 0) }}
-                        </div>
-                    </div></td>
-
-                    <!-- Deductions -->
-                    <td data-label="Deductions (-)" style="padding:0.9rem 1rem; text-align:right;" class="tabular-nums"><div class="employee-cell-value">
-                        @if($breakdown['total_deductions'] > 0)
-                            <span style="font-weight:600; color:var(--danger); font-size:0.95rem;">
-                                - {{ number_format($breakdown['total_deductions'], 2) }}
-                            </span>
-                            <div style="font-size:0.75rem; color:var(--text-muted);">
-                                EPF 8%: {{ number_format($breakdown['employee_epf'], 0) }}
-                                @if($breakdown['apit_tax'] > 0)
-                                    | Tax: {{ number_format($breakdown['apit_tax'], 0) }}
-                                @endif
-                            </div>
-                        @else
-                            <span style="color:var(--text-light); font-size:0.85rem;">0.00</span>
-                        @endif
-                    </div></td>
-
-                    <!-- Net Take-Home Pay (Highlight) -->
-                    <td data-label="Net Take-Home" style="padding:0.9rem 1rem; text-align:right; background:rgba(16, 185, 129, 0.04);" class="tabular-nums"><div class="employee-cell-value">
-                        <span class="badge badge-success" style="font-size:0.95rem; font-weight:700; padding:0.35rem 0.65rem; border-radius:6px;">
-                            {{ number_format($breakdown['net_salary'], 2) }}
-                        </span>
-                        <div style="font-size:0.75rem; color:var(--success); margin-top:2px;">Disbursable</div>
-                    </div></td>
-
-                    <!-- Employer EPF & ETF (15%) -->
-                    <td data-label="Employer (15%)" style="padding:0.9rem 1rem; text-align:right;" class="tabular-nums"><div class="employee-cell-value">
-                        @if($breakdown['total_employer_cost'] > 0)
-                            <span style="font-weight:600; color:var(--primary); font-size:0.95rem;">
-                                {{ number_format($breakdown['total_employer_cost'], 2) }}
-                            </span>
-                            <div style="font-size:0.75rem; color:var(--text-muted);">
-                                EPF 12%: {{ number_format($breakdown['employer_epf'], 0) }} | ETF 3%: {{ number_format($breakdown['employer_etf'], 0) }}
-                            </div>
-                        @else
-                            <span style="color:var(--text-light); font-size:0.85rem;">0.00</span>
-                        @endif
-                    </div></td>
-
-                    <!-- Total CTC (Cost to Company) -->
-                    <td data-label="Total CTC" style="padding:0.9rem 1rem; text-align:right; background:rgba(139, 92, 246, 0.04);" class="tabular-nums"><div class="employee-cell-value">
-                        <span style="font-weight:800; color:var(--primary); font-size:1rem;">
-                            {{ number_format($breakdown['ctc'], 2) }}
-                        </span>
-                        <div style="font-size:0.75rem; color:var(--text-muted);">Gross + 15% ER</div>
-                    </div></td>
-
-                    <!-- Actions -->
-                    <td data-label="Action" style="padding:0.9rem 1rem; text-align:center;"><div class="employee-cell-value">
-                        <a href="/employees/{{ $emp->id }}" class="btn btn-outline" style="padding:0.35rem 0.75rem; font-size:0.8rem; display:inline-flex; align-items:center; gap:0.35rem; border-radius:6px; text-decoration:none;" title="Configure Salary & Components">
-                            <ion-icon name="create-outline"></ion-icon>
-                            <span>Config</span>
-                        </a>
-                        <x-employee-party-action :employee="$emp" :compact="true" />
-                    </div></td>
-                </tr>
-                @empty
-                <tr>
-                    <td colspan="9" style="text-align:center; padding:3.5rem; color:var(--text-muted);">
-                        <ion-icon name="people-outline" style="font-size:3.5rem; opacity:0.3; margin-bottom:1rem;"></ion-icon><br>
-                        <span style="font-size:1.1rem; font-weight:600; color:var(--text-heading);">No employees found</span><br>
-                        @if(request('search') || request('status'))
-                            Try another search or reset the filters.
-                        @else
-                            Click "Sync HR Employees" to pull staff records from your HR system.
-                        @endif
-                    </td>
-                </tr>
-                @endforelse
-            </tbody>
-        </table>
-        
-        <!-- Pagination -->
-        @if($employees->total() > 0)
-        <div style="display:flex; flex-wrap:wrap; gap:0.75rem; justify-content:space-between; align-items:center; padding:1rem 1.25rem; border-top:1px solid var(--border); font-size:0.85rem; color:var(--text-muted);">
-            <div>
-                Showing <strong>{{ $employees->firstItem() ?? 0 }}</strong> to <strong>{{ $employees->lastItem() ?? 0 }}</strong> of <strong>{{ $employees->total() }}</strong> employees
-            </div>
-            @if($employees->hasPages())
-            <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
-                @if ($employees->onFirstPage())
-                    <span class="btn btn-outline" style="opacity:0.5; cursor:not-allowed; padding:0.35rem 0.75rem; font-size:0.85rem;">Previous</span>
-                @else
-                    <a href="{{ $employees->previousPageUrl() }}" class="btn btn-outline" style="padding:0.35rem 0.75rem; font-size:0.85rem; text-decoration:none;">Previous</a>
-                @endif
-
-                <span style="padding:0 0.5rem; font-weight:600; color:var(--text-main);">Page {{ $employees->currentPage() }} of {{ $employees->lastPage() }}</span>
-
-                @if ($employees->hasMorePages())
-                    <a href="{{ $employees->nextPageUrl() }}" class="btn btn-outline" style="padding:0.35rem 0.75rem; font-size:0.85rem; text-decoration:none;">Next</a>
-                @else
-                    <span class="btn btn-outline" style="opacity:0.5; cursor:not-allowed; padding:0.35rem 0.75rem; font-size:0.85rem;">Next</span>
-                @endif
-            </div>
-            @endif
-        </div>
+        @if($employees->count())
+            <div class="pi-columns" aria-hidden="true"><span>Employee</span><span>Gross pay</span><span>Estimated take-home pay</span><span>Employer cost</span><span>Actions</span></div>
         @endif
-    </div>
+        @forelse($employees as $employee)
+            @php
+                $salary = $employee->salary_breakdown;
+                $currency = $salary['currency'];
+                $initials = Str::of($employee->full_name)->squish()->explode(' ')->take(2)->map(fn ($part) => Str::upper(Str::substr($part, 0, 1)))->implode('');
+            @endphp
+            <article class="pi-entry" aria-labelledby="employee-row-{{ $employee->id }}">
+                <div class="pi-row">
+                    <div class="pi-identity">
+                        <span class="pi-mark pi-avatar" aria-hidden="true">{{ $initials }}@if($employee->profile_picture_url)<img src="{{ $employee->profile_picture_url }}" alt="" loading="lazy" width="40" height="40">@endif</span>
+                        <div>
+                            <h3 id="employee-row-{{ $employee->id }}"><a href="/employees/{{ $employee->id }}">{{ $employee->full_name }}</a></h3>
+                            <p class="pi-subline">{{ $employee->employee_code ?: 'EMP-'.$employee->id }} @if($employee->job_position)· {{ $employee->job_position }}@endif</p>
+                            <span class="pi-status pi-state-{{ $employee->status }}">{{ ucfirst($employee->status) }}</span>
+                        </div>
+                    </div>
+                    @foreach(['gross_salary' => 'Gross pay', 'net_salary' => 'Estimated take-home pay', 'ctc' => 'Employer cost'] as $key => $label)
+                        <div @class(['pi-money', 'pi-key-money' => $key === 'net_salary', 'pi-employer' => $key === 'ctc'])><span class="pi-label">{{ $label }}</span><span class="pi-amount"><small>{{ $currency }}</small> {{ $money($salary[$key]) }}</span></div>
+                    @endforeach
+                    <div class="pi-row-actions">
+                        <a href="/employees/{{ $employee->id }}" class="pi-button pi-quiet" aria-label="Open profile for {{ $employee->full_name }}">Open</a>
+                        <button type="button" class="pi-button pi-icon" hidden data-profile-toggle aria-expanded="false" aria-controls="employee-pay-{{ $employee->id }}" aria-label="Salary breakdown for {{ $employee->full_name }}"><ion-icon name="chevron-down-outline" aria-hidden="true"></ion-icon></button>
+                    </div>
+                </div>
+                <div class="pi-breakdown" id="employee-pay-{{ $employee->id }}">
+                    @foreach(['Earnings' => ['Basic pay' => 'basic_salary', 'Allowances' => 'total_allowances', 'EPF eligible earnings' => 'epf_base_salary'], 'Employee deductions' => ['Total deductions' => 'total_deductions', 'Employee EPF' => 'employee_epf', 'APIT' => 'apit_tax'], 'Employer contributions' => ['Total contributions' => 'total_employer_cost', 'Employer EPF' => 'employer_epf', 'ETF' => 'employer_etf']] as $heading => $fields)
+                        <section><h4>{{ $heading }}</h4><dl>
+                            @foreach($fields as $label => $key)<div><dt>{{ $label }}</dt><dd>{{ $currency }} {{ $money($salary[$key]) }}</dd></div>@endforeach
+                        </dl></section>
+                    @endforeach
+                    <footer class="pi-party-action"><x-employee-party-action :employee="$employee" compact /></footer>
+                </div>
+            </article>
+        @empty
+            <div class="pi-empty"><h3>{{ $hasFilters ? 'No matching employees' : 'No employees yet' }}</h3><p>{{ $hasFilters ? 'Try another search or reset the filters.' : 'Add an employee to set up their salary profile.' }}</p><a class="pi-button" href="{{ $hasFilters ? '/employees' : '/employees/create' }}">{{ $hasFilters ? 'Clear filters' : 'Add employee' }}</a></div>
+        @endforelse
+        @if($employees->count() || $employees->hasPages())
+            <footer class="pi-pagination">
+                @if($employees->count())<span>Showing {{ $employees->firstItem() }}–{{ $employees->lastItem() }} of {{ $employees->total() }} employees</span>@endif
+                {{ $employees->links() }}
+            </footer>
+        @endif
+    </section>
 </div>
+<script src="{{ asset('employee-register.js') }}?v={{ hash_file('sha256', public_path('employee-register.js')) }}" defer></script>
 @endsection
 
 @section('modals')
@@ -307,7 +136,7 @@
                 <ion-icon name="sync-outline" style="color:var(--primary); font-size:1.3rem;"></ion-icon>
                 <span>HR Employee Synchronization</span>
             </h3>
-            <button type="button" class="btn-close" onclick="closeModal('apiSetupModal')">&times;</button>
+            <button type="button" class="btn-close" aria-label="Close HR sync" onclick="closeModal('apiSetupModal')">&times;</button>
         </div>
         <form id="apiSetupForm" onsubmit="handleApiSetup(event)">
             @csrf
@@ -338,31 +167,31 @@
                 <input type="hidden" id="integration_id" value="{{ $integration->id ?? '' }}">
 
                 <div class="form-group" style="margin-bottom:1rem;">
-                    <label class="form-label">Integration Name *</label>
+                    <label class="form-label" for="integration_name">Integration Name *</label>
                     <input type="text" id="integration_name" name="name" class="form-control" value="{{ $integration->name ?? '' }}" placeholder="E.g. Nexus / BambooHR" required>
                 </div>
                 
                 <div class="form-group" style="margin-bottom:1rem;">
-                    <label class="form-label">API URL *</label>
+                    <label class="form-label" for="integration_api_url">API URL *</label>
                     <input type="url" id="integration_api_url" name="api_url" class="form-control" value="{{ $integration->url ?? '' }}" placeholder="https://api.hr-system.com/employees" required>
                 </div>
                 
                 <div class="form-row" style="margin-bottom:1rem;">
                     <div class="form-col">
-                        <label class="form-label">HTTP Method *</label>
+                        <label class="form-label" for="integration_method">HTTP Method *</label>
                         <select id="integration_method" name="method" class="form-control">
                             <option value="GET" {{ ($integration->method ?? 'GET') === 'GET' ? 'selected' : '' }}>GET</option>
                             <option value="POST" {{ ($integration->method ?? '') === 'POST' ? 'selected' : '' }}>POST</option>
                         </select>
                     </div>
                     <div class="form-col">
-                        <label class="form-label">Data Path</label>
+                        <label class="form-label" for="integration_response_data_path">Data Path</label>
                         <input type="text" id="integration_response_data_path" name="response_data_path" class="form-control" value="{{ $integration->response_path ?? 'data' }}" placeholder="E.g. data">
                     </div>
                 </div>
 
                 <div class="form-group" style="margin-bottom:1rem;">
-                    <label class="form-label">Bearer Token</label>
+                    <label class="form-label" for="integration_bearer_token">Bearer Token</label>
                     <input type="password" id="integration_bearer_token" name="bearer_token" class="form-control" placeholder="{{ isset($integration) && $integration->bearer_token ? '•••••••••••••••• (Leave blank to keep existing token)' : 'Enter API Bearer Token' }}">
                     @if(isset($integration) && $integration->bearer_token)
                         <small style="color:var(--text-muted); font-size:0.75rem;">Existing token is active. Leave blank to keep it.</small>
@@ -371,7 +200,7 @@
             </div>
             <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:0.75rem; padding:1.25rem 1.5rem; border-top:1px solid var(--border-light);">
                 <button type="button" class="btn btn-secondary" onclick="closeModal('apiSetupModal')">Cancel</button>
-                <button type="submit" class="btn btn-primary" id="btnSyncSubmit" style="display:inline-flex; align-items:center; gap:0.4rem;">
+                <button type="submit" class="btn btn-primary" id="btnSyncSubmit" data-no-spinner style="display:inline-flex; align-items:center; gap:0.4rem;">
                     <ion-icon name="sync-outline"></ion-icon>
                     <span>Sync Now</span>
                 </button>

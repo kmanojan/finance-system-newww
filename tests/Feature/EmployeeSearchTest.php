@@ -48,4 +48,18 @@ class EmployeeSearchTest extends TestCase
         $this->get('/employees')->assertOk()->assertViewHas('employees', fn ($employees) => $employees->total() === 25)
             ->assertSee('Employees &amp; payroll', false)->assertDontSee('<span>People</span>', false);
     }
+
+    public function test_salary_estimates_keep_active_employees_and_currencies_separate(): void
+    {
+        DB::table('employees')->where('external_id', 1)->update(['basic_salary' => 12500.25, 'currency' => 'LKR']);
+        DB::table('employees')->where('external_id', 2)->update(['basic_salary' => 30000, 'currency' => 'LKR']);
+        DB::table('employees')->insert(['external_id' => 3, 'first_name' => 'Casey', 'last_name' => '', 'full_name' => 'Casey',
+            'employee_code' => 'STAFF-GAMMA', 'status' => 'active', 'basic_salary' => 800.75, 'currency' => 'USD']);
+
+        $response = $this->get('/employees?search=ANITA')->assertOk();
+        $response->assertViewHas('activeCount', 2)->assertSee('12,500.25')->assertSee('800.75')->assertDontSee('30,000.00');
+        $totals = $response->viewData('salaryTotals');
+        $this->assertSame(1250025, $totals['LKR']['net_salary']);
+        $this->assertSame(80075, $totals['USD']['net_salary']);
+    }
 }

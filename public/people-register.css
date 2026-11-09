@@ -1,0 +1,180 @@
+/* Payroll and employee indexes share the Loans register's spacing and finance theme. */
+.pi-page {
+    --pi-inset: 24px;
+    --pi-columns: minmax(0, 1.5fr) minmax(0, .9fr) minmax(0, 1.45fr) minmax(0, 1fr) 90px;
+    color: var(--text-main);
+    min-width: 0;
+    font-size: 14px;
+    line-height: 1.5;
+}
+.pi-employees { --pi-columns: minmax(0, 1.65fr) repeat(3, minmax(0, 1fr)) 112px; }
+.pi-page *, .pi-page *::before, .pi-page *::after { box-sizing: border-box; }
+.pi-page :is(h1, h2, h3, h4, p, dl, dd) { margin: 0; }
+.pi-page [hidden] { display: none; }
+.pi-page :is(a, button, summary, select, input):focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.pi-header { display: flex; justify-content: space-between; align-items: center; gap: 12px 20px; margin-bottom: 20px; }
+.pi-header h1 { font-size: 26px; font-weight: 650; line-height: 1.3; letter-spacing: -.5px; color: var(--text-heading); }
+.pi-header p { margin-top: 4px; color: var(--text-muted); }
+.pi-actions, .pi-row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.pi-button {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border: 1px solid var(--control-border);
+    border-radius: var(--radius-control);
+    background: var(--bg-card);
+    color: var(--text-heading);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color .15s, border-color .15s;
+}
+.pi-button:hover { background: var(--nav-hover); border-color: var(--text-muted); }
+.pi-button ion-icon { font-size: 16px; flex: none; }
+.pi-primary, .pi-primary:hover { border-color: var(--action); background: var(--action); color: var(--action-ink); }
+.pi-primary:hover { filter: brightness(.95); }
+.pi-quiet { background: transparent; border-color: transparent; }
+.pi-icon { width: 44px; padding: 0; }
+.pi-icon ion-icon { transition: transform .15s; }
+.pi-icon[aria-expanded=true] ion-icon { transform: rotate(180deg); }
+.pi-menu { position: relative; }
+.pi-menu summary { list-style: none; }
+.pi-menu summary::-webkit-details-marker { display: none; }
+.pi-menu[open] summary ion-icon { transform: rotate(180deg); }
+.pi-menu-links {
+    position: absolute;
+    z-index: 5;
+    inset: calc(100% + 6px) 0 auto auto;
+    min-width: 206px;
+    padding: 4px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-control);
+    background: var(--bg-card);
+    box-shadow: 0 4px 16px #0002;
+}
+.pi-menu-links :is(a, button) { display: flex; align-items: center; width: 100%; min-height: 44px; padding: 8px 10px; border: 0; border-radius: 6px; background: transparent; color: var(--text-heading); font: inherit; font-size: 13px; text-align: left; text-decoration: none; cursor: pointer; }
+.pi-menu-links :is(a, button):hover { background: var(--nav-hover); }
+.pi-page .pi-notice { padding: 12px var(--pi-inset); margin-bottom: 16px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--bg-card); }
+.pi-overview, .pi-register { border: 1px solid var(--border); border-radius: var(--radius-card); background: var(--bg-card); }
+.pi-overview { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2.6fr); overflow: hidden; margin-bottom: 20px; }
+.pi-highlight { background: var(--balance-surface); color: var(--balance-ink); padding: 18px var(--pi-inset); }
+.pi-highlight > span { font-weight: 500; }
+.pi-highlight strong { display: block; margin: 2px 0 4px; font-size: 32px; font-weight: 600; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.pi-highlight p { font-size: 12px; }
+.pi-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; padding-block: 18px; }
+.pi-metrics > div { min-width: 0; padding: 0 14px; }
+.pi-metrics > div + div { border-left: 1px solid var(--border); }
+.pi-metrics dt, .pi-estimates > p { font-size: 12px; color: var(--text-muted); }
+.pi-metrics dd { margin-top: 4px; color: var(--text-heading); font-size: 20px; font-weight: 550; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.pi-metrics dd small, .pi-amount small { color: var(--text-muted); font-size: 11px; font-weight: 400; }
+.pi-estimates { padding: 14px 0 4px; min-width: 0; }
+.pi-estimates > :is(h2, p) { margin-inline: 14px; }
+.pi-estimates h2 { font-size: 14px; font-weight: 600; color: var(--text-heading); }
+.pi-estimates > .pi-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.pi-estimates .pi-metrics { padding-block: 8px; }
+.pi-estimates .pi-metrics + .pi-metrics { border-top: 1px solid var(--border-light); }
+.pi-estimates .pi-metrics dd { font-size: 14px; }
+.pi-estimates .pi-metrics dd small { display: block; }
+.pi-estimates .pi-estimate-empty { margin-block: 10px; }
+.pi-estimate-details > summary, .pi-filter-panel > summary { width: fit-content; min-height: 44px; padding: 11px 8px; border-radius: var(--radius-control); color: var(--text-heading); font-size: 13px; font-weight: 500; cursor: pointer; }
+.pi-estimate-details > summary { margin-inline: 6px; }
+.pi-estimate-details > summary:hover, .pi-filter-panel > summary:hover { background: var(--nav-hover); }
+.pi-register-header { padding: 18px var(--pi-inset) 10px; }
+.pi-register-header h2 { color: var(--text-heading); font-size: 17px; font-weight: 600; }
+.pi-register-header p, .pi-subline, .pi-note { color: var(--text-muted); font-size: 12px; overflow-wrap: anywhere; }
+.pi-register-header p { margin-top: 3px; }
+.pi-tabs { display: flex; flex-wrap: wrap; gap: 0 16px; padding: 0 var(--pi-inset); border-bottom: 1px solid var(--border); }
+.pi-tabs a { display: flex; min-height: 44px; align-items: center; gap: 5px; border-bottom: 2px solid transparent; color: var(--text-muted); font-size: 12px; text-decoration: none; }
+.pi-tabs a span { font-variant-numeric: tabular-nums; }
+.pi-tabs a[aria-current] { border-color: var(--primary); color: var(--text-heading); font-weight: 600; }
+.pi-tabs a:hover { color: var(--primary); }
+.pi-tabs a:focus-visible { outline-offset: -2px; }
+.pi-filters {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1.1fr) auto;
+    align-items: end;
+    gap: 10px;
+    padding: 12px var(--pi-inset);
+    border-bottom: 1px solid var(--border-light);
+}
+.pi-employees .pi-filters { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) auto; }
+.pi-filter-panel { padding: 4px var(--pi-inset); border-bottom: 1px solid var(--border-light); }
+.pi-filter-panel .pi-filters { padding: 6px 0 10px; border: 0; }
+.pi-filter-panel summary ion-icon { vertical-align: -2px; }
+.pi-filter-panel summary span { margin-inline-start: 8px; color: var(--text-muted); font-size: 12px; font-weight: 400; }
+.pi-field { min-width: 0; }
+.pi-field label { display: block; margin-bottom: 4px; color: var(--text-muted); font-size: 12px; }
+.pi-field :is(input, select) { display: block; width: 100%; min-width: 0; min-height: 44px; padding: 6px 8px; border: 1px solid var(--control-border); border-radius: var(--radius-control); background: var(--input-bg, var(--bg-card)); color: var(--text-heading); font: inherit; font-size: 13px; }
+.pi-columns, .pi-row { display: grid; grid-template-columns: var(--pi-columns); align-items: center; gap: 12px; padding: 12px var(--pi-inset); }
+.pi-columns { border-bottom: 1px solid var(--border-light); color: var(--text-muted); font-size: 12px; }
+.pi-columns > span:nth-child(n+2), .pi-money { text-align: right; }
+.pi-payroll .pi-columns > span:nth-child(2) { text-align: left; }
+.pi-row > div { min-width: 0; }
+.pi-row:hover { background: var(--bg-page); }
+.pi-row + .pi-row, .pi-entry + .pi-entry { border-top: 1px solid var(--border-light); }
+.pi-identity { display: flex; align-items: center; gap: 10px; }
+.pi-identity h3 { color: var(--text-heading); font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+.pi-identity h3 a { color: inherit; text-decoration: none; }
+.pi-identity h3 a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.pi-mark { display: grid; flex: 0 0 40px; width: 40px; height: 40px; place-items: center; border-radius: var(--radius-control); background: var(--primary-light); color: var(--text-heading); font-size: 12px; font-weight: 600; }
+.pi-avatar { position: relative; overflow: hidden; border-radius: 50%; }
+.pi-avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.pi-subline { display: block; }
+.pi-status { display: inline-block; padding: 2px 6px; border-radius: 6px; background: var(--bg-page); color: var(--text-main); font-size: 11px; font-weight: 500; }
+.pi-identity .pi-status { margin-top: 4px; }
+.pi-state-active, .pi-state-paid, .pi-state-completed { background: color-mix(in srgb, var(--success) 10%, var(--bg-card)); }
+.pi-state-review, .pi-state-partial { background: color-mix(in srgb, var(--warning) 14%, var(--bg-card)); }
+.pi-amount { display: block; color: var(--text-heading); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.pi-key-money .pi-amount { font-weight: 650; }
+.pi-label { position: absolute; width: 1px; height: 1px; clip-path: inset(50%); overflow: hidden; white-space: nowrap; }
+.pi-row-actions { justify-content: flex-end; }
+.pi-breakdown { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 20px; padding: 14px var(--pi-inset); border-top: 1px solid var(--border-light); background: var(--bg-page); font-size: 12px; }
+.pi-breakdown h4 { margin-bottom: 4px; color: var(--text-heading); font-size: 13px; font-weight: 600; }
+.pi-breakdown dl > div { display: flex; justify-content: space-between; gap: 8px; padding-block: 4px; border-bottom: 1px solid var(--border-light); }
+.pi-breakdown dt { color: var(--text-muted); }
+.pi-breakdown dd { text-align: right; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.pi-party-action { grid-column: 1 / -1; }
+.pi-party-action :is(a, button) { display: inline-flex; align-items: center; min-height: 44px; }
+.pi-empty { padding: 28px var(--pi-inset); text-align: center; }
+.pi-empty h3 { color: var(--text-heading); font-size: 17px; font-weight: 600; }
+.pi-empty p { margin: 6px 0 12px; color: var(--text-muted); }
+.pi-pagination { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px 16px; padding: 12px var(--pi-inset); border-top: 1px solid var(--border-light); color: var(--text-muted); font-size: 12px; }
+.pi-pagination :is(a, [aria-current="page"] > span, [aria-disabled="true"] > span) { min-width: 44px; min-height: 44px; justify-content: center; }
+.pi-page .pi-note { margin-top: 12px; }
+
+@media (max-width: 1150px) {
+    .pi-employee-overview { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 900px) {
+    .pi-page { --pi-inset: 16px; }
+    .pi-columns { display: none; }
+    .pi-row { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+    .pi-identity { grid-column: 1 / -1; }
+    .pi-money { text-align: left; }
+    .pi-label { position: static; display: block; width: auto; height: auto; margin-bottom: 2px; clip-path: none; overflow: visible; white-space: normal; color: var(--text-muted); font-size: 12px; }
+    .pi-row-actions { align-self: end; }
+    .pi-row-actions .pi-button { border-color: var(--control-border); }
+}
+@media (max-width: 620px) {
+    .pi-header { flex-wrap: wrap; }
+    .pi-header h1 { font-size: 22px; }
+    .pi-menu-links { inset-inline: 0 auto; min-width: min(206px, calc(100vw - 132px)); }
+    .pi-overview { grid-template-columns: minmax(0, 1fr); }
+    .pi-highlight { display: grid; grid-template-columns: 1fr auto; gap: 1px 8px; align-items: baseline; padding-block: 10px; }
+    .pi-highlight strong { font-size: 26px; }
+    .pi-highlight p { grid-column: 1 / -1; }
+    .pi-metrics { padding-block: 12px; }
+    .pi-tabs { gap: 0 12px; }
+    .pi-filters, .pi-employees .pi-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .pi-payroll .pi-search, .pi-filter-actions { grid-column: 1 / -1; }
+    .pi-field :is(input, select) { font-size: 16px; }
+    .pi-breakdown { grid-template-columns: minmax(0, 1fr); }
+    .pi-pagination nav { max-width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) { .pi-button, .pi-icon ion-icon { transition: none; } }

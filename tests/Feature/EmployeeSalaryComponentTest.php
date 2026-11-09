@@ -33,7 +33,7 @@ class EmployeeSalaryComponentTest extends TestCase
         $response->assertSee('Employer ETF (3%)');
     }
 
-    public function test_employee_index_displays_salary_breakdown_columns_and_kpis(): void
+    public function test_employee_index_displays_estimates_and_salary_breakdown(): void
     {
         $user = User::factory()->create(['role' => 'admin', 'is_active' => true]);
         $employee = Employee::create([
@@ -50,9 +50,10 @@ class EmployeeSalaryComponentTest extends TestCase
         $response = $this->actingAs($user)->get('/employees');
 
         $response->assertStatus(200);
-        $response->assertSee('Employees &amp; Salary Management', false);
-        $response->assertSee('Net Take-Home');
-        $response->assertSee('Total CTC');
+        $response->assertSeeText('Employee directory');
+        $response->assertSeeText('Estimated take-home pay');
+        $response->assertSeeText('Employer cost');
+        $response->assertSeeText('Employee deductions');
         $response->assertSee('100,000.00');
     }
 
