@@ -97,6 +97,11 @@ class LoanFlowService
         return self::mentionedIds($html, 'transaction');
     }
 
+    public static function mentionedReferenceIds(?string $html, string $kind): array
+    {
+        return in_array($kind, ['payment', 'project']) ? self::mentionedIds($html, $kind) : [];
+    }
+
     private static function mentionedIds(?string $html, string $kind): array
     {
         if (! $html || ! str_contains($html, '<')) {
@@ -124,6 +129,9 @@ class LoanFlowService
                 }
                 if ($kind === 'loan' && preg_match('~^/loans/([1-9][0-9]*)/?$~', $url['path'] ?? '', $match)) {
                     $ids[(int) $match[1]] = true;
+                }
+                if (in_array($kind, ['payment', 'project']) && preg_match('~^/'.($kind === 'payment' ? 'payments' : 'projects').'/([1-9][0-9]*)/?$~', $url['path'] ?? '', $reference)) {
+                    $ids[(int) $reference[1]] = true;
                 }
                 if ($kind === 'transaction' && ($url['path'] ?? '') === '/transactions') {
                     parse_str($url['query'] ?? '', $query);
@@ -255,7 +263,30 @@ class LoanFlowService
         $transactions = DB::table('transactions')->whereIn('id', $transactionEdges->pluck('transaction_id')->unique())->orderBy('transaction_date')->orderBy('id')->get()->keyBy('id');
         $transactionEdges = $transactionEdges->filter(fn ($edge) => $transactions->has($edge->transaction_id));
 
+        $referenceEdges = collect();
+        foreach ($notes->whereIn('loan_id', array_keys($ids)) as $note) {
+            foreach (['payment', 'project'] as $kind) {
+                foreach (self::mentionedReferenceIds($note->notes, $kind) as $id) {
+                    $referenceEdges->push((object) ['id' => $kind.'-'.$note->note_key.'-'.$id, 'kind' => 'reference',
+                        'loan_id' => $note->loan_id, 'source_loan_id' => $kind.'-'.$id, 'reference_id' => $id, 'reference_type' => $kind,
+                        'record_date' => $note->record_date, 'note_label' => $note->note_label]);
+                }
+            }
+        }
+        $references = collect();
+        foreach (DB::table('payments')->whereIn('id', $referenceEdges->where('reference_type', 'payment')->pluck('reference_id'))->get() as $payment) {
+            $references->put('payment-'.$payment->id, (object) ['node' => 'payment-'.$payment->id, 'url' => '/payments/'.$payment->id,
+                'code' => 'PAY-'.$payment->id, 'label' => 'Referenced payment', 'name' => 'Recorded client receipt', 'currency' => $payment->currency,
+                'amount' => $payment->total_amount, 'amountLabel' => 'Recorded', 'detail' => $payment->payment_date]);
+        }
+        foreach (DB::table('projects')->whereIn('id', $referenceEdges->where('reference_type', 'project')->pluck('reference_id'))->get() as $project) {
+            $references->put('project-'.$project->id, (object) ['node' => 'project-'.$project->id, 'url' => '/projects/'.$project->id,
+                'code' => 'PRJ-'.$project->id, 'label' => 'Referenced project', 'name' => $project->name, 'currency' => $project->currency,
+                'amount' => $project->budget_limit, 'amountLabel' => 'Budget', 'detail' => ucfirst($project->status)]);
+        }
+        $referenceEdges = $referenceEdges->filter(fn ($edge) => $references->has($edge->source_loan_id));
+
         return ['loans' => $loans->keyBy('id'), 'columns' => $loans->groupBy('flow_level')->sortKeys(),
-            'transactions' => $transactions, 'edges' => $edges->concat($transactionEdges)->values()];
+            'transactions' => $transactions, 'references' => $references, 'edges' => $edges->concat($transactionEdges)->concat($referenceEdges)->values()];
     }
 }

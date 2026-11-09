@@ -262,6 +262,7 @@ Route::middleware(['auth', AuthorizeWorkspace::class, AtomicWorkspaceWrite::clas
         Route::post('/fixed-assets/{id}/depreciate', [FixedAssetController::class, 'runDepreciation']);
     });
 
+    Route::get('/payments/{id}', [\App\Http\Controllers\PaymentReferenceController::class, 'show'])->whereNumber('id');
     Route::get('/projects', [ProjectController::class, 'index']);
     Route::post('/projects', [ProjectController::class, 'store']);
     Route::get('/projects/{id}', [ProjectController::class, 'show']);

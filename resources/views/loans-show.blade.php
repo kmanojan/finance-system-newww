@@ -35,7 +35,7 @@
         <div class="loan-tabs" role="tablist" aria-label="Loan information">
             <button type="button" id="tab-schedule" role="tab" aria-controls="content-schedule" aria-selected="true" tabindex="0" data-loan-tab="schedule"><ion-icon name="calendar-outline" aria-hidden="true"></ion-icon> Interest Schedule <span>{{ $schedules->count() }}</span></button>
             <button type="button" id="tab-principal" role="tab" aria-controls="content-principal" aria-selected="false" tabindex="-1" data-loan-tab="principal"><ion-icon name="swap-vertical-outline" aria-hidden="true"></ion-icon> Principal Records <span>{{ $principalRecords->count() }}</span></button>
-            <button type="button" id="tab-flow" role="tab" aria-controls="content-flow" aria-selected="false" tabindex="-1" data-loan-tab="flow"><ion-icon name="git-network-outline" aria-hidden="true"></ion-icon> Loan Flow <span>{{ max(0, $loanFlow['loans']->count() - 1) + $loanFlow['transactions']->count() }}</span></button>
+            <button type="button" id="tab-flow" role="tab" aria-controls="content-flow" aria-selected="false" tabindex="-1" data-loan-tab="flow"><ion-icon name="git-network-outline" aria-hidden="true"></ion-icon> Loan Flow <span>{{ max(0, $loanFlow['loans']->count() - 1) + $loanFlow['transactions']->count() + $loanFlow['references']->count() }}</span></button>
             <button type="button" id="tab-details" role="tab" aria-controls="content-details" aria-selected="false" tabindex="-1" data-loan-tab="details"><ion-icon name="document-text-outline" aria-hidden="true"></ion-icon> Loan Details</button>
         </div>
         <!-- TAB 1: Interest Schedule -->

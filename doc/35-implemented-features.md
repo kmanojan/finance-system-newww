@@ -403,3 +403,9 @@ Employees sidebar now labels the statutory register **EPF, ETF & tax**. Payroll-
 ### Loan settlement rich notes
 
 Full loan settlements, principal repayments and interest payments support the shared rich editor with `/loan` and `/transaction` selections. Saved references appear automatically in Loan flow as dashed contextual links; transaction cards link to the exact transaction. Rich notes render safely in record tables, and reference-only selections leave other loans and ledger entries unchanged. See `08-loans-third-party.md` for scope, compatibility and accounting behavior.
+
+### Payment and project rich-editor references
+
+The shared editor supports `/payment` and `/project` (including plural aliases) alongside existing loan, transaction, employee and party references. Payments search recorded client/project/invoice receipts by ID, project, invoice, date, amount, bank and reference; projects search ID, name, company, client, currency, status and budget. Search is bounded and requires workspace authentication. Selection inserts an exact record link, and the All category includes both new types. `/payments/{id}` provides read-only receipt details, payment methods and invoice allocations.
+
+Settlement-note payment/project selections appear as contextual cards in Loan flow without posting or allocating money. No database migration is required. This revision passed 194 backend tests (2,048 assertions), 16 frontend tests and the production build; an isolated browser check verified both selections in one paragraph, saving notes, flow cards and the payment destination.

@@ -349,6 +349,14 @@ This is the declared endpoint catalogue, not proof that an operation is permitte
 | `PUT` | `/transactions/{id}` | `TransactionController@update` |
 | `GET\|HEAD` | `/uploads/{path}` | `Closure` |
 
+## Rich-editor payment references
+
+| Method | URI | Handler |
+|---|---|---|
+| `GET\|HEAD` | `/payments/{id}` | `PaymentReferenceController@show` |
+
+Authenticated read-only receipt detail. The existing mention-search endpoint also accepts `type=payment` and `type=project`; its All response includes `payments` and `projects`.
+
 ## Scheduled work and maintenance
 
 HTTP routes do not describe queue/scheduler execution. See [`routes/console.php`](../routes/console.php) for recurring invoices, employee sync and reminder resumption, and the [feature guide](35-implemented-features.md#accounting-controls-and-operations) for maintenance commands and deployment responsibilities.

@@ -2,7 +2,7 @@
     'name',
     'id' => null,
     'value' => '',
-    'placeholder' => 'Type / for commands (/loan, /transaction, /party, /employee)...',
+    'placeholder' => 'Type / for commands (/loan, /transaction, /payment, /project, /party, /employee)...',
     'height' => '130px',
     'required' => false,
     'class' => '',
@@ -42,7 +42,7 @@
                     type="text" 
                     id="slash_search_input_{{ $editorId }}" 
                     class="slash-search-input" 
-                    placeholder="Search loans, transactions, parties, employees..." 
+                    placeholder="Search loans, transactions, payments, projects, parties, employees..."
                     autocomplete="off"
                 />
             </div>
@@ -59,6 +59,8 @@
             <button type="button" class="slash-tab-pill" data-category="transaction">
                 <ion-icon name="receipt-outline"></ion-icon> /transaction
             </button>
+            <button type="button" class="slash-tab-pill" data-category="payment"><ion-icon name="card-outline"></ion-icon> /payment</button>
+            <button type="button" class="slash-tab-pill" data-category="project"><ion-icon name="briefcase-outline"></ion-icon> /project</button>
             <button type="button" class="slash-tab-pill" data-category="party">
                 <ion-icon name="business-outline"></ion-icon> /party
             </button>
@@ -375,7 +377,7 @@ if (typeof window.__fetchMentionsServer === 'undefined') {
             })
             .catch(err => {
                 console.warn('CKeditorController mentions fetch error:', err);
-                return { items: [], loans: [], parties: [], employees: [], transactions: [] };
+                return { items: [], loans: [], parties: [], employees: [], transactions: [], payments: [], projects: [] };
             });
     };
 }
@@ -396,7 +398,7 @@ function initRichEditor(editorId, config) {
                 'link', 'insertTable', '|', 
                 'undo', 'redo'
             ],
-            placeholder: config.placeholder || 'Type / for commands (/loan, /transaction, /party, /employee)...'
+            placeholder: config.placeholder || 'Type / for commands (/loan, /transaction, /payment, /project, /party, /employee)...'
         })
         .then(editor => {
             window.__richEditors[editorId] = editor;
@@ -556,6 +558,10 @@ function setupSlashCommands(editor, editorId) {
                         </div>
                     </div>
                 `;
+            } else if (item.type === 'payment' || item.type === 'project') {
+                const isPayment = item.type === 'payment';
+                const description = isPayment ? [item.project_name, item.invoice_no, item.reference, item.date].filter(Boolean).join(' · ') : [item.company_name, item.status].filter(Boolean).join(' · ');
+                itemEl.innerHTML = `<div class="slash-menu-item-icon"><ion-icon name="${isPayment ? 'card-outline' : 'briefcase-outline'}"></ion-icon></div><div class="slash-menu-item-content"><div class="slash-menu-item-title">${escapeMention(item.code)} · ${escapeMention(isPayment ? (item.project_name || item.invoice_no || 'Client receipt') : item.name)}</div><div class="slash-menu-item-sub">${escapeMention(description)}</div><div class="slash-menu-item-sub">${isPayment ? 'Recorded' : 'Budget'} · ${escapeMention(item.currency)} ${Number(item.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</div></div>`;
             } else if (item.type === 'party') {
                 itemEl.innerHTML = `
                     <div class="slash-menu-item-icon" style="color:var(--primary); background:rgba(59,130,246,0.15);">
@@ -633,6 +639,10 @@ function setupSlashCommands(editor, editorId) {
             const sign = isInc ? '+' : (item.type_name === 'expense' ? '-' : '');
             const ref = item.reference_no ? ` [${escapeMention(item.reference_no)}]` : '';
             htmlToInsert = `<a href="/transactions?transaction_id=${Number(item.id)}" target="_blank" rel="noopener noreferrer" class="mention-chip mention-transaction" style="display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:6px; background:rgba(245,158,11,0.14); color:var(--warning); font-weight:600; text-decoration:none; border:1px solid rgba(245,158,11,0.35);" contenteditable="false"><ion-icon name="receipt-outline"></ion-icon> TXN-${item.id}${ref}: ${escapeMention((item.type_name || 'transaction').toUpperCase())} ${sign}${escapeMention(item.currency)} ${Number(item.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</a>&nbsp;`;
+        } else if (item.type === 'payment' || item.type === 'project') {
+            const isPayment = item.type === 'payment';
+            const label = isPayment ? `${item.code}: ${item.project_name || item.invoice_no || 'Client receipt'} (${item.currency} ${Number(item.amount).toLocaleString(undefined, {minimumFractionDigits: 2})})` : `${item.code}: ${item.name}`;
+            htmlToInsert = `<a href="/${isPayment ? 'payments' : 'projects'}/${Number(item.id)}">${escapeMention(label)}</a>&nbsp;`;
         } else if (item.type === 'party') {
             htmlToInsert = `<span class="mention-chip mention-party" style="display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:6px; background:rgba(59,130,246,0.12); color:var(--primary); font-weight:600; border:1px solid rgba(59,130,246,0.25);" contenteditable="false"><ion-icon name="business-outline"></ion-icon> ${item.name}</span>&nbsp;`;
         } else if (item.type === 'employee') {
@@ -669,13 +679,16 @@ function setupSlashCommands(editor, editorId) {
             all: 'Slash Commands & Search',
             loan: 'Loans · up to 10 matches',
             transaction: 'Transactions (/transaction - 10 Results)',
+            payment: 'Payments · up to 10 matches', project: 'Projects · up to 10 matches',
             party: 'Parties (/party - 10 Results)',
             employee: 'Employees (/employee - 10 Results)'
         };
         const placeholders = {
-            all: 'Search loans, transactions, parties, employees...',
+            all: 'Search loans, transactions, payments, projects, parties, employees...',
             loan: 'Search code, party, lender, description or amount…',
             transaction: 'Search transaction by description, ref no, amount...',
+            payment: 'Search payment ID, project, invoice, bank reference or amount…',
+            project: 'Search project ID, name, company or client…',
             party: 'Search party by name, contact, phone, email...',
             employee: 'Search employee by name, code, position...'
         };
@@ -690,6 +703,8 @@ function setupSlashCommands(editor, editorId) {
         // If category is 'all' and no query, show command labels
         if (category === 'all' && (!query || query.trim() === '')) {
             const commands = [
+                {type: 'command', action: 'payment', title: '/payment', subtitle: 'Reference a recorded client / project payment', icon: 'card-outline', iconColor: 'var(--primary)', bgColor: 'var(--primary-light)'},
+                {type: 'command', action: 'project', title: '/project', subtitle: 'Search and link a project', icon: 'briefcase-outline', iconColor: 'var(--primary)', bgColor: 'var(--primary-light)'},
                 {
                     type: 'command',
                     action: 'loan',
@@ -735,13 +750,15 @@ function setupSlashCommands(editor, editorId) {
 
         if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
         searchDebounceTimer = setTimeout(() => {
-            window.__fetchMentionsServer(category === 'all' ? 'loan' : category, query, 10).then(data => {
+            window.__fetchMentionsServer(category, query, 10).then(data => {
                 if (revision !== searchRevision) return;
                 let items = [];
                 if (category === 'loan') {
                     items = (data.loans || data.items || []).map(l => ({ ...l, type: 'loan' }));
                 } else if (category === 'transaction') {
                     items = (data.transactions || data.items || []).map(t => ({ ...t, type_name: t.type, type: 'transaction' }));
+                } else if (category === 'payment' || category === 'project') {
+                    items = (data[category === 'payment' ? 'payments' : 'projects'] || data.items || []).map(record => ({...record, type: category}));
                 } else if (category === 'party') {
                     items = (data.parties || data.items || []).map(p => ({ ...p, type: 'party' }));
                 } else if (category === 'employee') {
@@ -751,7 +768,7 @@ function setupSlashCommands(editor, editorId) {
                     const tx = (data.transactions || []).map(x => ({ ...x, type_name: x.type, type: 'transaction' }));
                     const p = (data.parties || []).map(x => ({ ...x, type: 'party' }));
                     const em = (data.employees || []).map(x => ({ ...x, type: 'employee' }));
-                    items = [...l, ...tx, ...p, ...em];
+                    items = [...l, ...tx, ...(data.payments || []).map(x => ({...x, type: 'payment'})), ...(data.projects || []).map(x => ({...x, type: 'project'})), ...p, ...em];
                 }
                 renderItems(items, titles[category]);
             });
@@ -878,6 +895,9 @@ function setupSlashCommands(editor, editorId) {
         } else if (trimmed.startsWith('/transaction') || trimmed.startsWith('/txn') || trimmed.startsWith('/tx')) {
             const subQuery = trimmed.replace(/\/transaction|\/txn|\/tx/, '').trim();
             fetchCategoryData('transaction', subQuery);
+        } else if (trimmed.startsWith('/payment') || trimmed.startsWith('/project')) {
+            const category = trimmed.startsWith('/payment') ? 'payment' : 'project';
+            fetchCategoryData(category, trimmed.replace(/^\/(?:payments?|projects?)\b/, '').trim());
         } else if (trimmed.startsWith('/party')) {
             const subQuery = trimmed.replace('/party', '').trim();
             fetchCategoryData('party', subQuery);

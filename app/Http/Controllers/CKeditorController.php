@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\LoanMentionSearch;
+use App\Services\RichReferenceSearch;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -26,7 +27,7 @@ class CKeditorController extends Controller
             'loans' => [],
             'parties' => [],
             'employees' => [],
-            'transactions' => [],
+            'transactions' => [], 'payments' => [], 'projects' => [],
         ];
 
         // 1. Loans (/loan)
@@ -197,6 +198,15 @@ class CKeditorController extends Controller
             $data['transactions'] = $transactions;
             if ($type === 'transaction') {
                 $data['items'] = $transactions;
+            }
+        }
+
+        foreach (['payment' => 'payments', 'project' => 'projects'] as $kind => $table) {
+            if (($type === $kind || $type === 'all') && Schema::hasTable($table)) {
+                $data[$table] = RichReferenceSearch::search($kind, $q, $type === 'all' ? 3 : $limit);
+                if ($type === $kind) {
+                    $data['items'] = $data[$table];
+                }
             }
         }
 
