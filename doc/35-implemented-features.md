@@ -421,3 +421,5 @@ Individual EPF/ETF/APIT payments and statutory batches now accept actual payment
 ### Default remittance amount
 
 The actual remittance form pre-fills the outstanding statutory balance, formatted to two decimal places, for ETF, EPF and APIT. Users can reduce it for a partial payment. After payment, the next form defaults to the remaining balance; a validation error preserves the entered amount. Opening the form does not record a payment.
+
+The statutory register (`/payroll/statutory`) lists payroll months newest first, with descending payroll ID as the tie-breaker and consistent obligation ordering within each payroll. Filters and pagination retain this ordering.

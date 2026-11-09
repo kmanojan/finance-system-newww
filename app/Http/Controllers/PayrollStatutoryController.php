@@ -18,7 +18,7 @@ class PayrollStatutoryController extends Controller
             'status' => ['nullable', Rule::in(['open', 'all', 'paid', 'partial', 'unpaid', 'prepared_unpaid', 'paid_unsubmitted', 'overdue'])]]);
         $query = PayrollStatutoryService::register($filters);
         $summary = (clone $query)->selectRaw("COUNT(*) as obligations, COALESCE(SUM(paid_cents),0) as paid_cents, COALESCE(SUM(balance_cents),0) as balance_cents, COALESCE(SUM(CASE WHEN event_id IS NOT NULL THEN balance_cents ELSE 0 END),0) as prepared_balance_cents, COALESCE(SUM(CASE WHEN balance_cents <= 0 AND (action IS NULL OR action != 'submitted') THEN 1 ELSE 0 END),0) as paid_unsubmitted_count")->first();
-        $rows = $query->orderBy('due_on')->orderBy('month')->orderBy('run_id')->orderBy('kind')->paginate(30)->withQueryString();
+        $rows = $query->orderByDesc('month')->orderByDesc('run_id')->orderBy('kind')->paginate(30)->withQueryString();
         foreach ($rows as $row) {
             $row->tracking = PayrollStatutoryService::state($row->run_status, (int) $row->due_cents, (int) $row->paid_cents, $row->due_on,
                 $row->event_id ? (object) ['id' => $row->event_id, 'action' => $row->action] : null);
