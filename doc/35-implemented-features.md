@@ -439,3 +439,17 @@ The layout uses the existing finance type and theme tokens with a shared totals 
 - The popup uses the existing design tokens, shared employee selector, payment fields and payroll deduction month. It adapts to mobile with a scrollable body and visible close/save controls.
 - Close, Cancel, Escape and clicking the backdrop dismiss the popup and restore focus. Reopening retains unsaved field values while on the page.
 - Server validation reopens the creation popup with the errors and submitted values; file attachments must be selected again after a validation redirect. Accounting, bank transfer behaviour and recovery rules are unchanged.
+
+
+### Loan index redesign (9 November 2026)
+
+The loan register now prioritises **Total to settle**, with unpaid principal and scheduled interest shown separately. Borrowed, paid and current-month interest totals remain available, and a help control explains the type-specific payable balance. Summary amounts use the existing balance service and reflect the current filters.
+
+- An aligned desktop register shows the loan code, lender, status, original principal, full settlement balance, next due/settled date and quick actions. On phones, each loan becomes a labelled list item with touch-sized controls.
+- Search, the shared party selector, borrowing-date filters, status links and pagination remain available. Mobile lender/date filters expand on request. Switching status resets pagination, and empty filtered results offer Clear filters.
+- Details expand with keyboard-accessible buttons that announce their state. Expand/collapse all stays in sync with individual rows. Detail panels retain principal repayments, interest, facility terms, bank, guarantor, collateral, description, status and delete actions.
+- Light and dark themes use the shared typography, violet action, balance, border and status tokens. New scoped assets are `public/loan-index.css` and `public/loan-index.js`. Create/edit forms, payment rules and database records are unchanged.
+
+Design direction: Taste's achromatic-ledger composition (seed 1771249544), adapted to the established Apptimus palette and typography. The main question is “How much remains to settle, and which loan needs attention?” The principal/interest split is the identifying financial detail. No decorative charts or screenshots were added.
+
+Validation: 60 loan tests / 646 assertions; browser checks at 320, 390, 768, 1024 and 1440 pixels with synthetic local loans, including large amounts and long lender names. Checked light/dark themes, search, empty results, status changes from page two, lender picker, quick edit and expand-all. Browser geometry checks found no page-level horizontal overflow.

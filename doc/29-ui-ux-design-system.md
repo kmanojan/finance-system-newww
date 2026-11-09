@@ -101,3 +101,17 @@ Reuse the rich-editor component for settlement notes, preserving shared light/da
 The salary batch form shows whole-payroll net amount, already-paid salaries and pending balance, including employees whose salaries are fully paid. Only employees with outstanding salary appear in the selectable table. Selecting an employee fills their remaining balance; entering a smaller positive amount records a partial release. Selected payment amount and pending-after-batch preview update across search and all 50-row pages. Invalid amounts suppress the preview and block recording. Select this page affects the current filtered page; Clear selection resets the whole batch.
 
 The layout uses the existing finance type and theme tokens with a shared totals strip, fixed employee column, bounded scrolling table, larger amount inputs and a separate payment-details section. Light/dark and 1440/768/390/320 layouts were checked using browser DOM geometry without screenshots. The design-taste app direction was Achromatic ledger (seed 850163138), adapted to retain the requested existing brand; its inset row marker indicates selection rather than elevation. The main question is how much this release pays and what remains payable. No new financial posting behavior is introduced.
+
+
+### Loan index redesign (9 November 2026)
+
+The loan register now prioritises **Total to settle**, with unpaid principal and scheduled interest shown separately. Borrowed, paid and current-month interest totals remain available, and a help control explains the type-specific payable balance. Summary amounts use the existing balance service and reflect the current filters.
+
+- An aligned desktop register shows the loan code, lender, status, original principal, full settlement balance, next due/settled date and quick actions. On phones, each loan becomes a labelled list item with touch-sized controls.
+- Search, the shared party selector, borrowing-date filters, status links and pagination remain available. Mobile lender/date filters expand on request. Switching status resets pagination, and empty filtered results offer Clear filters.
+- Details expand with keyboard-accessible buttons that announce their state. Expand/collapse all stays in sync with individual rows. Detail panels retain principal repayments, interest, facility terms, bank, guarantor, collateral, description, status and delete actions.
+- Light and dark themes use the shared typography, violet action, balance, border and status tokens. New scoped assets are `public/loan-index.css` and `public/loan-index.js`. Create/edit forms, payment rules and database records are unchanged.
+
+Design direction: Taste's achromatic-ledger composition (seed 1771249544), adapted to the established Apptimus palette and typography. The main question is “How much remains to settle, and which loan needs attention?” The principal/interest split is the identifying financial detail. No decorative charts or screenshots were added.
+
+Validation: 60 loan tests / 646 assertions; browser checks at 320, 390, 768, 1024 and 1440 pixels with synthetic local loans, including large amounts and long lender names. Checked light/dark themes, search, empty results, status changes from page two, lender picker, quick edit and expand-all. Browser geometry checks found no page-level horizontal overflow.
