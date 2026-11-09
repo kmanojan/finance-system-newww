@@ -275,11 +275,13 @@
         @if($payments->isEmpty())
             <p class="text-muted" style="text-align:center; padding:2rem;">No payments recorded yet.</p>
         @else
+            <div role="region" aria-label="Project payments" tabindex="0" style="overflow-x:auto;">
             <table class="data-table">
-                <thead><tr><th>Payment Date</th><th>Currency</th><th>Applied To</th><th style="text-align:right;">Collected Amount</th><th style="text-align:center;">Action</th></tr></thead>
+                <thead><tr><th scope="col">Payment code</th><th>Payment Date</th><th>Currency</th><th>Applied To</th><th style="text-align:right;">Collected Amount</th><th style="text-align:center;">Action</th></tr></thead>
                 <tbody>
                     @foreach($payments as $pay)
                     <tr>
+                        <td style="white-space:nowrap; font-weight:600;"><a href="/payments/{{ $pay->id }}">PAY-{{ $pay->id }}</a></td>
                         <td>{{ $pay->payment_date }}</td>
                         <td>{{ $pay->currency }}</td>
                         <td>
@@ -293,7 +295,7 @@
                             @endphp
                             <span class="badge" style="background:var(--bg-alt); color:var(--text); border:1px solid var(--border);">{{ $appliedTo }}</span>
                         </td>
-                        <td style="text-align:right; font-weight:600; color:var(--success);">${{ number_format($pay->total_amount, 2) }}</td>
+                        <td style="text-align:right; font-weight:600; color:var(--success);">{{ $pay->currency }} {{ number_format($pay->total_amount, 2) }}</td>
                         <td style="text-align:center;">
                             <button type="button" class="btn btn-outline btn-pill" style="padding:0.2rem 0.8rem; font-size:0.8rem;" onclick="openModal('viewPaymentModal_{{ $pay->id }}')">View</button>
                         </td>
@@ -302,12 +304,13 @@
                 </tbody>
                 <tfoot>
                     <tr style="background:var(--bg-alt); font-weight:700;">
-                        <td colspan="3" style="text-align:right;">Total Collected:</td>
-                        <td style="text-align:right; color:var(--success);">${{ number_format($totalCollected, 2) }}</td>
+                        <td colspan="4" style="text-align:right;">Total Collected:</td>
+                        <td style="text-align:right; color:var(--success);">{{ $project->currency }} {{ number_format($totalCollected, 2) }}</td>
                         <td></td>
                     </tr>
                 </tfoot>
             </table>
+            </div>
         @endif
     </div>
 </div>
@@ -1731,14 +1734,15 @@
 <div class="modal-backdrop" id="viewPaymentModal_{{ $pay->id }}">
     <div class="modal-card" style="max-width: 700px;">
         <div class="modal-header">
-            <h2 class="modal-title">Payment Details</h2>
+            <h2 class="modal-title">Payment PAY-{{ $pay->id }}</h2>
             <button type="button" class="btn-close" onclick="closeModal('viewPaymentModal_{{ $pay->id }}')"><ion-icon name="close-outline"></ion-icon></button>
         </div>
         <div class="modal-body">
+            <p><strong>Payment code:</strong> <a href="/payments/{{ $pay->id }}">PAY-{{ $pay->id }}</a></p>
             <div style="display:flex; justify-content:space-between; margin-bottom:1rem;">
                 <div><strong>Payment Date:</strong> {{ $pay->payment_date }}</div>
                 <div><strong>Currency:</strong> {{ $pay->currency }}</div>
-                <div><strong>Total Amount:</strong> <span style="color:var(--success); font-weight:600;">${{ number_format($pay->total_amount, 2) }}</span></div>
+                <div><strong>Total Amount:</strong> <span style="color:var(--success); font-weight:600;">{{ $pay->currency }} {{ number_format($pay->total_amount, 2) }}</span></div>
             </div>
             
             <div style="margin-bottom:1.5rem; padding: 0.75rem; background: var(--bg-alt); border-radius: 6px; border: 1px solid var(--border);">
@@ -1767,7 +1771,7 @@
                     @foreach($paymentModes->where('payment_id', $pay->id) as $mode)
                     <tr>
                         <td><span class="badge" style="background:#f1f5f9; color:#475569;">{{ ucfirst($mode->mode) }}</span></td>
-                        <td style="font-weight:500;">${{ number_format($mode->amount, 2) }}</td>
+                        <td style="font-weight:500;">{{ $pay->currency }} {{ number_format($mode->amount, 2) }}</td>
                         <td>
                             @if($mode->mode === 'cheque')
                                 <small>Bank: {{ $mode->bank_name ?? '-' }} <br>

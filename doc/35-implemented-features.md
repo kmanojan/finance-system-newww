@@ -409,3 +409,7 @@ Full loan settlements, principal repayments and interest payments support the sh
 The shared editor supports `/payment` and `/project` (including plural aliases) alongside existing loan, transaction, employee and party references. Payments search recorded client/project/invoice receipts by ID, project, invoice, date, amount, bank and reference; projects search ID, name, company, client, currency, status and budget. Search is bounded and requires workspace authentication. Selection inserts an exact record link, and the All category includes both new types. `/payments/{id}` provides read-only receipt details, payment methods and invoice allocations.
 
 Settlement-note payment/project selections appear as contextual cards in Loan flow without posting or allocating money. No database migration is required. This revision passed 194 backend tests (2,048 assertions), 16 frontend tests and the production build; an isolated browser check verified both selections in one paragraph, saving notes, flow cards and the payment destination.
+
+### Visible payment codes
+
+Every client/project receipt uses the stable code `PAY-{database ID}`. This is derived from the existing unique payment ID, not a separate editable database column, so legacy and newly recorded payments are covered without a backfill. The project Payments tab displays a linked Payment code column; its View dialog and the read-only payment detail page show the same code used by rich-editor suggestions and Loan flow. The table scrolls horizontally on narrow screens.
