@@ -25,8 +25,7 @@ class PayrollStatutoryController extends Controller
         }
 
         return view('payroll.statutory-index', ['rows' => $rows, 'summary' => $summary, 'filters' => $filters,
-            'companies' => DB::table('companies')->orderBy('name')->get(),
-            'batches' => PayrollStatutoryService::batches($filters)->orderByDesc('id')->paginate(15, ['*'], 'batches_page')->withQueryString()]);
+            'companies' => DB::table('companies')->orderBy('name')->get()]);
     }
 
     public function batchForm(Request $request)

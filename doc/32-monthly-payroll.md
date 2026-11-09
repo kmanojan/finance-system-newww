@@ -223,3 +223,5 @@ EPF, ETF and APIT remittances may be recorded using their actual date from the f
 The actual remittance form pre-fills the outstanding statutory balance, formatted to two decimal places, for ETF, EPF and APIT. Users can reduce it for a partial payment. After payment, the next form defaults to the remaining balance; a validation error preserves the entered amount. Opening the form does not record a payment.
 
 The statutory register (`/payroll/statutory`) lists payroll months newest first, with descending payroll ID as the tie-breaker and consistent obligation ordering within each payroll. Filters and pagination retain this ordering.
+
+The statutory register shows payment state using the shared light/dark badges: Paid (green), Partially paid (amber), and Unpaid (red), always with visible text. The Payment batches history section is hidden from this register. Recording a batch, individual monthly payment history and existing batch detail links remain available; saved batches are retained.

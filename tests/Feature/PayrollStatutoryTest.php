@@ -296,7 +296,7 @@ class PayrollStatutoryTest extends TestCase
         $batch = PayrollStatutoryService::batches()->first();
         $this->assertEquals(800000, $batch->total_cents);
         $this->assertEquals(200000, $batch->posted_cents);
-        $this->get('/payroll/statutory')->assertOk()->assertSee('Partially reversed');
+        $this->get('/payroll/statutory')->assertOk()->assertDontSee('id="payment-batches"', false)->assertSee('badge badge-warning', false)->assertSee('badge badge-danger', false)->assertSee('Record payment batch');
     }
 
     public function test_batch_rejects_overpayment_duplicates_wrong_scope_and_rolls_back_every_month(): void
