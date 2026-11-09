@@ -159,7 +159,7 @@ class CKeditorController extends Controller
                         ->orWhere('categories.name', 'LIKE', $search);
                     if (is_numeric($q)) {
                         $sub->orWhere('transactions.id', '=', (int) $q)
-                            ->orWhere('transactions.amount', 'LIKE', $search);
+                            ->orWhereRaw('CAST(transactions.amount AS TEXT) LIKE ?', [$search]);
                     }
                 });
             }

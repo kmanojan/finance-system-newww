@@ -9,8 +9,8 @@
 @section('content')
 <link rel="stylesheet" href="{{ asset('loan-detail.css') }}?v={{ filemtime(public_path('loan-detail.css')) }}">
 <script defer src="{{ asset('loan-detail.js') }}?v={{ filemtime(public_path('loan-detail.js')) }}"></script>
-<link rel="stylesheet" href="{{ asset('loan-flow.css') }}?v={{ filemtime(public_path('loan-flow.css')) }}">
-<script defer src="{{ asset('loan-flow.js') }}?v={{ filemtime(public_path('loan-flow.js')) }}"></script>
+<link rel="stylesheet" href="{{ asset('loan-flow.css') }}?v={{ hash_file('sha256',public_path('loan-flow.css')) }}">
+<script defer src="{{ asset('loan-flow.js') }}?v={{ hash_file('sha256',public_path('loan-flow.js')) }}"></script>
 
 @php
     $totalDraws = $principalRecords->where('record_type', 'draw')->sum('amount');
@@ -35,7 +35,7 @@
         <div class="loan-tabs" role="tablist" aria-label="Loan information">
             <button type="button" id="tab-schedule" role="tab" aria-controls="content-schedule" aria-selected="true" tabindex="0" data-loan-tab="schedule"><ion-icon name="calendar-outline" aria-hidden="true"></ion-icon> Interest Schedule <span>{{ $schedules->count() }}</span></button>
             <button type="button" id="tab-principal" role="tab" aria-controls="content-principal" aria-selected="false" tabindex="-1" data-loan-tab="principal"><ion-icon name="swap-vertical-outline" aria-hidden="true"></ion-icon> Principal Records <span>{{ $principalRecords->count() }}</span></button>
-            <button type="button" id="tab-flow" role="tab" aria-controls="content-flow" aria-selected="false" tabindex="-1" data-loan-tab="flow"><ion-icon name="git-network-outline" aria-hidden="true"></ion-icon> Loan Flow <span>{{ max(0, $loanFlow['loans']->count() - 1) }}</span></button>
+            <button type="button" id="tab-flow" role="tab" aria-controls="content-flow" aria-selected="false" tabindex="-1" data-loan-tab="flow"><ion-icon name="git-network-outline" aria-hidden="true"></ion-icon> Loan Flow <span>{{ max(0, $loanFlow['loans']->count() - 1) + $loanFlow['transactions']->count() }}</span></button>
             <button type="button" id="tab-details" role="tab" aria-controls="content-details" aria-selected="false" tabindex="-1" data-loan-tab="details"><ion-icon name="document-text-outline" aria-hidden="true"></ion-icon> Loan Details</button>
         </div>
         <!-- TAB 1: Interest Schedule -->
@@ -96,7 +96,7 @@
                                 @forelse($payments as $payment)
                                     <div class="loan-payment-note">
                                         @if($payments->count() > 1)<small>{{ $payment->transaction_date }} · {{ $payment->currency }} {{ number_format($payment->amount, 2) }}</small>@endif
-                                        <p>{{ \App\Services\LoanInterestPaymentService::note($payment) ?: '—' }}</p>
+                                        <div class="loan-settlement-note">{!! \App\Services\LoanSettlementNoteService::display(\App\Services\LoanInterestPaymentService::note($payment) ?: '—') !!}</div>
                                     </div>
                                 @empty
                                     <span class="text-muted">—</span>
@@ -202,7 +202,7 @@
                                     {{ $record->payment_mode ?? 'Default' }}
                                 </span>
                             </td>
-                            <td class="text-muted">{{ $record->notes ?? '-' }}</td>
+                            <td class="text-muted"><div class="loan-settlement-note">{!! \App\Services\LoanSettlementNoteService::display($record->notes ?: '—') !!}</div></td>
                         </tr>
                         @endforeach
 
@@ -288,7 +288,7 @@
 
                 <div class="form-group" style="margin-top:1.25rem;">
                     <label class="form-label">Notes</label>
-                    <input type="text" name="notes" class="form-control" value="Full Principal Settlement" placeholder="E.g. Final principal clearance">
+                    <x-rich-editor name="notes" id="full_settlement_notes" value="Full Principal Settlement" placeholder="Explain how this was settled. Type /loan or /transaction to reference records." />
                 </div>
             </div>
             <div class="modal-footer">
@@ -564,7 +564,7 @@
                 </div>
                 <div class="form-group" style="margin-top:1rem;">
                     <label for="settle_interest_notes" class="form-label">Note (optional)</label>
-                    <textarea name="notes" id="settle_interest_notes" class="form-control" rows="3" maxlength="1000" placeholder="E.g. Cheque reference or reason for this payment"></textarea>
+                    <x-rich-editor name="notes" id="settle_interest_notes" placeholder="Explain the payment. Type /loan or /transaction to reference records." />
                 </div>
             </div>
             <div class="modal-footer">
@@ -586,7 +586,7 @@
                 <div class="form-group"><label class="form-label" for="edit_interest_payment_amount">Amount paid ({{ $loan->currency }})</label><x-amount-input name="paid_amount" id="edit_interest_payment_amount" required="true" /></div>
                 <div class="form-group" style="margin-top:1rem;"><label class="form-label" for="edit_interest_payment_date">Date paid</label><input type="date" class="form-control" name="paid_date" id="edit_interest_payment_date" required></div>
                 <div class="form-group" style="margin-top:1rem;"><label class="form-label">Bank account</label><x-bank-account-selector name="bank_account_id" id="edit_interest_payment_bank" :bankAccounts="$bankAccounts" placeholder="Cash in hand / Unassigned" /></div>
-                <div class="form-group" style="margin-top:1rem;"><label class="form-label" for="edit_interest_payment_notes">Note (optional)</label><textarea class="form-control" name="notes" id="edit_interest_payment_notes" rows="3" maxlength="1000"></textarea></div>
+                <div class="form-group" style="margin-top:1rem;"><label class="form-label" for="edit_interest_payment_notes">Note (optional)</label><x-rich-editor name="notes" id="edit_interest_payment_notes" placeholder="Explain the payment. Type /loan or /transaction to reference records." /></div>
             </div>
             <div class="modal-footer"><button type="button" class="btn btn-outline" onclick="closeModal('editInterestPaymentModal')">Cancel</button><button type="submit" class="btn btn-primary-gradient">Save payment changes</button></div>
         </form>
@@ -651,7 +651,7 @@
                 </div>
                 <div class="form-group" style="margin-top:1rem;">
                     <label class="form-label">Notes</label>
-                    <input type="text" name="notes" class="form-control" placeholder="E.g. Bank Transfer / Monthly principal portion">
+                    <x-rich-editor name="notes" id="principal_repayment_notes" placeholder="Explain the repayment. Type /loan or /transaction to reference records." />
                 </div>
             </div>
             <div class="modal-footer">
@@ -745,7 +745,7 @@ function setAmountInputValue(id, val) {
 
 function openSettleModal(id, suggestedAmount, dueDate) {
     document.getElementById('settleForm').action = "/loans/{{ $loan->id }}/schedule/" + id + "/settle";
-    document.getElementById('settle_interest_notes').value = '';
+    window.setRichEditorData('settle_interest_notes', '');
     setAmountInputValue('settle_amount', suggestedAmount);
     const dateInput = document.getElementById('settle_paid_date') || document.querySelector('#settleModal input[name="paid_date"]');
     if (dateInput && dueDate) {
@@ -759,7 +759,7 @@ function openEditInterestPayment(payment) {
     setAmountInputValue('edit_interest_payment_amount', payment.amount);
     document.getElementById('edit_interest_payment_date').value = payment.paid_date;
     setBankAccountSelectorValue('edit_interest_payment_bank', payment.bank_account_id || '');
-    document.getElementById('edit_interest_payment_notes').value = payment.notes || '';
+    window.setRichEditorData('edit_interest_payment_notes', payment.notes || '');
     openModal('editInterestPaymentModal');
 }
 

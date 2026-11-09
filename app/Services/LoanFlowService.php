@@ -73,7 +73,7 @@ class LoanFlowService
         }
     }
 
-    public static function edges()
+    public static function edges($notes = null)
     {
         $payments = DB::table('loan_refinancing_links as links')
             ->join('loan_principal_records as records', 'records.id', '=', 'links.principal_record_id')
@@ -84,10 +84,20 @@ class LoanFlowService
                 return $edge;
             });
 
-        return $payments->concat(self::descriptionEdges())->sortBy([['record_date', 'asc'], ['id', 'asc']])->values();
+        return $payments->concat(self::descriptionEdges())->concat(self::settlementEdges($notes ?? self::settlementNotes()))->sortBy([['record_date', 'asc'], ['id', 'asc']])->values();
     }
 
     public static function mentionedLoanIds(?string $html): array
+    {
+        return self::mentionedIds($html, 'loan');
+    }
+
+    public static function mentionedTransactionIds(?string $html): array
+    {
+        return self::mentionedIds($html, 'transaction');
+    }
+
+    private static function mentionedIds(?string $html, string $kind): array
     {
         if (! $html || ! str_contains($html, '<')) {
             return [];
@@ -112,8 +122,17 @@ class LoanFlowService
                         continue;
                     }
                 }
-                if (preg_match('~^/loans/([1-9][0-9]*)/?$~', $url['path'] ?? '', $match)) {
+                if ($kind === 'loan' && preg_match('~^/loans/([1-9][0-9]*)/?$~', $url['path'] ?? '', $match)) {
                     $ids[(int) $match[1]] = true;
+                }
+                if ($kind === 'transaction' && ($url['path'] ?? '') === '/transactions') {
+                    parse_str($url['query'] ?? '', $query);
+                    $id = $query['transaction_id'] ?? null;
+                    if (is_scalar($id) && preg_match('/^[1-9][0-9]*$/', (string) $id)) {
+                        $ids[(int) $id] = true;
+                    } elseif (! isset($url['query']) && preg_match('/^TXN-([1-9][0-9]*)\b/', trim($anchor->textContent), $legacy)) {
+                        $ids[(int) $legacy[1]] = true;
+                    }
                 }
             }
 
@@ -149,9 +168,51 @@ class LoanFlowService
         return collect(array_values($edges));
     }
 
+    private static function settlementNotes()
+    {
+        $notes = DB::table('loan_principal_records')->where('record_type', 'repayment')->whereNotNull('notes')
+            ->select('id', 'loan_id', 'record_date', 'notes')->get()->map(function ($record) {
+                $record->note_key = 'principal-'.$record->id;
+                $record->note_label = 'Principal repayment #'.$record->id;
+
+                return $record;
+            });
+        $schedules = DB::table('loan_interest_schedule')->pluck('loan_id', 'id');
+        foreach (DB::table('transactions')->where('type', 'expense')->where('reference_no', 'like', 'LOAN-INT-%')->get() as $payment) {
+            if (preg_match('/^LOAN-INT-([0-9]+)-([0-9]+)$/', $payment->reference_no, $match)
+                && (int) ($schedules[$match[2]] ?? 0) === (int) $match[1]) {
+                $notes->push((object) ['id' => $payment->id, 'loan_id' => (int) $match[1],
+                    'record_date' => $payment->transaction_date, 'notes' => LoanInterestPaymentService::note($payment),
+                    'note_key' => 'interest-'.$payment->id, 'note_label' => 'Interest payment TXN-'.$payment->id]);
+            }
+        }
+
+        return $notes;
+    }
+
+    private static function settlementEdges($notes)
+    {
+        $loans = DB::table('loans')->select('id', 'claimed_date')->get()->keyBy('id');
+        $edges = collect();
+        foreach ($notes as $note) {
+            foreach (self::mentionedLoanIds($note->notes) as $id) {
+                if ($id === (int) $note->loan_id || ! isset($loans[$id], $loans[$note->loan_id])) {
+                    continue;
+                }
+                $pair = collect([$loans[$id], $loans[$note->loan_id]])->sortBy([['claimed_date', 'asc'], ['id', 'asc']])->values();
+                $edges->push((object) ['id' => 'settlement-'.$note->note_key.'-'.$id, 'kind' => 'settlement',
+                    'loan_id' => $pair[0]->id, 'source_loan_id' => $pair[1]->id,
+                    'record_date' => $note->record_date, 'note_owner_id' => $note->loan_id, 'note_label' => $note->note_label]);
+            }
+        }
+
+        return $edges;
+    }
+
     public static function graph(int $loanId): array
     {
-        $all = self::edges();
+        $notes = self::settlementNotes();
+        $all = self::edges($notes);
         $ids = [$loanId => true];
         do {
             $count = count($ids);
@@ -183,6 +244,18 @@ class LoanFlowService
             $loan->flow_level = $levels[$loan->id];
         }
 
-        return ['loans' => $loans->keyBy('id'), 'columns' => $loans->groupBy('flow_level')->sortKeys(), 'edges' => $edges];
+        $transactionEdges = collect();
+        foreach ($notes->whereIn('loan_id', array_keys($ids)) as $note) {
+            foreach (self::mentionedTransactionIds($note->notes) as $id) {
+                $transactionEdges->push((object) ['id' => 'transaction-'.$note->note_key.'-'.$id, 'kind' => 'transaction',
+                    'loan_id' => $note->loan_id, 'source_loan_id' => 'transaction-'.$id, 'transaction_id' => $id,
+                    'record_date' => $note->record_date, 'note_label' => $note->note_label]);
+            }
+        }
+        $transactions = DB::table('transactions')->whereIn('id', $transactionEdges->pluck('transaction_id')->unique())->orderBy('transaction_date')->orderBy('id')->get()->keyBy('id');
+        $transactionEdges = $transactionEdges->filter(fn ($edge) => $transactions->has($edge->transaction_id));
+
+        return ['loans' => $loans->keyBy('id'), 'columns' => $loans->groupBy('flow_level')->sortKeys(),
+            'transactions' => $transactions, 'edges' => $edges->concat($transactionEdges)->values()];
     }
 }

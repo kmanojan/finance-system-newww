@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\User;
 use App\Services\LoanBalanceService;
 use App\Services\LoanFlowService;
+use App\Services\LoanSettlementNoteService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -261,5 +262,74 @@ class LoanFlowTest extends TestCase
         $this->get("/loans/$old")->assertOk()->assertSee('Loan flow')->assertDontSee('Save funding link')->assertDontSee('Remove link');
         $this->postJson("/loans/$old/funding-links", ['principal_record_id' => $record, 'source_loan_id' => $new, 'amount' => 1])->assertForbidden();
         $this->deleteJson("/loans/$old/funding-links/$link")->assertForbidden();
+    }
+
+    public function test_rich_settlement_notes_add_loan_and_transaction_references_without_extra_posting(): void
+    {
+        $loan = $this->loan();
+        $other = $this->loan(['claimed_date' => '2026-10-02']);
+        $tx = DB::table('transactions')->insertGetId(['category_id' => DB::table('categories')->insertGetId(['name' => 'Reference receipt', 'type' => 'income']), 'department_id' => 1, 'type' => 'income', 'amount' => 50000, 'currency' => 'LKR', 'transaction_date' => '2026-10-02', 'description' => 'Existing funding receipt', 'payment_status' => 'completed']);
+        $beforeTx = DB::table('transactions')->find($tx);
+        $notes = '<p>Settled using <strong>bank transfer</strong> from <a href="/loans/'.$other.'">Related loan</a> and <a href="/transactions?transaction_id='.$tx.'">TXN-'.$tx.'</a>.</p>';
+        $this->postJson('/loans/'.$loan.'/settle-fully', ['settlement_date' => '2026-11-06', 'notes' => $notes])->assertRedirect();
+        $graph = LoanFlowService::graph($loan);
+        $this->assertCount(2, $graph['loans']);
+        $this->assertCount(1, $graph['transactions']);
+        $this->assertSame(['settlement', 'transaction'], $graph['edges']->pluck('kind')->all());
+        $this->assertCount(2, LoanFlowService::graph($other)['loans']);
+        $this->assertEquals(10000, LoanBalanceService::calculate(DB::table('loans')->find($other))['total_outstanding']);
+        $this->assertEquals($beforeTx, DB::table('transactions')->find($tx));
+        $this->assertDatabaseCount('transactions', 2);
+        $this->assertDatabaseCount('loan_principal_records', 1);
+        $this->assertDatabaseCount('loan_refinancing_links', 0);
+        $this->get('/loans/'.$loan)->assertOk()->assertSee('<strong>bank transfer</strong>', false)->assertSee('data-flow-node="transaction-'.$tx.'"', false)->assertSee('settlement reference', false);
+        $this->get('/transactions?transaction_id='.$tx)->assertOk()->assertSee('Existing funding receipt')->assertDontSee('Full Principal Settlement to Flow lender');
+        $this->get('/loans/settlements')->assertOk()->assertSee('<strong>bank transfer</strong>', false);
+    }
+
+    public function test_note_reference_parser_ignores_unsafe_missing_and_self_links_and_preserves_plain_notes(): void
+    {
+        $loan = $this->loan();
+        $tx = DB::table('transactions')->insertGetId(['category_id' => DB::table('categories')->insertGetId(['name' => 'Reference receipt', 'type' => 'income']), 'department_id' => 1, 'type' => 'income', 'amount' => 1, 'currency' => 'LKR', 'transaction_date' => '2026-10-01', 'description' => 'Reference']);
+        $notes = '<p onclick="unsafeSettlement()">Safe <strong>note</strong><script>unsafeSettlement()</script><a href="javascript:unsafeSettlement()">bad</a><a href="https://evil.example/loans/999">External</a><a href="/loans/'.$loan.'">Self</a><a href="/loans/999">Missing</a><a href="/transactions?transaction_id=999">Missing transaction</a><a href="/transactions?transaction_id='.$tx.'">Reference</a><a href="/transactions?transaction_id='.$tx.'">Duplicate</a></p>';
+        $this->postJson('/loans/'.$loan.'/repayment', ['amount' => 1000, 'record_date' => '2026-11-06', 'notes' => $notes])->assertRedirect();
+        $saved = DB::table('loan_principal_records')->where('loan_id', $loan)->value('notes');
+        $this->assertStringNotContainsString('unsafeSettlement', $saved);
+        $graph = LoanFlowService::graph($loan);
+        $this->assertCount(1, $graph['loans']);
+        $this->assertCount(1, $graph['transactions']);
+        $this->assertCount(1, $graph['edges']);
+        $this->assertSame([], LoanFlowService::mentionedTransactionIds('<a href="//evil.example/transactions?transaction_id='.$tx.'">TXN-'.$tx.'</a>'));
+        $this->assertSame([$tx], LoanFlowService::mentionedTransactionIds('<a href="/transactions">TXN-'.$tx.' [old chip]</a>'));
+        $this->assertSame('Paid by cheque', LoanSettlementNoteService::display('Paid by cheque'));
+        $this->get('/loans/'.$loan)->assertOk()->assertDontSee('unsafeSettlement', false);
+    }
+
+    public function test_interest_note_references_update_and_disappear_when_payment_is_deleted(): void
+    {
+        $loan = $this->loan();
+        $other = $this->loan();
+        $schedule = DB::table('loan_interest_schedule')->insertGetId(['loan_id' => $loan, 'due_date' => '2026-11-01', 'interest_amount' => 1000, 'paid_amount' => 0, 'status' => 'pending']);
+        $this->postJson('/loans/'.$loan.'/schedule/'.$schedule.'/settle', ['paid_amount' => 1000, 'paid_date' => '2026-11-06', 'notes' => '<p>Paid using <a href="/loans/'.$other.'">loan reference</a></p>'])->assertRedirect();
+        $payment = DB::table('transactions')->where('reference_no', 'LOAN-INT-'.$loan.'-'.$schedule)->first();
+        $this->assertCount(1, LoanFlowService::graph($loan)['edges']);
+        $url = '/loans/'.$loan.'/schedule/'.$schedule.'/payments/'.$payment->id;
+        $this->putJson($url, ['paid_amount' => 1000, 'paid_date' => '2026-11-06', 'notes' => '<p>Corrected <strong>bank payment</strong></p>'])->assertRedirect();
+        $this->assertCount(0, LoanFlowService::graph($loan)['edges']);
+        $this->putJson($url, ['paid_amount' => 1000, 'paid_date' => '2026-11-06', 'notes' => '<a href="/loans/'.$other.'">reference</a>'])->assertRedirect();
+        $this->deleteJson($url)->assertRedirect();
+        $this->assertCount(0, LoanFlowService::graph($loan)['edges']);
+    }
+
+    public function test_interest_only_full_settlement_keeps_its_rich_note_reference(): void
+    {
+        $loan = $this->loan();
+        $other = $this->loan();
+        $this->repayment($loan);
+        DB::table('loan_interest_schedule')->insert(['loan_id' => $loan, 'due_date' => '2026-11-01', 'interest_amount' => 1000, 'paid_amount' => 0, 'status' => 'pending']);
+        $this->postJson('/loans/'.$loan.'/settle-fully', ['settlement_date' => '2026-11-06', 'notes' => '<p>Remaining interest from <a href="/loans/'.$other.'">loan</a></p>'])->assertRedirect();
+        $this->assertCount(1, LoanFlowService::graph($loan)['edges']);
+        $this->assertDatabaseCount('loan_principal_records', 1);
+        $this->assertDatabaseCount('transactions', 1);
     }
 }

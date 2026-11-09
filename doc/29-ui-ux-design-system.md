@@ -91,3 +91,7 @@ Tabs implement `tablist`/`tab`/`tabpanel`, selected state, roving tabindex, Arro
 ### Statutory batch payments
 
 Use the Employees submenu label **EPF, ETF & tax**. Keep pending monthly obligations and payment batch history in the same register. The batch form uses the shared payroll panel, table, field and button styles: company/type/year scope first, checkbox selection with sticky month labels, adjustable partial amounts, then payment details with a live total and save feedback. Selected amounts survive validation errors; refreshing a back/forward-cached form reloads authoritative balances. Table scrolling stays inside its region on phones. Light/dark input colours use shared tokens. JavaScript and payroll styles use content hashes to avoid stale PWA assets after deployment.
+
+### Loan settlement reference editing
+
+Reuse the rich-editor component for settlement notes, preserving shared light/dark tokens, formatting controls and slash search. Loan flow uses the existing card design for referenced transactions, dashed lines for context and solid lines for actual funding allocations. Keep notes in their table column and guidance behind the existing help icon. Flow counts include both referenced transactions and related loans. Use content hashes for the flow CSS/JavaScript assets.

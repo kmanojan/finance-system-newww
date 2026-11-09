@@ -533,9 +533,9 @@ function setupSlashCommands(editor, editorId) {
                 const isExp = item.type_name === 'expense' || item.type === 'expense';
                 const typeColor = isInc ? 'var(--success)' : (isExp ? 'var(--danger)' : 'var(--primary)');
                 const typeBg = isInc ? 'rgba(16,185,129,0.15)' : (isExp ? 'rgba(239,68,68,0.15)' : 'rgba(59,130,246,0.15)');
-                const typeLabel = (item.type || 'TXN').toUpperCase();
-                const refSnippet = item.reference_no ? `<span style="font-size:0.72rem; color:var(--text-muted); background:var(--bg-page); padding:1px 5px; border-radius:4px;">${item.reference_no}</span>` : '';
-                const dateSnippet = item.transaction_date ? `<span style="color:var(--text-muted); font-size:0.72rem;"> &bull; ${item.transaction_date}</span>` : '';
+                const typeLabel = (item.type_name || 'TXN').toUpperCase();
+                const refSnippet = item.reference_no ? `<span style="font-size:0.72rem; color:var(--text-muted); background:var(--bg-page); padding:1px 5px; border-radius:4px;">${escapeMention(item.reference_no)}</span>` : '';
+                const dateSnippet = item.transaction_date ? `<span style="color:var(--text-muted); font-size:0.72rem;"> &bull; ${escapeMention(item.transaction_date)}</span>` : '';
 
                 itemEl.innerHTML = `
                     <div class="slash-menu-item-icon" style="color:${typeColor}; background:${typeBg};">
@@ -545,13 +545,13 @@ function setupSlashCommands(editor, editorId) {
                         <div class="slash-menu-item-title">
                             <span>
                                 <span style="font-size:0.75rem; font-weight:700; color:${typeColor}; background:${typeBg}; padding:1px 5px; border-radius:4px; margin-right:4px;">${typeLabel}</span>
-                                ${item.description || 'Transaction #' + item.id}
+                                ${escapeMention(item.description || 'Transaction #' + item.id)}
                             </span>
                             ${refSnippet}
                         </div>
                         <div class="slash-menu-item-sub">
                             <strong style="color:${typeColor};">${isInc ? '+' : (isExp ? '-' : '')}${item.currency} ${Number(item.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</strong>
-                            ${item.category_name ? `<span style="color:var(--text-muted); font-size:0.72rem;"> &bull; ${item.category_name}</span>` : ''}
+                            ${item.category_name ? `<span style="color:var(--text-muted); font-size:0.72rem;"> &bull; ${escapeMention(item.category_name)}</span>` : ''}
                             ${dateSnippet}
                         </div>
                     </div>
@@ -629,10 +629,10 @@ function setupSlashCommands(editor, editorId) {
             const code = item.loan_code || ('LN-' + item.id);
             htmlToInsert = `<a href="/loans/${item.id}" target="_blank" rel="noopener noreferrer" class="mention-chip mention-loan" style="display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:6px; background:rgba(139,92,246,0.12); color:var(--primary); font-weight:600; text-decoration:none; border:1px solid rgba(139,92,246,0.25);" contenteditable="false"><ion-icon name="link-outline"></ion-icon> ${escapeMention(code)}: ${escapeMention(item.party_name || item.lender_name)} (${escapeMention(item.currency)} ${Number(item.principal_amount).toLocaleString(undefined, {minimumFractionDigits: 2})})</a>&nbsp;`;
         } else if (item.type === 'transaction') {
-            const isInc = item.type === 'income';
-            const sign = isInc ? '+' : (item.type === 'expense' ? '-' : '');
-            const ref = item.reference_no ? ` [${item.reference_no}]` : '';
-            htmlToInsert = `<a href="/transactions" target="_blank" rel="noopener noreferrer" class="mention-chip mention-transaction" style="display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:6px; background:rgba(245,158,11,0.14); color:var(--warning); font-weight:600; text-decoration:none; border:1px solid rgba(245,158,11,0.35);" contenteditable="false"><ion-icon name="receipt-outline"></ion-icon> TXN-${item.id}${ref}: ${item.type.toUpperCase()} ${sign}${item.currency} ${Number(item.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</a>&nbsp;`;
+            const isInc = item.type_name === 'income';
+            const sign = isInc ? '+' : (item.type_name === 'expense' ? '-' : '');
+            const ref = item.reference_no ? ` [${escapeMention(item.reference_no)}]` : '';
+            htmlToInsert = `<a href="/transactions?transaction_id=${Number(item.id)}" target="_blank" rel="noopener noreferrer" class="mention-chip mention-transaction" style="display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:6px; background:rgba(245,158,11,0.14); color:var(--warning); font-weight:600; text-decoration:none; border:1px solid rgba(245,158,11,0.35);" contenteditable="false"><ion-icon name="receipt-outline"></ion-icon> TXN-${item.id}${ref}: ${escapeMention((item.type_name || 'transaction').toUpperCase())} ${sign}${escapeMention(item.currency)} ${Number(item.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</a>&nbsp;`;
         } else if (item.type === 'party') {
             htmlToInsert = `<span class="mention-chip mention-party" style="display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:6px; background:rgba(59,130,246,0.12); color:var(--primary); font-weight:600; border:1px solid rgba(59,130,246,0.25);" contenteditable="false"><ion-icon name="business-outline"></ion-icon> ${item.name}</span>&nbsp;`;
         } else if (item.type === 'employee') {
@@ -741,14 +741,14 @@ function setupSlashCommands(editor, editorId) {
                 if (category === 'loan') {
                     items = (data.loans || data.items || []).map(l => ({ ...l, type: 'loan' }));
                 } else if (category === 'transaction') {
-                    items = (data.transactions || data.items || []).map(t => ({ ...t, type: 'transaction' }));
+                    items = (data.transactions || data.items || []).map(t => ({ ...t, type_name: t.type, type: 'transaction' }));
                 } else if (category === 'party') {
                     items = (data.parties || data.items || []).map(p => ({ ...p, type: 'party' }));
                 } else if (category === 'employee') {
                     items = (data.employees || data.items || []).map(e => ({ ...e, type: 'employee' }));
                 } else if (category === 'all') {
                     const l = (data.loans || []).map(x => ({ ...x, type: 'loan' }));
-                    const tx = (data.transactions || []).map(x => ({ ...x, type: 'transaction' }));
+                    const tx = (data.transactions || []).map(x => ({ ...x, type_name: x.type, type: 'transaction' }));
                     const p = (data.parties || []).map(x => ({ ...x, type: 'party' }));
                     const em = (data.employees || []).map(x => ({ ...x, type: 'employee' }));
                     items = [...l, ...tx, ...p, ...em];
@@ -835,13 +835,16 @@ function setupSlashCommands(editor, editorId) {
         }
 
         const position = selection.getFirstPosition();
-        const textNode = position.parent.getChild(0);
-        if (!textNode || !textNode.data) {
-            closeMenu();
-            return;
+        // Links/bold text split a paragraph into several model text nodes. Read all
+        // text before the caret so another slash reference can follow an existing one.
+        let remaining = position.offset;
+        let fullText = '';
+        for (const child of position.parent.getChildren()) {
+            if (remaining <= 0) break;
+            const length = Math.min(remaining, child.offsetSize);
+            fullText += typeof child.data === 'string' ? child.data.slice(0, length) : ' ';
+            remaining -= child.offsetSize;
         }
-
-        const fullText = textNode.data.substring(0, position.offset);
         const lastSlashIndex = fullText.lastIndexOf('/');
 
         if (lastSlashIndex === -1 || (lastSlashIndex > 0 && fullText[lastSlashIndex - 1] !== ' ' && fullText[lastSlashIndex - 1] !== '\n')) {

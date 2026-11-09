@@ -58,11 +58,11 @@
             if (!from || !to) return;
             const a = from.getBoundingClientRect(), b = to.getBoundingClientRect();
             const mixed = pairCounts.get(`${edge.dataset.flowFrom}:${edge.dataset.flowTo}`) > 1;
-            const offset = mixed ? (edge.dataset.flowKind === 'description' ? -18 : 18) : 0;
+            const offset = mixed ? (edge.dataset.flowKind !== 'repayment' ? -18 : 18) : 0;
             const x1 = a.right - box.left, y1 = a.top + a.height / 2 - box.top + offset;
             const x2 = b.left - box.left, y2 = b.top + b.height / 2 - box.top + offset;
             const mid = (x1 + x2) / 2;
-            svg.append(el('path', {d: `M ${x1} ${y1} C ${mid} ${y1}, ${mid} ${y2}, ${x2 - 3} ${y2}`, 'marker-end': 'url(#loan-flow-arrow)', class: edge.dataset.flowKind === 'description' ? 'flow-borrowing' : 'flow-repayment'}));
+            svg.append(el('path', {d: `M ${x1} ${y1} C ${mid} ${y1}, ${mid} ${y2}, ${x2 - 3} ${y2}`, 'marker-end': 'url(#loan-flow-arrow)', class: edge.dataset.flowKind !== 'repayment' ? 'flow-borrowing' : 'flow-repayment'}));
             const text = numbers.join(', ');
             if (numbers.length === 1) {
                 svg.append(el('circle', {cx: mid, cy: (y1 + y2) / 2, r: 12}));

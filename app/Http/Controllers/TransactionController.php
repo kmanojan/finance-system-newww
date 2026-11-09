@@ -29,6 +29,11 @@ class TransactionController extends Controller
             ->orderBy('transactions.transaction_date', 'desc')
             ->orderBy('transactions.id', 'desc');
 
+        if ($request->filled('transaction_id')) {
+            $request->validate(['transaction_id' => 'required|integer|min:1']);
+            $query->where('transactions.id', $request->integer('transaction_id'));
+        }
+
         if ($request->filled('tag_id')) {
             $query->join('taggables', function ($join) use ($request) {
                 $join->on('transactions.id', '=', 'taggables.taggable_id')

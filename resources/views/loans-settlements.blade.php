@@ -139,7 +139,7 @@
                     @endif
                 </td>
                 <td style="padding:0.85rem 1rem; font-size:0.85rem; color:var(--text-muted);">
-                    {{ $record->notes ?? '-' }}
+                    {!! \App\Services\LoanSettlementNoteService::display($record->notes ?: '—') !!}
                 </td>
             </tr>
             @endforeach

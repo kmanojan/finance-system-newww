@@ -8,6 +8,7 @@ use App\Services\LoanBalanceService;
 use App\Services\LoanFlowService;
 use App\Services\LoanInterestPaymentService;
 use App\Services\LoanPrincipalCorrectionService;
+use App\Services\LoanSettlementNoteService;
 use App\Services\PeriodLockService;
 use App\Services\TransactionPostingService;
 use Carbon\Carbon;
@@ -910,7 +911,7 @@ class LoanController extends Controller
 
     public function settleInterestPeriod(Request $request, $id, $scheduleId)
     {
-        $request->validate(['paid_amount' => 'required|numeric|gt:0', 'paid_date' => 'nullable|date_format:Y-m-d', 'notes' => 'nullable|string|max:1000']);
+        $request->validate(['paid_amount' => 'required|numeric|gt:0', 'paid_date' => 'nullable|date_format:Y-m-d', 'notes' => 'nullable|string|max:20000']);
         PeriodLockService::checkLockedDate($request->paid_date ?: date('Y-m-d'));
         $loan = DB::table('loans')->where('id', $id)->lockForUpdate()->first();
         abort_unless($loan, 404);
@@ -921,7 +922,7 @@ class LoanController extends Controller
         }
         $paidAmount = floatval($request->input('paid_amount'));
         $paidDate = $request->input('paid_date') ?: now()->format('Y-m-d');
-        $notes = trim((string) $request->input('notes', ''));
+        $notes = LoanSettlementNoteService::clean($request->input('notes'));
 
         $schedule = $period;
         $bankAccountId = $request->input('bank_account_id') ?: ($loan->bank_account_id ?? null);
@@ -965,7 +966,7 @@ class LoanController extends Controller
         $data = $request->validate([
             'paid_amount' => 'required|numeric|min:0.01|max:9999999999999.99|decimal:0,2',
             'paid_date' => 'required|date_format:Y-m-d', 'bank_account_id' => 'nullable|exists:bank_accounts,id',
-            'notes' => 'nullable|string|max:1000',
+            'notes' => 'nullable|string|max:20000',
         ]);
         $data['bank_account_id'] ??= null;
         LoanInterestPaymentService::change((int) $id, (int) $scheduleId, (int) $paymentId, $data);
@@ -1029,7 +1030,7 @@ class LoanController extends Controller
 
     public function recordPrincipalRepayment(Request $request, $id)
     {
-        $request->validate(['source_loan_id' => 'nullable|integer|exists:loans,id', 'amount' => 'required|numeric|min:0.01|decimal:0,2', 'record_date' => 'nullable|date_format:Y-m-d', 'bank_account_id' => 'nullable|exists:bank_accounts,id']);
+        $request->validate(['notes' => 'nullable|string|max:20000', 'source_loan_id' => 'nullable|integer|exists:loans,id', 'amount' => 'required|numeric|min:0.01|decimal:0,2', 'record_date' => 'nullable|date_format:Y-m-d', 'bank_account_id' => 'nullable|exists:bank_accounts,id']);
         PeriodLockService::checkLockedDate($request->record_date ?: date('Y-m-d'));
         $current = DB::table('loans')->where('id', $id)->lockForUpdate()->first();
         abort_unless($current && $current->status === 'active', 422);
@@ -1039,6 +1040,7 @@ class LoanController extends Controller
         }
         $loan = DB::table('loans')->where('id', $id)->first();
         $amount = floatval($request->input('amount'));
+        $notes = LoanSettlementNoteService::clean($request->input('notes'));
         $recordDate = $request->input('record_date') ?: now()->format('Y-m-d');
         $pmMode = is_array($request->input('pm_mode')) ? current($request->input('pm_mode')) : ($request->input('pm_mode') ?: 'Normal');
         $bankAccountId = $request->input('bank_account_id') ?: ($loan->bank_account_id ?? null);
@@ -1050,7 +1052,7 @@ class LoanController extends Controller
             'record_date' => $recordDate,
             'payment_mode' => $pmMode,
             'reference_no' => is_array($request->input('pm_reference')) ? current($request->input('pm_reference')) : $request->input('pm_reference'),
-            'notes' => $request->input('notes'),
+            'notes' => $notes,
             'created_at' => now(),
         ]);
 
@@ -1077,7 +1079,7 @@ class LoanController extends Controller
                 'amount' => $amount,
                 'currency' => $loan->currency,
                 'transaction_date' => $recordDate,
-                'description' => "Principal Repayment to {$loan->lender_name}".($request->input('notes') ? " ({$request->input('notes')})" : ''),
+                'description' => "Principal Repayment to {$loan->lender_name}".(strip_tags($notes) !== '' ? ' ('.strip_tags($notes).')' : ''),
                 'reference_no' => "LOAN-PRIN-{$loan->id}",
                 'payment_method' => $pmMode ?: 'Normal',
                 'created_at' => now(),
@@ -1133,7 +1135,7 @@ class LoanController extends Controller
 
     public function settleFully(Request $request, $id)
     {
-        $request->validate(['source_loan_id' => 'nullable|integer|exists:loans,id', 'settlement_date' => 'nullable|date_format:Y-m-d', 'paid_date' => 'nullable|date_format:Y-m-d', 'bank_account_id' => 'nullable|exists:bank_accounts,id']);
+        $request->validate(['notes' => 'nullable|string|max:20000', 'source_loan_id' => 'nullable|integer|exists:loans,id', 'settlement_date' => 'nullable|date_format:Y-m-d', 'paid_date' => 'nullable|date_format:Y-m-d', 'bank_account_id' => 'nullable|exists:bank_accounts,id']);
         $loan = DB::table('loans')->where('id', $id)->lockForUpdate()->first();
         abort_unless($loan && in_array($loan->status, ['active', 'defaulted']), 422);
         $repayments = DB::table('loan_principal_records')->where('loan_id', $id)->where('record_type', 'repayment')->sum('amount');
@@ -1143,7 +1145,7 @@ class LoanController extends Controller
         $settlementDate = $request->input('settlement_date') ?: ($request->input('paid_date') ?: now()->format('Y-m-d'));
         $paymentMethod = is_array($request->input('payment_method')) ? current($request->input('payment_method')) : ($request->input('payment_method') ?: 'Normal');
         $referenceNo = $request->input('reference_no') ?: "LOAN-SETTLE-{$loan->id}";
-        $notes = $request->input('notes') ?: 'Full Principal Settlement';
+        $notes = LoanSettlementNoteService::clean($request->input('notes')) ?: 'Full Principal Settlement';
         $bankAccountId = $request->input('bank_account_id') ?: ($loan->bank_account_id ?? null);
 
         if ($request->filled('source_loan_id') && $outstanding <= 0) {
@@ -1210,7 +1212,7 @@ class LoanController extends Controller
                     'amount' => $unpaidInt,
                     'currency' => $loan->currency,
                     'transaction_date' => $settlementDate,
-                    'description' => "Interest Settlement for Loan {$loan->id} ({$loan->lender_name})",
+                    'description' => "Interest Settlement for Loan {$loan->id} ({$loan->lender_name})"."\nNote: {$notes}",
                     'reference_no' => "LOAN-INT-{$loan->id}-{$sched->id}",
                     'payment_method' => $paymentMethod,
                     'created_at' => now(),

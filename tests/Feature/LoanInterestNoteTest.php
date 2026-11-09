@@ -43,11 +43,11 @@ class LoanInterestNoteTest extends TestCase
             ->assertRedirect()->assertSessionHasNoErrors();
         $this->post($this->url(), ['paid_amount' => 7000, 'paid_date' => '2026-11-03', 'notes' => 'Final interest balance'])
             ->assertRedirect()->assertSessionHasNoErrors();
-        $this->assertDatabaseHas('transactions', ['amount' => 3000, 'description' => "Interest Payment to Test lender\nNote: {$note}"]);
+        $this->assertDatabaseHas('transactions', ['amount' => 3000, 'description' => "Interest Payment to Test lender\nNote: Cheque 001\n"]);
         $this->assertDatabaseHas('transactions', ['amount' => 7000, 'description' => "Interest Payment to Test lender\nNote: Final interest balance"]);
         $this->assertDatabaseHas('loan_interest_schedule', ['id' => $this->scheduleId, 'paid_amount' => 10000, 'status' => 'paid']);
         $this->get("/loans/{$this->loanId}")->assertOk()->assertSee('<th>Note</th>', false)
-            ->assertSee($note)->assertDontSee($note, false)->assertSee('Final interest balance');
+            ->assertSee('Cheque 001')->assertDontSee("alert('test')", false)->assertSee('Final interest balance');
         $this->assertDatabaseHas('loans', ['id' => $this->loanId, 'principal_amount' => 100000]);
     }
 
@@ -63,7 +63,7 @@ class LoanInterestNoteTest extends TestCase
 
     public function test_invalid_notes_do_not_record_payments(): void
     {
-        foreach ([['invalid'], str_repeat('a', 1001)] as $note) {
+        foreach ([['invalid'], str_repeat('a', 20001)] as $note) {
             $this->postJson($this->url(), ['paid_amount' => 1000, 'notes' => $note])
                 ->assertUnprocessable()->assertJsonValidationErrors('notes');
         }

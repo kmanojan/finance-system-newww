@@ -399,3 +399,7 @@ When implementing another feature, update this guide, its module workflow, the r
 ### Statutory payment batches
 
 Employees sidebar now labels the statutory register **EPF, ETF & tax**. Payroll-year and paid/partial filters complement the existing monthly pending balances and document tracking. `/payroll/statutory/batches/create` supports multi-month selection, editable partial amounts, bank/date/reference/receipt, live totals and recoverable save errors. Saved batch details and history retain every monthly allocation and reversal. Existing statutory posting, permissions, balance checks and audit reporting are reused; salary balances and document submission are unaffected. See `32-monthly-payroll.md` for accounting and request-key grouping details.
+
+### Loan settlement rich notes
+
+Full loan settlements, principal repayments and interest payments support the shared rich editor with `/loan` and `/transaction` selections. Saved references appear automatically in Loan flow as dashed contextual links; transaction cards link to the exact transaction. Rich notes render safely in record tables, and reference-only selections leave other loans and ledger entries unchanged. See `08-loans-third-party.md` for scope, compatibility and accounting behavior.

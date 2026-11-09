@@ -58,7 +58,7 @@ class LoanInterestPaymentService
                 TransactionPostingService::reverse($payment);
             }
             if ($change) {
-                $notes = trim((string) ($change['notes'] ?? ''));
+                $notes = LoanSettlementNoteService::clean($change['notes'] ?? null);
                 $data = ['amount' => $cents($change['paid_amount']) / 100, 'transaction_date' => $change['paid_date'],
                     'bank_account_id' => $change['bank_account_id'] ?: null,
                     'description' => "Interest Payment to {$loan->lender_name}".($notes !== '' ? "\nNote: {$notes}" : ''), 'updated_at' => now()];

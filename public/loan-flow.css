@@ -52,3 +52,8 @@
 .loan-flow-help p { margin:0 0 12px; }
 .loan-flow-help ul { margin:0; padding-left:20px; }
 @media(max-width:600px) { .loan-flow-help { margin:0 16px 16px; padding:16px; } .loan-flow-help-toggle { width:44px; height:44px; } }
+
+.loan-settlement-note { white-space: normal; overflow-wrap: anywhere; min-width: 180px; max-width: 480px; line-height: 1.6; }
+.loan-settlement-note p { margin: 0 0 6px; }
+.loan-settlement-note a { color: var(--primary); text-decoration: underline; }
+.loan-settlement-note table { max-width: 100%; }
