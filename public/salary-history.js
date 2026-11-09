@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const historyPanel = document.getElementById('salary-history');
     if (!historyPanel) return;
     const profilePanel = document.getElementById('employee-profile-panel');
+    const sheetsPanel = document.getElementById('employee-sheets-panel');
     const primaryTabs = [...document.querySelectorAll('[data-employee-view]')];
     const viewTabs = [...historyPanel.querySelectorAll('[data-salary-view]')];
     let selectedView = 'table';
@@ -26,11 +27,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     function selectPrimary(name, updateHash = true) {
         const isHistory = name === 'history';
+        const isSheets = name === 'sheets' && sheetsPanel;
         historyPanel.hidden = !isHistory;
-        profilePanel.hidden = isHistory;
-        document.querySelectorAll('[data-salary-profile-action]').forEach(button => {button.hidden = isHistory;});
-        selectTabs(primaryTabs, isHistory ? 'history' : 'profile', 'employeeView');
-        if (updateHash) history.replaceState(null, '', isHistory ? `#salary-history-${selectedView}` : '#salary-profile');
+        profilePanel.hidden = isHistory || isSheets;
+        if (sheetsPanel) sheetsPanel.hidden = !isSheets;
+        document.querySelectorAll('[data-salary-profile-action]').forEach(button => {button.hidden = isHistory || isSheets;});
+        selectTabs(primaryTabs, isHistory ? 'history' : (isSheets ? 'sheets' : 'profile'), 'employeeView');
+        if (updateHash) history.replaceState(null, '', isHistory ? `#salary-history-${selectedView}` : (isSheets ? '#salary-sheets' : '#salary-profile'));
     }
     function keyboardTabs(tabs) {
         tabs.forEach((tab, index) => tab.addEventListener('keydown', event => {
@@ -44,7 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
     keyboardTabs(primaryTabs); keyboardTabs(viewTabs);
     function restore() {
         selectView(location.hash.replace('#salary-history-', ''), false);
-        selectPrimary(location.hash.startsWith('#salary-history') ? 'history' : 'profile', false);
+        selectPrimary(location.hash.startsWith('#salary-history') ? 'history' : (location.hash === '#salary-sheets' ? 'sheets' : 'profile'), false);
     }
     window.addEventListener('hashchange', restore); restore();
 

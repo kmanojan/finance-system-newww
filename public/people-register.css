@@ -1,7 +1,7 @@
 /* Payroll and employee indexes share the Loans register's spacing and finance theme. */
 .pi-page {
     --pi-inset: 24px;
-    --pi-columns: minmax(0, 1.5fr) minmax(0, .9fr) minmax(0, 1.45fr) minmax(0, 1fr) 90px;
+    --pi-columns: minmax(0, 1.5fr) minmax(0, .85fr) minmax(0, .8fr) minmax(0, 1.3fr) minmax(0, 1fr) 72px;
     color: var(--text-main);
     min-width: 0;
     font-size: 14px;
@@ -114,7 +114,7 @@
 .pi-columns, .pi-row { display: grid; grid-template-columns: var(--pi-columns); align-items: center; gap: 12px; padding: 12px var(--pi-inset); }
 .pi-columns { border-bottom: 1px solid var(--border-light); color: var(--text-muted); font-size: 12px; }
 .pi-columns > span:nth-child(n+2), .pi-money { text-align: right; }
-.pi-payroll .pi-columns > span:nth-child(2) { text-align: left; }
+.pi-payroll .pi-columns > span:is(:nth-child(2), :nth-child(3)) { text-align: left; }
 .pi-row > div { min-width: 0; }
 .pi-row:hover { background: var(--bg-page); }
 .pi-row + .pi-row, .pi-entry + .pi-entry { border-top: 1px solid var(--border-light); }
@@ -178,3 +178,5 @@
     .pi-pagination nav { max-width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) { .pi-button, .pi-icon ion-icon { transition: none; } }
+
+@media (min-width: 901px) { .pi-payroll .pi-row { gap: 10px; } }

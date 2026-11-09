@@ -51,6 +51,23 @@ class PayrollSalaryBatchTest extends TestCase
         return $this->postJson('/payroll/'.$run.'/salary-batches', $extra + ['entries' => $entries, 'paid_on' => '2026-02-01', 'reference' => 'January release', 'request_key' => (string) Str::uuid(), 'bank_account_id' => 1]);
     }
 
+    public function test_employee_salary_sheets_keep_employee_scope_and_payment_reversals(): void
+    {
+        $run = $this->createRun();
+        $items = PayrollService::items($run);
+        $this->batch($run, [['item_id' => $items[0]->id, 'amount' => 20000], ['item_id' => $items[1]->id, 'amount' => 10000]])->assertOk();
+        $url = '/employees/'.$items[0]->employee_id;
+        $response = $this->get($url)->assertOk()->assertSee('Salary sheets')->assertSee('Partially paid');
+        $sheets = $response->viewData('salarySheets');
+        $this->assertSame(1, $sheets->total());
+        $this->assertSame($items[0]->id, $sheets->first()->id);
+        $this->assertSame(2000000, (int) $sheets->first()->paid_cents);
+        $response->assertSee('/payroll/'.$run.'/employees/'.$items[0]->id.'/payslip', false);
+        $payment = DB::table('payroll_payments')->first();
+        $this->postJson('/payroll/payments/'.$payment->id.'/reverse', ['date' => '2026-02-02', 'reason' => 'Bank returned this salary batch'])->assertRedirect();
+        $this->assertSame(0, (int) $this->get($url)->assertOk()->viewData('salarySheets')->first()->paid_cents);
+    }
+
     private function summary(int $run): array
     {
         return PayrollService::salaryPaymentStatus(PayrollService::run($run), PayrollService::items($run));

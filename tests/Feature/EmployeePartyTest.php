@@ -76,7 +76,7 @@ class EmployeePartyTest extends TestCase
         $this->actingAs(User::factory()->create(['role' => 'admin', 'is_active' => true]));
         $employee = Employee::withoutEvents(fn () => $this->employee());
         $action = '/employees/'.$employee->id.'/sync-party';
-        $this->get('/employees')->assertOk()->assertSee($action, false)->assertSee('Sync as party');
+        $this->get('/employees')->assertOk()->assertSee('/employees/'.$employee->id, false)->assertDontSee('data-profile-toggle', false);
         $this->get('/employees/'.$employee->id)->assertOk()->assertSee($action, false);
         $salary = $employee->fresh()->basic_salary;
         $this->from('/employees')->post($action)->assertRedirect('/employees')->assertSessionHas('success');
@@ -86,7 +86,7 @@ class EmployeePartyTest extends TestCase
         $this->assertDatabaseCount('parties', 1);
         $this->assertSame($partyId, $employee->fresh()->party_id);
         $this->assertSame($salary, $employee->fresh()->basic_salary);
-        $this->get('/employees')->assertOk()->assertDontSee($action, false)->assertSee('View party');
+        $this->get('/employees')->assertOk()->assertSee('/employees/'.$employee->id, false);
         $this->get('/employees/'.$employee->id)->assertOk()->assertDontSee($action, false)->assertSee('View party');
         $this->assertDatabaseCount('transactions', 0);
         $this->assertDatabaseCount('payroll_runs', 0);

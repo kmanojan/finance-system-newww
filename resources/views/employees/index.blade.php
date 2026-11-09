@@ -100,17 +100,9 @@
                         <div @class(['pi-money', 'pi-key-money' => $key === 'net_salary', 'pi-employer' => $key === 'ctc'])><span class="pi-label">{{ $label }}</span><span class="pi-amount"><small>{{ $currency }}</small> {{ $money($salary[$key]) }}</span></div>
                     @endforeach
                     <div class="pi-row-actions">
-                        <a href="/employees/{{ $employee->id }}" class="pi-button pi-quiet" aria-label="Open profile for {{ $employee->full_name }}">Open</a>
-                        <button type="button" class="pi-button pi-icon" hidden data-profile-toggle aria-expanded="false" aria-controls="employee-pay-{{ $employee->id }}" aria-label="Salary breakdown for {{ $employee->full_name }}"><ion-icon name="chevron-down-outline" aria-hidden="true"></ion-icon></button>
+                        <a href="/employees/{{ $employee->id }}" class="pi-button pi-quiet" aria-label="Open profile for {{ $employee->full_name }}">View profile</a>
+
                     </div>
-                </div>
-                <div class="pi-breakdown" id="employee-pay-{{ $employee->id }}">
-                    @foreach(['Earnings' => ['Basic pay' => 'basic_salary', 'Allowances' => 'total_allowances', 'EPF eligible earnings' => 'epf_base_salary'], 'Employee deductions' => ['Total deductions' => 'total_deductions', 'Employee EPF' => 'employee_epf', 'APIT' => 'apit_tax'], 'Employer contributions' => ['Total contributions' => 'total_employer_cost', 'Employer EPF' => 'employer_epf', 'ETF' => 'employer_etf']] as $heading => $fields)
-                        <section><h4>{{ $heading }}</h4><dl>
-                            @foreach($fields as $label => $key)<div><dt>{{ $label }}</dt><dd>{{ $currency }} {{ $money($salary[$key]) }}</dd></div>@endforeach
-                        </dl></section>
-                    @endforeach
-                    <footer class="pi-party-action"><x-employee-party-action :employee="$employee" compact /></footer>
                 </div>
             </article>
         @empty
@@ -124,7 +116,6 @@
         @endif
     </section>
 </div>
-<script src="{{ asset('employee-register.js') }}?v={{ hash_file('sha256', public_path('employee-register.js')) }}" defer></script>
 @endsection
 
 @section('modals')

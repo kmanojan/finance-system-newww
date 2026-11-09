@@ -10,6 +10,7 @@ use App\Services\ActivityLogService;
 use App\Services\EmployeePartyService;
 use App\Services\SalaryHistoryService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class EmployeeController extends Controller
@@ -121,7 +122,21 @@ class EmployeeController extends Controller
         $salaryChart = SalaryHistoryService::query($employee->id)->orderByDesc('id')->limit(100)->get()->reverse()->map(fn ($row) => SalaryHistoryService::present($row))->values();
         $salaryCurrent = SalaryHistoryService::snapshot($employee);
 
-        return view('employees.show', compact('employee', 'allComponents', 'salaryBreakdown', 'componentsData', 'salaryHistory', 'salaryChart', 'salaryCurrent'));
+        $payments = DB::table('payroll_payment_allocations as a')
+            ->join('payroll_payments as p', 'p.id', '=', 'a.payroll_payment_id')
+            ->where('p.kind', 'salary')->where('p.status', 'posted')
+            ->select('a.payroll_item_id')->selectRaw('SUM(a.amount_cents) as paid_cents')->groupBy('a.payroll_item_id');
+        $salarySheets = DB::table('payroll_items as i')
+            ->join('payroll_runs as r', 'r.id', '=', 'i.payroll_run_id')
+            ->join('companies as c', 'c.id', '=', 'r.company_id')
+            ->leftJoinSub($payments, 'payments', fn ($join) => $join->on('payments.payroll_item_id', '=', 'i.id'))
+            ->where('i.employee_id', $employee->id)
+            ->select('i.id', 'r.id as run_id', 'r.month', 'r.status', 'r.currency', 'c.name as company_name', 'i.net_cents')
+            ->selectRaw('COALESCE(payments.paid_cents, 0) as paid_cents')
+            ->orderByDesc('r.month')->orderByDesc('r.id')
+            ->paginate(12, ['*'], 'salary_sheets_page')->withQueryString()->fragment('salary-sheets');
+
+        return view('employees.show', compact('employee', 'allComponents', 'salaryBreakdown', 'componentsData', 'salaryHistory', 'salaryChart', 'salaryCurrent', 'salarySheets'));
     }
 
     public function syncParty($id)

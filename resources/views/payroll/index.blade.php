@@ -61,7 +61,7 @@
             </form>
         </details>
         @if($runs->count())
-            <div class="pi-columns" aria-hidden="true"><span>Payroll / company</span><span>Processing</span><span>Salary payment</span><span>Employer cost</span><span>Action</span></div>
+            <div class="pi-columns" aria-hidden="true"><span>Payroll / company</span><span>Processing</span><span>Payment status</span><span>Salary amounts</span><span>Employer cost</span><span>Action</span></div>
         @endif
         @forelse($runs as $run)
             @php
@@ -77,10 +77,10 @@
                     <div><h3 id="payroll-row-{{ $run->id }}"><a href="/payroll/{{ $run->id }}">{{ $month }}</a></h3><p class="pi-subline">{{ $run->company_name }}</p><p class="pi-subline">{{ $reference }} · {{ number_format($run->employee_count) }} {{ Str::plural('employee', $run->employee_count) }}</p></div>
                 </div>
                 <div class="pi-stage"><span class="pi-label">Processing</span><span class="pi-status pi-state-{{ $run->status }}">{{ $statuses[$run->status] ?? ucfirst($run->status) }}</span></div>
+                <div class="pi-payment-status"><span class="pi-label">Payment status</span><span class="pi-status pi-state-{{ $payment['state'] }}">{{ $payment['label'] }}</span></div>
                 <div class="pi-money pi-key-money">
-                    <span class="pi-label">Salary payment</span>
+                    <span class="pi-label">Salary amounts</span>
                     @if($posted)
-                        <span class="pi-status pi-state-{{ $payment['state'] }}">{{ $payment['label'] }}</span>
                         <span class="pi-amount"><small>{{ $run->currency }}</small> {{ $money($payment['balance']) }} <small>left</small></span>
                         <span class="pi-subline">Paid {{ $run->currency }} {{ $money($payment['paid']) }}</span>
                         <span class="pi-subline">All unpaid obligations {{ $run->currency }} {{ $money($run->balance) }}</span>

@@ -1,0 +1,42 @@
+.ep-page { min-width: 0; }
+.ep-page [x-cloak], .ep-page [hidden] { display: none !important; }
+.ep-back { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; margin-bottom: 8px; color: var(--text-muted); font-size: 13px; text-decoration: none; }
+.ep-back:hover { color: var(--primary); }
+.ep-page .pi-highlight strong { font-size: clamp(22px, 2vw, 30px); overflow-wrap: anywhere; }
+.ep-page .pi-highlight strong small { font-size: 12px; }
+.ep-page .pi-metrics dd small { display: block; }
+.ep-page .pi-metrics dd { font-size: 19px; }
+.ep-tabs { margin-bottom: 20px; }
+.ep-page .ep-tabs button { min-height: 44px; }
+.ep-layout { display: grid; grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr); gap: 20px; }
+.ep-main, .ep-side { min-width: 0; display: flex; flex-direction: column; gap: 20px; }
+.ep-panel { padding: 20px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-card); min-width: 0; }
+.ep-panel > header { margin-bottom: 16px; }
+.ep-panel h2 { font-size: 16px; font-weight: 600; color: var(--text-heading); }
+.ep-panel header p { margin-top: 4px; color: var(--text-muted); font-size: 13px; }
+.ep-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.ep-side .ep-fields { grid-template-columns: minmax(0, 1fr); }
+.ep-component { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(90px, .8fr) minmax(0, 1fr); gap: 12px; align-items: center; padding: 14px 0; border-top: 1px solid var(--border-light); }
+.ep-component-name { display: flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer; }
+.ep-component-name input { flex: none; width: 20px; height: 20px; accent-color: var(--primary); }
+.ep-component-name strong { display: block; font-weight: 500; font-size: 13px; overflow-wrap: anywhere; }
+.ep-component-name small, .ep-effect > span { display: block; color: var(--text-muted); font-size: 12px; }
+.ep-effect { text-align: right; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.ep-effect strong { font-size: 13px; font-weight: 500; }
+.ep-component input[type=number] { text-align: right; }
+.ep-component-empty { color: var(--text-muted); font-size: 13px; }
+.ep-calculation > div { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border-light); font-size: 13px; }
+.ep-calculation dt { color: var(--text-muted); }
+.ep-calculation dt small { display: block; }
+.ep-calculation dd { text-align: right; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.ep-sheet-scroll { max-width: 100%; overflow-x: auto; }
+.ep-sheets { width: 100%; border-collapse: collapse; min-width: 850px; }
+.ep-sheets :is(th,td) { padding: 12px; border-bottom: 1px solid var(--border-light); font-size: 13px; text-align: left; }
+.ep-sheets thead th { font-size: 12px; font-weight: 500; color: var(--text-muted); }
+.ep-sheets tbody th { font-weight: 500; }
+.ep-sheets small { display: block; color: var(--text-muted); font-size: 12px; }
+.ep-sheets :is(td,th):is(:nth-child(4),:nth-child(5),:nth-child(6)) { text-align: right; font-variant-numeric: tabular-nums; }
+.ep-error { color: var(--danger); }
+.ep-page [data-employee-party-action] :is(a,button) { min-height: 44px; }
+@media(max-width:1100px) { .ep-layout { grid-template-columns: minmax(0,1fr); } .ep-side { display:grid; grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media(max-width:600px) { .ep-side, .ep-fields { grid-template-columns: minmax(0,1fr); } .ep-panel { padding:16px; } .ep-component { grid-template-columns: minmax(0,1fr) minmax(0,1fr); } .ep-component-name { grid-column:1/-1; } .ep-page .pi-overview { grid-template-columns:minmax(0,1fr); } .ep-page .pi-highlight { display:block; } .ep-page .pi-metrics dd { font-size:14px; } .ep-tabs { flex-wrap:wrap; } .ep-page .pi-header h1 { overflow-wrap:anywhere; } }

@@ -53,7 +53,7 @@ class EmployeeSalaryComponentTest extends TestCase
         $response->assertSeeText('Employee directory');
         $response->assertSeeText('Estimated take-home pay');
         $response->assertSeeText('Employer cost');
-        $response->assertSeeText('Employee deductions');
+        $this->get('/employees/'.$employee->id)->assertOk()->assertSeeText('Employee deductions')->assertSeeText('Salary sheets');
         $response->assertSee('100,000.00');
     }
 
@@ -227,7 +227,7 @@ class EmployeeSalaryComponentTest extends TestCase
         $this->assertEquals('Telephone Allowance', $deskBreakdown['earnings'][0]['name']);
     }
 
-    public function test_employee_show_view_renders_save_button_and_dropdowns_without_filter_buttons(): void
+    public function test_employee_profile_renders_component_groups_and_salary_sheet_navigation(): void
     {
         $user = User::factory()->create(['role' => 'admin', 'is_active' => true]);
         $employee = Employee::create([
@@ -245,30 +245,14 @@ class EmployeeSalaryComponentTest extends TestCase
 
         $response->assertStatus(200);
 
-        // 1. Verify Save button text is explicitly present inside the HTML
-        $response->assertSee('Save Salary Profile');
-
-        // 2. Verify filter pills (All, Active, Inactive) are removed
-        $response->assertDontSee("earningsFilter = 'all'");
-        $response->assertDontSee("deductionsFilter = 'all'");
-        $response->assertDontSee('earningsFilter');
-        $response->assertDontSee('deductionsFilter');
-
-        // 3. Verify + Assign Role Allowance dropdown is present
-        $response->assertSee('+ Assign Role Allowance');
-        $response->assertSee('allowanceDropdownOpen');
-        $response->assertSee('+ Assign Deduction');
-        $response->assertSee('deductionDropdownOpen');
-
-        // 4. Verify modal is no longer present
-        $response->assertDontSee('id="assignAllowanceModal"', false);
-        $response->assertDontSee('openAllowanceModal');
-
-        // 5. Verify basic salary and components use amount-input styling with comma formatting
-        $response->assertSee('amount-input-wrapper');
-        $response->assertSee('amount-display-input');
+        $response->assertSeeText('Save salary profile');
+        $response->assertSeeText('Earnings & allowances');
+        $response->assertSeeText('Employee deductions');
+        $response->assertSeeText('Employer contributions');
+        $response->assertSeeText('Salary sheets');
         $response->assertSee('name="basic_salary"', false);
-        $response->assertSee('formatComponentAmount');
-        $response->assertSee('formatComponentBlur');
+        $response->assertSee('x-model="comp.enabled"', false);
+        $response->assertSee('x-model.number="comp.value"', false);
+
     }
 }
