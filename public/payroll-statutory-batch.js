@@ -5,6 +5,8 @@
     const all = form.querySelector('[data-stat-all]'), save = form.querySelector('[data-stat-save]');
     const message = form.querySelector('[data-stat-message]'), total = form.querySelector('[data-stat-total]');
     const date = form.querySelector('[name="paid_on"]');
+    const scope = document.querySelector('[data-stat-scope]');
+    const loadedScope = [...scope.querySelectorAll('[name]')].map(field => [field, field.value]);
     let submitting = false;
     const cents = value => /^\d{1,9}(\.\d{1,2})?$/.test(value.trim()) ? Math.round(Number(value.trim()) * 100) : NaN;
     const selected = () => rows.filter(row => row.querySelector('[data-stat-select]').checked);
@@ -23,8 +25,9 @@
         const earliest = chosen.map(row => row.dataset.earliest).sort().pop() || '';
         date.min = earliest;
         total.textContent = `${chosen.length} month${chosen.length === 1 ? '' : 's'} · LKR ${(sum / 100).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-        save.disabled = submitting || !chosen.length || invalid || sum > 99999999999;
-        message.textContent = invalid ? 'Each selected month needs an amount above zero, within its pending balance, with up to two decimals.' : sum > 99999999999 ? 'The batch exceeds LKR 999,999,999.99.' : chosen.length ? `Payment date must be on or after ${earliest}. Unpaid balances remain pending.` : 'Select at least one pending month.';
+        const changedScope = loadedScope.some(([field, value]) => field.value !== value);
+        save.disabled = changedScope || submitting || !chosen.length || invalid || sum > 99999999999;
+        message.textContent = changedScope ? 'Load pending months to apply the changed company, payment type or year before recording a batch.' : invalid ? 'Each selected month needs an amount above zero, within its pending balance, with up to two decimals.' : sum > 99999999999 ? 'The batch exceeds LKR 999,999,999.99.' : chosen.length ? `Payment date must be on or after ${earliest}. Unpaid balances remain pending.` : 'Select at least one pending month.';
     }
     function toggle(row, checked) {
         row.querySelector('[data-stat-select]').checked = checked;
@@ -38,7 +41,9 @@
         row.querySelector('[data-stat-amount]').addEventListener('input', summary);
     });
     all.addEventListener('change', () => { rows.forEach(row => toggle(row, all.checked)); summary(); });
-    document.querySelector('[data-stat-scope]')?.addEventListener('submit', event => {
+    scope.addEventListener('change', summary);
+    scope.addEventListener('input', summary);
+    scope.addEventListener('submit', event => {
         if (selected().length && !window.confirm('Loading months clears the current selection and entered amounts. Continue?')) event.preventDefault();
     });
     form.addEventListener('invalid', () => { message.textContent = 'Check the highlighted payment field before recording this batch.'; }, true);

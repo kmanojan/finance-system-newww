@@ -20,6 +20,9 @@ function fixture(response = {ok: true, json: async () => ({redirect: '/payroll/s
         return row;
     });
     const form = new Element(), scope = new Element();
+    scope.fields = [new Element(), new Element()];
+    scope.fields[0].value = '1'; scope.fields[1].value = 'epf';
+    scope.querySelectorAll = () => scope.fields;
     form.querySelectorAll = () => rows;
     form.querySelector = selector => elements[selector.match(/data-stat-(\w+)/)?.[1] || selector.match(/name="(\w+)"/)[1]];
     const document = {querySelector: selector => selector === '[data-statutory-batch]' ? form : scope};
@@ -66,4 +69,14 @@ test('validation errors retain selection and partial amounts for correction', as
     assert.match(f.elements.message.textContent, /exceeds/);
     assert.equal(f.rows[0].amount.value, '2000'); assert.equal(f.rows[0].select.checked, true);
     assert.equal(f.elements.save.disabled, false); assert.equal(f.navigations.length, 0);
+});
+
+test('changed scope blocks recording against previously loaded months until reloaded', () => {
+    const f = fixture(); f.elements.all.checked = true; f.elements.all.fire('change');
+    f.scope.fields[1].value = 'etf'; f.scope.fire('change');
+    assert.equal(f.elements.save.disabled, true);
+    assert.match(f.elements.message.textContent, /Load pending months/);
+    f.form.fire('submit'); assert.equal(f.requests.length, 0);
+    f.scope.fields[1].value = 'epf'; f.scope.fire('change');
+    assert.equal(f.elements.save.disabled, false);
 });
