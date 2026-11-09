@@ -231,3 +231,11 @@ The statutory register shows payment state using the shared light/dark badges: P
 The salary batch form shows whole-payroll net amount, already-paid salaries and pending balance, including employees whose salaries are fully paid. Only employees with outstanding salary appear in the selectable table. Selecting an employee fills their remaining balance; entering a smaller positive amount records a partial release. Selected payment amount and pending-after-batch preview update across search and all 50-row pages. Invalid amounts suppress the preview and block recording. Select this page affects the current filtered page; Clear selection resets the whole batch.
 
 The layout uses the existing finance type and theme tokens with a shared totals strip, fixed employee column, bounded scrolling table, larger amount inputs and a separate payment-details section. Light/dark and 1440/768/390/320 layouts were checked using browser DOM geometry without screenshots. The design-taste app direction was Achromatic ledger (seed 850163138), adapted to retain the requested existing brand; its inset row marker indicates selection rather than elevation. The main question is how much this release pays and what remains payable. No new financial posting behavior is introduced.
+
+
+### Salary advance creation popup (9 November 2026)
+
+- **Record advance** and **Record first advance** open a native modal on the Salary Advances register. The `#new-advance` link also opens it.
+- The popup uses the existing design tokens, shared employee selector, payment fields and payroll deduction month. It adapts to mobile with a scrollable body and visible close/save controls.
+- Close, Cancel, Escape and clicking the backdrop dismiss the popup and restore focus. Reopening retains unsaved field values while on the page.
+- Server validation reopens the creation popup with the errors and submitted values; file attachments must be selected again after a validation redirect. Accounting, bank transfer behaviour and recovery rules are unchanged.
