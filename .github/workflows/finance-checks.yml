@@ -16,7 +16,7 @@ jobs:
       - name: Check browser navigation behavior
         run: node --test tests/Frontend/navigation.test.mjs
       - name: Check salary batch entry behavior
-        run: node --test tests/Frontend/payroll-batch.test.cjs
+        run: node --test tests/Frontend/payroll-batch.test.cjs tests/Frontend/payroll-statutory-batch.test.cjs
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'

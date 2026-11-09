@@ -111,6 +111,9 @@ Route::middleware(['auth', AuthorizeWorkspace::class, AtomicWorkspaceWrite::clas
         Route::get('/import-history', 'importHistoryForm');
         Route::post('/import-history', 'importHistory');
         Route::get('/statutory', [\App\Http\Controllers\PayrollStatutoryController::class, 'index']);
+        Route::get('/statutory/batches/create', [\App\Http\Controllers\PayrollStatutoryController::class, 'batchForm']);
+        Route::post('/statutory/batches', [\App\Http\Controllers\PayrollStatutoryController::class, 'batch']);
+        Route::get('/statutory/batches/{payment}', [\App\Http\Controllers\PayrollStatutoryController::class, 'batchDetail'])->whereNumber('payment');
         Route::get('/statutory/events/{event}/evidence', [\App\Http\Controllers\PayrollStatutoryController::class, 'evidence'])->whereNumber('event');
         Route::get('/{id}/statutory/{kind}', [\App\Http\Controllers\PayrollStatutoryController::class, 'show'])->whereNumber('id')->where('kind', 'epf|etf|apit');
         Route::get('/{id}/statutory/{kind}/schedule', [\App\Http\Controllers\PayrollStatutoryController::class, 'schedule'])->whereNumber('id')->where('kind', 'epf|etf|apit');

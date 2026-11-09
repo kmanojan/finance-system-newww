@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class PayrollStatutoryService
@@ -112,11 +113,14 @@ class PayrollStatutoryService
             $union ? $union->unionAll($query) : $union = $query;
         }
         $query = DB::query()->fromSub($union, 's')->when(! empty($filters['company_id']), fn ($q) => $q->where('company_id', $filters['company_id']))
+            ->when(! empty($filters['year']), fn ($q) => $q->whereBetween('month', [$filters['year'].'-01-01', $filters['year'].'-12-31']))
             ->when(! empty($filters['month']), fn ($q) => $q->where('month', $filters['month'].'-01'))
             ->when(! empty($filters['kind']), fn ($q) => $q->where('kind', $filters['kind']));
         $notSubmitted = fn ($q) => $q->whereNull('action')->orWhere('action', '!=', 'submitted');
         match ($filters['status'] ?? 'open') {
             'open' => $query->where(fn ($q) => $q->where('balance_cents', '>', 0)->orWhere($notSubmitted)),
+            'paid' => $query->where('balance_cents', '<=', 0),
+            'partial' => $query->where('balance_cents', '>', 0)->where('paid_cents', '>', 0),
             'unpaid' => $query->where('balance_cents', '>', 0),
             'prepared_unpaid' => $query->whereNotNull('event_id')->where('balance_cents', '>', 0),
             'paid_unsubmitted' => $query->where('balance_cents', '<=', 0)->where($notSubmitted),
@@ -125,6 +129,69 @@ class PayrollStatutoryService
         };
 
         return $query;
+    }
+
+    /** A batch groups existing monthly payments without changing their ledger or audit semantics.
+     * The unique request key stores a namespaced batch UUID plus its payroll ID.
+     */
+    public static function batch(array $input): int
+    {
+        $data = validator($input, [
+            'company_id' => 'required|integer|exists:companies,id',
+            'kind' => ['required', Rule::in(array_keys(self::KINDS))],
+            'entries' => 'required|array|min:1|max:240',
+            'entries.*.run_id' => 'required|integer|distinct',
+            'entries.*.amount' => 'required|numeric|min:0.01|max:999999999.99|decimal:0,2',
+            'paid_on' => 'required|date_format:Y-m-d|before_or_equal:'.self::today(),
+            'reference' => 'required|string|max:255', 'request_key' => 'required|uuid',
+            'bank_account_id' => 'nullable|integer|exists:bank_accounts,id',
+        ])->validate();
+
+        return DB::transaction(function () use ($data) {
+            // Serialise batches in this company, including repeated requests with different selections.
+            DB::table('companies')->where('id', $data['company_id'])->lockForUpdate()->first();
+            $prefix = 'statbatch:'.strtolower($data['request_key']).':';
+            self::check(! DB::table('payroll_payments')->where('request_key', 'like', $prefix.'%')->exists(), 'This batch was already recorded. Check payment batch history before retrying.');
+            $entries = collect($data['entries'])->sortBy('run_id');
+            $runs = DB::table('payroll_runs')->whereIn('id', $entries->pluck('run_id'))->orderBy('id')->lockForUpdate()->get()->keyBy('id');
+            self::check($runs->count() === $entries->count(), 'A selected payroll no longer exists. Refresh the months.');
+            self::check($entries->sum(fn ($entry) => PayrollCalculationService::cents($entry['amount'])) <= 99999999999, 'The batch exceeds the maximum total of LKR 999,999,999.99.');
+            $ids = [];
+            foreach ($entries as $entry) {
+                $run = $runs[$entry['run_id']];
+                self::check((int) $run->company_id === (int) $data['company_id'] && $run->currency === 'LKR', 'Every selected payroll must belong to this company and use LKR.');
+                $ids[] = PayrollService::payment($run->id, [
+                    'kind' => $data['kind'], 'amount' => $entry['amount'], 'paid_on' => $data['paid_on'],
+                    'reference' => $data['reference'], 'bank_account_id' => $data['bank_account_id'] ?? null,
+                    'request_key' => $prefix.$run->id,
+                ]);
+            }
+            ActivityLogService::logCreate('PayrollStatutoryBatch', $ids[0], ['payment_ids' => $ids, 'kind' => $data['kind'], 'company_id' => $data['company_id']]);
+
+            return $ids[0];
+        });
+    }
+
+    public static function batchPayments(int $payment)
+    {
+        $first = DB::table('payroll_payments')->find($payment) ?? abort(404);
+        abort_unless(preg_match('/^statbatch:([0-9a-f-]{36}):[0-9]+$/', $first->request_key, $match), 404);
+
+        return DB::table('payroll_payments as p')->join('payroll_runs as r', 'r.id', '=', 'p.payroll_run_id')
+            ->where('p.company_id', $first->company_id)->where('p.kind', $first->kind)
+            ->where('p.request_key', 'like', 'statbatch:'.$match[1].':%')->select('p.*', 'r.month')->orderBy('r.month')->orderBy('p.id')->get();
+    }
+
+    public static function batches(array $filters = [])
+    {
+        return DB::table('payroll_payments as p')->join('companies as c', 'c.id', '=', 'p.company_id')
+            ->leftJoin('bank_accounts as b', 'b.id', '=', 'p.bank_account_id')
+            ->where('p.request_key', 'like', 'statbatch:%')
+            ->when(! empty($filters['company_id']), fn ($q) => $q->where('p.company_id', $filters['company_id']))
+            ->when(! empty($filters['kind']), fn ($q) => $q->where('p.kind', $filters['kind']))
+            ->select('p.company_id', 'c.name as company_name', 'p.kind', 'p.paid_on', 'p.reference', 'p.currency', 'b.bank_name', 'b.account_no')
+            ->selectRaw("MIN(p.id) as id, COUNT(*) as month_count, SUM(p.amount_cents) as total_cents, SUM(CASE WHEN p.status = 'posted' THEN p.amount_cents ELSE 0 END) as posted_cents")
+            ->groupByRaw('SUBSTR(p.request_key, 1, 46), p.company_id, c.name, p.kind, p.paid_on, p.reference, p.currency, b.bank_name, b.account_no');
     }
 
     private static function check(bool $condition, string $message): void

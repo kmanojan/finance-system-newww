@@ -202,4 +202,91 @@ class PayrollStatutoryTest extends TestCase
         $this->assertTrue($this->state($run, 'etf')['submitted']);
         $this->assertDatabaseCount('journal_entries', $journals);
     }
+
+    private function statutoryBatch(array $entries, array $extra = [])
+    {
+        return $this->postJson('/payroll/statutory/batches', $extra + [
+            'company_id' => 1, 'kind' => 'epf', 'entries' => $entries,
+            'paid_on' => '2026-03-15', 'reference' => 'Authority bulk transfer',
+            'request_key' => (string) Str::uuid(), 'bank_account_id' => 1,
+        ]);
+    }
+
+    public function test_multiple_month_batch_partial_balances_history_and_reversal(): void
+    {
+        $jan = $this->createRun();
+        $feb = $this->createRun('2026-02');
+        $beforeSalary = PayrollPayablesService::items()->sum('balance_cents');
+        $this->get('/payroll/statutory/batches/create?company_id=1&kind=epf&year=2026')->assertOk()->assertSee('January 2026')->assertSee('February 2026');
+        $response = $this->statutoryBatch([['run_id' => $jan, 'amount' => 6000], ['run_id' => $feb, 'amount' => 2000]])->assertOk();
+        $first = DB::table('payroll_payments')->orderBy('id')->first();
+        $response->assertJsonPath('redirect', '/payroll/statutory/batches/'.$first->id);
+        $this->assertSame(0, $this->state($jan)['balance']);
+        $this->assertSame(400000, $this->state($feb)['balance']);
+        $this->assertSame(90000, $this->state($jan, 'etf')['balance']);
+        $this->assertSame($beforeSalary, PayrollPayablesService::items()->sum('balance_cents'));
+        $this->assertFalse($this->state($jan)['submitted']);
+        $this->assertDatabaseCount('transactions', 2);
+        $this->assertDatabaseCount('payroll_payments', 2);
+        $this->assertDatabaseCount('journal_entries', 4);
+        $this->assertEquals(8000, DB::table('transactions')->sum('amount'));
+        $this->assertSame(1, PayrollStatutoryService::batches()->get()->count());
+        $this->get('/payroll/statutory/batches/'.$first->id)->assertOk()->assertSee('8,000.00')->assertSee('Month allocations');
+        $form = $this->get('/payroll/statutory/batches/create?company_id=1&kind=epf')->assertOk();
+        $this->assertSame([$feb], $form->viewData('rows')->pluck('run_id')->all());
+        $this->get('/payroll/statutory?year=2026&kind=epf&status=paid')->assertOk()->assertSee('January 2026')->assertDontSee('February 2026');
+        $this->get('/payroll/statutory?year=2026&kind=epf&status=partial')->assertOk()->assertSee('February 2026')->assertDontSee('January 2026');
+        $this->postJson('/payroll/payments/'.$first->id.'/reverse', ['date' => '2026-03-16', 'reason' => 'Authority returned January allocation'])->assertRedirect();
+        $this->assertSame(600000, $this->state($jan)['balance']);
+        $batch = PayrollStatutoryService::batches()->first();
+        $this->assertEquals(800000, $batch->total_cents);
+        $this->assertEquals(200000, $batch->posted_cents);
+        $this->get('/payroll/statutory')->assertOk()->assertSee('Partially reversed');
+    }
+
+    public function test_batch_rejects_overpayment_duplicates_wrong_scope_and_rolls_back_every_month(): void
+    {
+        $jan = $this->createRun();
+        $feb = $this->createRun('2026-02');
+        $entries = [['run_id' => $jan, 'amount' => 6000], ['run_id' => $feb, 'amount' => 6001]];
+        $this->statutoryBatch($entries)->assertUnprocessable();
+        $this->assertDatabaseCount('payroll_payments', 0);
+        $this->assertDatabaseCount('transactions', 0);
+        $this->assertDatabaseCount('journal_entries', 2);
+        $this->statutoryBatch([['run_id' => $jan, 'amount' => 1], ['run_id' => $jan, 'amount' => 1]])->assertUnprocessable();
+        $this->statutoryBatch([['run_id' => $jan, 'amount' => '1.001']])->assertUnprocessable();
+        $this->statutoryBatch([['run_id' => $jan, 'amount' => 1]], ['kind' => 'salary'])->assertUnprocessable();
+        $this->statutoryBatch([['run_id' => $jan, 'amount' => 1]], ['paid_on' => '2026-01-30'])->assertUnprocessable();
+        $this->statutoryBatch([['run_id' => $jan, 'amount' => 1]], ['paid_on' => '2026-11-09'])->assertUnprocessable();
+        DB::table('companies')->insert(['id' => 2, 'name' => 'Other company', 'base_currency' => 'LKR']);
+        DB::table('bank_accounts')->insert(['id' => 2, 'company_id' => 2, 'bank_name' => 'Other bank', 'account_no' => 'WRONG', 'currency' => 'LKR']);
+        $this->statutoryBatch([['run_id' => $jan, 'amount' => 1]], ['company_id' => 2])->assertUnprocessable();
+        $this->statutoryBatch([['run_id' => $jan, 'amount' => 1]], ['bank_account_id' => 2])->assertUnprocessable();
+        $draft = $this->createRun('2026-03', false);
+        $this->statutoryBatch([['run_id' => $jan, 'amount' => 1], ['run_id' => $draft, 'amount' => 1]], ['paid_on' => '2026-04-01'])->assertUnprocessable();
+        $this->assertDatabaseCount('payroll_payments', 0);
+        $key = (string) Str::uuid();
+        $this->statutoryBatch([['run_id' => $jan, 'amount' => 1]], ['request_key' => $key])->assertOk();
+        $this->statutoryBatch([['run_id' => $feb, 'amount' => 1]], ['request_key' => $key])->assertUnprocessable();
+        $this->assertDatabaseCount('payroll_payments', 1);
+    }
+
+    public function test_etf_and_tax_batches_have_private_receipts_and_role_protection(): void
+    {
+        Storage::fake('local');
+        $run = $this->createRun();
+        foreach (['etf' => 900, 'apit' => 1000] as $kind => $amount) {
+            $this->statutoryBatch([], ['kind' => $kind, 'entries_json' => json_encode([['run_id' => $run, 'amount' => $amount]]), 'receipt' => UploadedFile::fake()->create('bank.pdf', 1, 'application/pdf')])->assertOk();
+            $this->assertSame(0, $this->state($run, $kind)['balance']);
+        }
+        $payment = DB::table('payroll_payments')->first();
+        Storage::disk('local')->assertExists($payment->receipt_path);
+        $this->get('/payroll/payments/'.$payment->id.'/receipt')->assertOk();
+        $this->assertSame(600000, $this->state($run)['balance']);
+        $this->get('/payroll/statutory?year=2025')->assertOk()->assertViewHas('rows', fn ($rows) => $rows->isEmpty());
+        $this->actingAs(User::factory()->create(['role' => 'viewer', 'is_active' => true]));
+        $this->get('/payroll/statutory/batches/create')->assertForbidden();
+        $this->get('/payroll/statutory/batches/'.$payment->id)->assertForbidden();
+        $this->statutoryBatch([['run_id' => $run, 'amount' => 1]])->assertForbidden();
+    }
 }

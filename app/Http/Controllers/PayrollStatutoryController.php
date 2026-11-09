@@ -13,11 +13,11 @@ class PayrollStatutoryController extends Controller
 {
     public function index(Request $request)
     {
-        $filters = $request->validate(['company_id' => 'nullable|integer|exists:companies,id', 'month' => 'nullable|date_format:Y-m',
+        $filters = $request->validate(['company_id' => 'nullable|integer|exists:companies,id', 'month' => 'nullable|date_format:Y-m', 'year' => 'nullable|integer|min:2000|max:2100',
             'kind' => ['nullable', Rule::in(array_keys(PayrollStatutoryService::KINDS))],
-            'status' => ['nullable', Rule::in(['open', 'all', 'unpaid', 'prepared_unpaid', 'paid_unsubmitted', 'overdue'])]]);
+            'status' => ['nullable', Rule::in(['open', 'all', 'paid', 'partial', 'unpaid', 'prepared_unpaid', 'paid_unsubmitted', 'overdue'])]]);
         $query = PayrollStatutoryService::register($filters);
-        $summary = (clone $query)->selectRaw("COUNT(*) as obligations, COALESCE(SUM(balance_cents),0) as balance_cents, COALESCE(SUM(CASE WHEN event_id IS NOT NULL THEN balance_cents ELSE 0 END),0) as prepared_balance_cents, COALESCE(SUM(CASE WHEN balance_cents <= 0 AND (action IS NULL OR action != 'submitted') THEN 1 ELSE 0 END),0) as paid_unsubmitted_count")->first();
+        $summary = (clone $query)->selectRaw("COUNT(*) as obligations, COALESCE(SUM(paid_cents),0) as paid_cents, COALESCE(SUM(balance_cents),0) as balance_cents, COALESCE(SUM(CASE WHEN event_id IS NOT NULL THEN balance_cents ELSE 0 END),0) as prepared_balance_cents, COALESCE(SUM(CASE WHEN balance_cents <= 0 AND (action IS NULL OR action != 'submitted') THEN 1 ELSE 0 END),0) as paid_unsubmitted_count")->first();
         $rows = $query->orderBy('due_on')->orderBy('month')->orderBy('run_id')->orderBy('kind')->paginate(30)->withQueryString();
         foreach ($rows as $row) {
             $row->tracking = PayrollStatutoryService::state($row->run_status, (int) $row->due_cents, (int) $row->paid_cents, $row->due_on,
@@ -25,7 +25,56 @@ class PayrollStatutoryController extends Controller
         }
 
         return view('payroll.statutory-index', ['rows' => $rows, 'summary' => $summary, 'filters' => $filters,
-            'companies' => DB::table('companies')->orderBy('name')->get()]);
+            'companies' => DB::table('companies')->orderBy('name')->get(),
+            'batches' => PayrollStatutoryService::batches($filters)->orderByDesc('id')->paginate(15, ['*'], 'batches_page')->withQueryString()]);
+    }
+
+    public function batchForm(Request $request)
+    {
+        $filters = $request->validate(['company_id' => 'nullable|integer|exists:companies,id',
+            'kind' => ['nullable', Rule::in(array_keys(PayrollStatutoryService::KINDS))],
+            'year' => 'nullable|integer|min:2000|max:2100']);
+        $companies = DB::table('companies')->orderBy('name')->get();
+        $companyId = $filters['company_id'] ?? $companies->first()?->id;
+        $kind = $filters['kind'] ?? 'epf';
+        $filters = array_merge($filters, ['company_id' => $companyId, 'kind' => $kind, 'status' => 'unpaid']);
+        $rows = $companyId ? PayrollStatutoryService::register($filters)->where('currency', 'LKR')->orderBy('month')->orderBy('run_id')->get() : collect();
+
+        return view('payroll.statutory-batch-create', compact('companies', 'companyId', 'kind', 'filters', 'rows') + [
+            'today' => PayrollStatutoryService::today(),
+            'banks' => DB::table('bank_accounts')->where('company_id', $companyId)->where('currency', 'LKR')->get(),
+        ]);
+    }
+
+    public function batch(Request $request)
+    {
+        $request->validate(['entries_json' => 'nullable|json|max:100000', 'receipt' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120']);
+        $input = $request->all();
+        if ($request->filled('entries_json')) {
+            $input['entries'] = json_decode($request->input('entries_json'), true);
+        }
+        $id = PayrollStatutoryService::batch($input);
+        if ($request->hasFile('receipt')) {
+            $file = $request->file('receipt');
+            $path = $file->store('payroll-receipts', config('filesystems.documents_disk', 'local'));
+            abort_unless($path, 500, 'The receipt could not be stored. The batch was not saved.');
+            DB::table('payroll_payments')->whereIn('id', PayrollStatutoryService::batchPayments($id)->pluck('id'))
+                ->update(['receipt_path' => $path, 'receipt_name' => basename($file->getClientOriginalName())]);
+        }
+        $url = '/payroll/statutory/batches/'.$id;
+
+        return $request->expectsJson() ? response()->json(['redirect' => $url]) : redirect($url)->with('success', 'Statutory payment batch recorded.');
+    }
+
+    public function batchDetail(int $payment)
+    {
+        $payments = PayrollStatutoryService::batchPayments($payment);
+        $first = $payments->first();
+
+        return view('payroll.statutory-batch-detail', compact('payments', 'first') + [
+            'batchId' => $payments->min('id'), 'company' => DB::table('companies')->find($first->company_id),
+            'bank' => $first->bank_account_id ? DB::table('bank_accounts')->find($first->bank_account_id) : null,
+        ]);
     }
 
     public function show(int $id, string $kind)

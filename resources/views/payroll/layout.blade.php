@@ -4,7 +4,7 @@
 @include('navigation.people')
 @endsection
 @section('content')
-<link rel="stylesheet" href="{{ asset('payroll.css') }}?v={{ filemtime(public_path('payroll.css')) }}">
+<link rel="stylesheet" href="{{ asset('payroll.css') }}?v={{ hash_file('sha256',public_path('payroll.css')) }}">
 <div class="payroll-workspace">
     @if(session('success'))<div class="pr-notice" role="status">{{ session('success') }}</div>@endif
     @if($errors->any())<div class="pr-errors" role="alert"><strong>Check the following</strong><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
