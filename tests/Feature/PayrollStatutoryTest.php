@@ -115,6 +115,26 @@ class PayrollStatutoryTest extends TestCase
         $this->assertDatabaseHas('payroll_payments', ['kind' => 'epf', 'amount_cents' => 200000]);
     }
 
+    public function test_etf_remittance_defaults_to_the_outstanding_amount_and_preserves_edits(): void
+    {
+        $run = $this->createRun();
+        $url = '/payroll/'.$run.'/statutory/etf';
+
+        $this->get($url)->assertOk()->assertSee('value="900.00" required', false);
+        $this->assertDatabaseCount('payroll_payments', 0);
+
+        $this->post($url.'/payment', [
+            'amount' => '125.50', 'paid_on' => '2026-02-12', 'reference' => 'Partial ETF remittance',
+            'request_key' => (string) Str::uuid(), 'bank_account_id' => 1,
+        ])->assertRedirect($url.'#remittance-payments');
+        $this->get($url)->assertOk()->assertSee('value="774.50" required', false);
+
+        $this->followingRedirects()->from($url)->post($url.'/payment', [
+            'amount' => '50.25', 'paid_on' => '2026-02-12', 'request_key' => (string) Str::uuid(),
+        ])->assertOk()->assertSee('value="50.25" required', false);
+        $this->assertDatabaseCount('payroll_payments', 1);
+    }
+
     public function test_stale_duplicate_invalid_and_unapproved_updates_are_rejected(): void
     {
         $draft = $this->createRun('2026-01', false);

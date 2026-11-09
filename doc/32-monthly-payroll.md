@@ -217,3 +217,7 @@ Only authorised finance roles can record batches; manager/admin reversal permiss
 ### Actual remittance dates within the payroll month
 
 EPF, ETF and APIT remittances may be recorded using their actual date from the first day of the payroll month onward (for example, 30 January for January payroll). Both individual remittances and multi-month batches use this rule. A batch cannot predate the first day of its latest selected payroll month. The payment record, cash transaction and remittance journal keep the entered date; the payroll accrual remains at month-end. Future dates, closed periods, unapproved payrolls, duplicate requests and overpayments remain blocked. This is a recording-date rule, not a change to statutory deadlines.
+
+### Default remittance amount
+
+The actual remittance form pre-fills the outstanding statutory balance, formatted to two decimal places, for ETF, EPF and APIT. Users can reduce it for a partial payment. After payment, the next form defaults to the remaining balance; a validation error preserves the entered amount. Opening the form does not record a payment.

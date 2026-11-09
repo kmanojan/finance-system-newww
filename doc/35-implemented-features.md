@@ -417,3 +417,7 @@ Every client/project receipt uses the stable code `PAY-{database ID}`. This is d
 ### Statutory remittance date correction
 
 Individual EPF/ETF/APIT payments and statutory batches now accept actual payments within the payroll month, starting on its first day, instead of requiring month-end. Date hints and batch minimum dates match the server rule. The original payment date is retained; no production payment is created by deploying this correction. See the monthly payroll guide for retained validation and accounting behavior.
+
+### Default remittance amount
+
+The actual remittance form pre-fills the outstanding statutory balance, formatted to two decimal places, for ETF, EPF and APIT. Users can reduce it for a partial payment. After payment, the next form defaults to the remaining balance; a validation error preserves the entered amount. Opening the form does not record a payment.
