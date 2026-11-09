@@ -453,3 +453,7 @@ The loan register now prioritises **Total to settle**, with unpaid principal and
 Design direction: Taste's achromatic-ledger composition (seed 1771249544), adapted to the established Apptimus palette and typography. The main question is “How much remains to settle, and which loan needs attention?” The principal/interest split is the identifying financial detail. No decorative charts or screenshots were added.
 
 Validation: 60 loan tests / 646 assertions; browser checks at 320, 390, 768, 1024 and 1440 pixels with synthetic local loans, including large amounts and long lender names. Checked light/dark themes, search, empty results, status changes from page two, lender picker, quick edit and expand-all. Browser geometry checks found no page-level horizontal overflow.
+
+### Auditor payables in plain language (9 November 2026)
+
+The report now leads with one unpaid total per currency and short explanations of borrowed principal, interest due, employee salaries, and employee funds/tax. Future interest stays outside that total. Unapproved payrolls, recording gaps and source checks appear in a compact review notice. Detailed schedules open on demand, and a plain-language guide explains the financial terms and date scope. Empty data is distinguished from an actual zero. Existing calculations, permissions, PDF and Excel schedules are preserved. See [the report guide](../docs/auditor-payables.md#plain-language-report-page--9-november-2026).

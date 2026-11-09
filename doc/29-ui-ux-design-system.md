@@ -115,3 +115,9 @@ The loan register now prioritises **Total to settle**, with unpaid principal and
 Design direction: Taste's achromatic-ledger composition (seed 1771249544), adapted to the established Apptimus palette and typography. The main question is “How much remains to settle, and which loan needs attention?” The principal/interest split is the identifying financial detail. No decorative charts or screenshots were added.
 
 Validation: 60 loan tests / 646 assertions; browser checks at 320, 390, 768, 1024 and 1440 pixels with synthetic local loans, including large amounts and long lender names. Checked light/dark themes, search, empty results, status changes from page two, lender picker, quick edit and expand-all. Browser geometry checks found no page-level horizontal overflow.
+
+### Auditor payables overview
+
+The report asks **What remains unpaid?** before presenting audit evidence. One currency per balance sheet pairs a prominent recorded unpaid total with an explained breakdown. Keep future interest and unconfirmed amounts outside this total. Review notices name missing or unapproved records; do not style missing data as a zero. Detailed schedules use native disclosures, and breakdown links reveal their destination and focus its summary. Definitions remain available in **How to read this report**. Preserve complete PDF/Excel exports.
+
+Use the existing Lexend Deca, neutral surfaces, 20px panel radius, 10px controls and purple primary action. The Achromatic ledger direction (seed 760860705) informs the quiet number hierarchy, adapted to the established brand. `audit-payables.css` and `audit-payables.js` are page-scoped and content-hashed. Phone summaries stack and dense evidence tables scroll locally. Browser review remains DOM-only without screenshots.

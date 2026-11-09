@@ -34,3 +34,15 @@ PDF uses direct paginated tables with repeated headings, wrapped evidence refere
 Feature tests cover date cutoffs, settled loans, separate interest, future commitments, currencies, missing dates, legacy/upfront interest, salary partial payments, statutory preparation without payment, payment reversals, voids, draft segregation, missing months, privacy and PDF/Excel exports. A 1,000-employee PDF fixture checks long references and pagination. PDF text/geometry validation uses synthetic data without screenshots.
 
 The statutory event migration (`2026_11_08_000001_create_payroll_statutory_events`) must be applied before deploying this release. The production SQL is in `database/releases/2026-11-08-statutory.sql`.
+
+## Plain-language report page — 9 November 2026
+
+The web page opens with **What remains unpaid?**, one recorded total per currency and an explained breakdown: borrowed money to repay, interest due by the reporting date, employee take-home salary, employee funds/tax, and other payroll amounts where applicable. The visible parts add up to the existing service total. Principal includes amounts repayable later; the overview does not label the entire balance as overdue. Future scheduled interest and estimates without a schedule remain visibly separate and excluded.
+
+A short review notice identifies unapproved payrolls, gaps in payroll coverage and source exceptions. An empty summary says why balances may be unavailable instead of implying nothing is owed. A genuine zero from fully paid records remains a numeric zero. Payroll's last included month is shown beside the reporting date.
+
+Six native expandable sections retain the complete loan, salary, statutory, payment, draft/coverage and source-review schedules. Breakdown and warning links open the relevant section and move keyboard focus to its summary. Native disclosures also work without JavaScript. **How to read this report** explains payable, principal, interest, net salary, EPF, ETF, APIT, date scope and the report's limits in plain language. PDF and Excel keep the complete schedules and selected cutoff; calculation, recognition and access rules are unchanged.
+
+The page retains the shared typography, light/dark tokens and responsive navigation. Phone summaries stack; detailed audit tables scroll inside their own frames. The page assets use content hashes. Verification: 12 auditor report tests / 122 assertions, production build, source design lint, and DOM-only browser checks at 1440, 1280, 768, 390 and 320px in both themes. Browser checks covered disclosures, keyboard activation, drilldown focus, empty dates, the glossary and export cutoff links with isolated synthetic data. No production records were changed and no screenshots were captured.
+
+Release validation against GitHub main (`ccd9635`) passed 200 backend tests / 2,129 assertions, 22 frontend tests, PHP formatting, JavaScript syntax and the production build. The release contains only the report redesign, its tests and documentation; it requires no database migration.

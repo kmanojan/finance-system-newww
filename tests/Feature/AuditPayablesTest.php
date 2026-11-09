@@ -218,6 +218,68 @@ class AuditPayablesTest extends TestCase
         $this->assertDatabaseCount('payroll_payments', 0);
     }
 
+    public function test_plain_language_overview_reconciles_per_currency_and_keeps_future_interest_separate(): void
+    {
+        $run = $this->createRun();
+        $this->pay($run, 'salary', 20000, '2026-02-01');
+        $loan = $this->loan(['interest_method' => 'fixed_amount', 'interest_amount' => 1000]);
+        $this->loan(['principal_amount' => 123.45, 'currency' => 'USD']);
+        DB::table('loan_interest_schedule')->insert([
+            ['loan_id' => $loan, 'due_date' => '2026-02-01', 'interest_amount' => 1000, 'paid_amount' => 0, 'status' => 'pending'],
+            ['loan_id' => $loan, 'due_date' => '2026-04-01', 'interest_amount' => 2000, 'paid_amount' => 0, 'status' => 'pending'],
+        ]);
+        $response = $this->get('/reports/audit-payables?as_of=2026-02-28')->assertOk()
+            ->assertSee('What remains unpaid?')->assertSee('Borrowed money to repay')
+            ->assertSee('Interest due later')->assertSee('Not included in the unpaid total above.')
+            ->assertSee('Different currencies are not added together.');
+        $dom = new \DOMDocument;
+        @$dom->loadHTML($response->getContent());
+        $xpath = new \DOMXPath($dom);
+        $sheets = $xpath->query('//*[@data-currency]');
+        $this->assertCount(2, $sheets);
+        $expected = ['LKR' => 11550000, 'USD' => 12345];
+        foreach ($sheets as $sheet) {
+            $total = (int) $xpath->query('.//*[@data-audit-total]', $sheet)->item(0)->getAttribute('data-audit-total');
+            $parts = 0;
+            foreach ($xpath->query('.//*[@data-audit-part]', $sheet) as $part) {
+                $parts += (int) $part->getAttribute('data-audit-part');
+            }
+            $this->assertSame($expected[$sheet->getAttribute('data-currency')], $total);
+            $this->assertSame($total, $parts);
+        }
+        $this->assertCount(6, $xpath->query('//details[contains(@class, "audit-disclosure") and not(@open)]'));
+        $ids = [];
+        foreach ($xpath->query('//*[@id]') as $node) {
+            $ids[] = $node->getAttribute('id');
+        }
+        $this->assertSame(count($ids), count(array_unique($ids)), 'Disclosure destinations must have unique IDs.');
+        $this->assertCount(1, $xpath->query('//section/h2[contains(., "Loans and remaining balances")]'));
+    }
+
+    public function test_overview_explains_unconfirmed_data_without_presenting_a_zero_total(): void
+    {
+        $this->createRun('2026-01', false);
+        $response = $this->get('/reports/audit-payables?as_of=2026-03-15')->assertOk()
+            ->assertSee('No confirmed balances for this date')
+            ->assertSee('This does not mean nothing is owed.')
+            ->assertSee('1 payroll awaiting approval')
+            ->assertSee('Missing amounts are unknown, not zero.')
+            ->assertSee('Payroll through 28 Feb 2026')
+            ->assertDontSee('data-audit-total=', false);
+        $this->assertDatabaseCount('payroll_payments', 0);
+        $this->assertDatabaseCount('journal_entries', 0);
+    }
+
+    public function test_fully_paid_records_show_a_real_zero_instead_of_an_empty_report(): void
+    {
+        $loan = $this->loan();
+        DB::table('loan_principal_records')->insert(['loan_id' => $loan, 'record_type' => 'repayment', 'amount' => 100000, 'record_date' => '2026-02-01']);
+        $this->get('/reports/audit-payables?as_of=2026-02-28')->assertOk()
+            ->assertSee('data-audit-total="0"', false)
+            ->assertSee('Settled by recorded payments')
+            ->assertDontSee('No confirmed balances for this date');
+    }
+
     public function test_pdf_handles_a_thousand_employee_rows_and_unbroken_evidence_references(): void
     {
         $this->createRun();
