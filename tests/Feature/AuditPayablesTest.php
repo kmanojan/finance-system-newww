@@ -230,7 +230,7 @@ class AuditPayablesTest extends TestCase
         ]);
         $response = $this->get('/reports/audit-payables?as_of=2026-02-28')->assertOk()
             ->assertSee('What remains unpaid?')->assertSee('Borrowed money to repay')
-            ->assertSee('Interest due later')->assertSee('Not included in the unpaid total above.')
+            ->assertDontSee('Interest due later')->assertDontSee('How to read this report')
             ->assertSee('Different currencies are not added together.');
         $dom = new \DOMDocument;
         @$dom->loadHTML($response->getContent());

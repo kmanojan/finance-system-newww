@@ -87,11 +87,8 @@
                         @endif
                     </dl>
                 </div>
-                @if($row['future_interest'] > 0 || $row['unscheduled_interest'] > 0)
+                @if($row['unscheduled_interest'] > 0)
                     <div class="audit-future">
-                        @if($row['future_interest'] > 0)
-                            <p><strong>Interest due later</strong><span>{{ $currency }} {{ $money($row['future_interest']) }}</span><small>Scheduled after {{ $reportDate }}. Not included in the unpaid total above.</small></p>
-                        @endif
                         @if($row['unscheduled_interest'] > 0)
                             <p><strong>Interest without a schedule</strong><span>{{ $currency }} {{ $money($row['unscheduled_interest']) }}</span><small>An estimate to check. Not included because its due dates are unknown.</small></p>
                         @endif
@@ -146,20 +143,6 @@
         @endforeach
     </section>
 
-    <details class="audit-guide">
-        <summary>How to read this report</summary>
-        <div class="audit-guide-body">
-            <dl>
-                <div><dt>Payable</dt><dd>Money the company still owes. The total includes loan principal even when its repayment date is later.</dd></div>
-                <div><dt>Principal and interest</dt><dd>Principal is the money borrowed. Interest is the extra cost of borrowing it.</dd></div>
-                <div><dt>Net salary</dt><dd>Take-home pay after deductions. Only approved payroll is included; marking processing complete does not mean it has been paid.</dd></div>
-                <div><dt>EPF, ETF and APIT</dt><dd>EPF is the Employees’ Provident Fund and includes employee and employer contributions. ETF is the employer’s Employees’ Trust Fund contribution. APIT is Advance Personal Income Tax deducted from pay. These are paid separately from take-home salary.</dd></div>
-                <div><dt>Reporting date</dt><dd>Loans and recorded payments are counted through {{ $reportDate }}. Payroll includes only whole months ended by {{ $payrollDate }}, with no daily estimate for an unfinished month.</dd></div>
-                <div><dt>What to verify</dt><dd>Check bank payments, lender balances and authority receipts before sharing. Preparing or submitting documents does not count as payment. Draft payrolls, missing records, supplier bills, penalties and unrecorded interest are outside the total.</dd></div>
-            </dl>
-            <p>This report reads current records. Later edits can change a past report, so keep a dated export with its supporting documents. PDF and Excel use the selected view. Remaining only hides fully paid items and payment-history tables; original and paid amounts remain alongside each outstanding balance. Choose All records & payment history for the full audit trail.</p>
-        </div>
-    </details>
     <footer class="audit-footer">Generated {{ $report['generatedAt'] }} · Confidential payroll information</footer>
 </div>
 <script src="{{ asset('audit-payables.js') }}?v={{ hash_file('sha256', public_path('audit-payables.js')) }}" defer></script>
