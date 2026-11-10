@@ -18,6 +18,11 @@
     </dl>
     <div class="sd-due"><span>Payment due <strong>{{ $state['dueOn'] }}</strong></span>@if($state['overdue'])<span class="sd-overdue">Overdue payment</span>@endif @if($kind === 'epf')<span class="sd-due-note">Includes employee and employer EPF.</span>@endif</div>
 </section>
+<nav class="sd-tabs" aria-label="Statutory payment views" data-statutory-tabs>
+    <a id="statutory-details-tab" href="#statutory-details" data-statutory-view="details">Payment details</a>
+    <a id="statutory-employees-tab" href="#statutory-employees" data-statutory-view="employees">Employees <span>{{ $items->count() }}</span></a>
+</nav>
+<div id="statutory-details" data-statutory-panel="details" aria-labelledby="statutory-details-tab">
 <nav class="sd-sections" aria-label="On this payment page">
     @if($editable && $state['balance'] > 0)<a href="#record-remittance">Record remittance</a>@endif
     <a href="#remittance-payments">Payment history</a><a href="#statutory-preparation">Preparation</a><a href="#statutory-documents">Supporting documents</a><a href="#statutory-activity">Activity history</a>
@@ -35,4 +40,9 @@
 @if($editable && $state['submitted'] && in_array(strtolower(auth()->user()->role), ['admin','manager']))<details class="pr-help"><summary>Reopen submission for correction</summary><p>Keep the original submission history and supporting files. Reopening does not reverse a payment or withdraw documents from the authority.</p><form method="post" action="/payroll/{{ $run->id }}/statutory/{{ $kind }}/reopened" class="pr-form-grid" data-confirm="Reopen the internal submission record? Recorded payments and the original evidence will be retained.">@csrf<input type="hidden" name="expected_event_id" value="{{ $expectedEvent }}"><input type="hidden" name="request_key" value="{{ \Illuminate\Support\Str::uuid() }}"><div class="pr-field"><label for="reopened-on">Correction date</label><input id="reopened-on" name="event_on" type="date" max="{{ $today }}" value="{{ $today }}" required></div><div class="pr-field"><label for="reopen-reason">Correction reason</label><input id="reopen-reason" name="notes" minlength="5" maxlength="2000" required></div><div class="pr-full"><button class="pr-btn">Record reopening</button></div></form></details>@endif
 <details class="pr-help"><summary>Due dates and submission scope</summary><p>Confirm the payment deadline for this payroll month, including working days and holidays. The payroll's saved deadline is the starting value. EPF/ETF monthly remittance documents and APIT monthly remittance support are tracked here. Annual APIT employer statements and ETF half-year returns are separate obligations.</p><p><a href="https://epf.lk/?p=171" target="_blank" rel="noopener noreferrer">EPF remittance guidance</a> · <a href="https://etfb.lk/payment-of-contributions/" target="_blank" rel="noopener noreferrer">ETF contribution guidance</a> · <a href="https://www.ird.gov.lk/en/Type%20of%20Taxes/SitePages/Advance%20Personal%20Income%20Tax%20%28APIT%29.aspx" target="_blank" rel="noopener noreferrer">IRD APIT guidance</a></p><p>The download is an internal review schedule, not an official filing format. This system records your preparation, payments and document submissions; it does not submit them to an authority.</p></details></section>
 </div>
+<div id="statutory-employees" data-statutory-panel="employees" aria-labelledby="statutory-employees-tab">
+    @include('payroll.statutory-employees')
+</div>
+</div>
+<script src="{{ asset('statutory-detail.js') }}?v={{ hash_file('sha256', public_path('statutory-detail.js')) }}" defer></script>
 @endsection

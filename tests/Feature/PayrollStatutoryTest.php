@@ -49,6 +49,32 @@ class PayrollStatutoryTest extends TestCase
         return $run;
     }
 
+    public function test_employee_tab_uses_monthly_snapshots_and_includes_zero_contributions(): void
+    {
+        $zero = Employee::create(['first_name' => 'Zero', 'last_name' => 'Contribution Employee', 'full_name' => 'Zero Contribution Employee', 'employee_code' => 'ZERO-1', 'basic_salary' => 20000, 'currency' => 'LKR']);
+        $run = PayrollService::create(['month' => '2026-01', 'company_id' => 1, 'department_id' => 1, 'currency' => 'LKR',
+            'employee_ids' => [$this->employee->id, $zero->id], 'salary_due_date' => '2026-02-28', 'statutory_due_date' => '2026-02-28', 'tax_due_date' => '2026-02-15']);
+        DB::table('payroll_items')->where('payroll_run_id', $run)->update(['reviewed' => true]);
+        PayrollService::transition($run, 'submit');
+        PayrollService::transition($run, 'approve');
+        $this->employee->update(['full_name' => 'Changed current employee name', 'basic_salary' => 90000]);
+        $this->createRun('2026-02');
+
+        foreach (['epf', 'etf', 'apit'] as $kind) {
+            $response = $this->get("/payroll/$run/statutory/$kind")->assertOk();
+            $response->assertSee('statutory-employees-tab')->assertSee('Statutory Review Employee')->assertSee('Zero Contribution Employee')
+                ->assertDontSee('Changed current employee name')->assertSee('Employee EPF')->assertSee('Employer EPF')->assertSee('Total EPF')->assertSee('Tax (APIT)');
+            $dom = new \DOMDocument;
+            @$dom->loadHTML($response->getContent());
+            $xpath = new \DOMXPath($dom);
+            $rows = $xpath->query('//tr[@data-statutory-employee]');
+            $this->assertCount(2, $rows);
+            $amounts = fn ($row) => array_map(fn ($cell) => trim($cell->textContent), iterator_to_array($xpath->query('./td', $row)));
+            $this->assertSame(['2,400.00', '3,600.00', '6,000.00', '900.00', '1,000.00'], $amounts($rows->item(0)));
+            $this->assertSame(['0.00', '0.00', '0.00', '0.00', '0.00'], $amounts($rows->item(1)));
+        }
+    }
+
     private function event(int $run, string $kind, string $action, array $extra = [])
     {
         $latest = DB::table('payroll_statutory_events')->where('payroll_run_id', $run)->where('kind', $kind)->max('id') ?? 0;
