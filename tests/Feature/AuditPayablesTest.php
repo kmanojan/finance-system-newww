@@ -239,7 +239,7 @@ class AuditPayablesTest extends TestCase
             $this->assertCount(1, $rows);
             $this->assertSame((string) $due, $rows->item(0)->getAttribute('data-interest-due-loan'));
             $text = $rows->item(0)->textContent;
-            foreach (['2026-02-01', '2026-02-28', '1,500.00', '250.00', '1,250.00'] as $value) {
+            foreach (['LKR 100,000.00', '2026-02-01', '2026-02-28', '1,500.00', '250.00', '1,250.00'] as $value) {
                 $this->assertStringContainsString($value, $text);
             }
             $this->assertStringNotContainsString('2026-04-01', $text);
