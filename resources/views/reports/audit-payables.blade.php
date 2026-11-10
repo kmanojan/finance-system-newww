@@ -12,8 +12,11 @@
     $exceptionCount = count($report['exceptions']);
     $needsReview = $draftCount || $gapCount || $exceptionCount;
     $countLabel = fn ($count, $noun) => $count.' '.\Illuminate\Support\Str::plural($noun, $count);
+    $interestDueLoans = collect($report['loans'])->filter(fn ($loan) => $loan['included'] && $loan['dueInterest'] > 0);
+    $interestDuePeriods = collect($report['interestSchedule'])->filter(fn ($period) => $period['classification'] === 'Due by cutoff' && $period['balance'] > 0)->groupBy('loan_id');
     $sections = [
         'loans' => ['Loans', 'Borrowed amounts, repayments and interest for each lender.', $countLabel(count($report['loans']), 'loan')],
+        'interest-due' => ['Loans with interest due', 'Unpaid interest due on or before '.$reportDate.'. Future and fully paid interest are excluded.', $countLabel($interestDueLoans->count(), 'loan')],
         'salaries' => ['Employee salaries', 'Salary after deductions, payments made and what each employee is still owed.', $countLabel(count($report['payrollMonths']), 'payroll')],
         'statutory' => ['EPF, ETF & tax', 'Contributions and deductions to pay separately from employee salaries.', $countLabel(count($report['statutory']), 'obligation')],
         'payments' => ['Payments already recorded', 'Payment dates, references and reversals. These are already reflected in the balances.', $countLabel(count($report['payments']), 'payment')],
@@ -68,7 +71,7 @@
                             <dd data-audit-part="{{ $row['principal'] }}">{{ $money($row['principal']) }}</dd>
                         </div>
                         <div>
-                            <dt><a href="#audit-loans" data-audit-open>Loan interest due</a><small>Interest due by {{ $reportDate }} that remains unpaid.</small></dt>
+                            <dt><a href="#audit-interest-due" data-audit-open>Loan interest due</a><small>Interest due by {{ $reportDate }} that remains unpaid.</small></dt>
                             <dd data-audit-part="{{ $row['interest_due'] }}">{{ $money($row['interest_due']) }}</dd>
                         </div>
                         <div>
@@ -137,7 +140,11 @@
             <details class="audit-disclosure" id="audit-{{ $key }}">
                 <summary><span class="audit-disclosure-title">{{ $label }}<small>{{ $description }}</small></span><span class="audit-count">{{ $count }}</span></summary>
                 <div class="audit-detail-body">
-                    @include('reports.partials.audit-payables-schedules', ['pdf' => false, 'onlySection' => $key])
+                    @if($key === 'interest-due')
+                        @include('reports.partials.audit-loan-interest-due')
+                    @else
+                        @include('reports.partials.audit-payables-schedules', ['pdf' => false, 'onlySection' => $key])
+                    @endif
                 </div>
             </details>
         @endforeach

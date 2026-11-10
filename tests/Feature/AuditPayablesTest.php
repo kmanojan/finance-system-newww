@@ -218,6 +218,36 @@ class AuditPayablesTest extends TestCase
         $this->assertDatabaseCount('payroll_payments', 0);
     }
 
+    public function test_interest_due_accordion_matches_cutoff_and_excludes_future_paid_and_skipped_periods(): void
+    {
+        $due = $this->loan(['lender_name' => 'Due lender']);
+        $future = $this->loan(['lender_name' => 'Future lender']);
+        $paid = $this->loan(['lender_name' => 'Paid lender']);
+        $skipped = $this->loan(['lender_name' => 'Skipped lender']);
+        foreach ([[$due, '2026-02-01', 1000, 250, '2026-02-10', 'partial'], [$due, '2026-02-28', 500, 0, null, 'pending'],
+            [$due, '2026-04-01', 3000, 0, null, 'pending'], [$future, '2026-04-01', 800, 0, null, 'pending'],
+            [$paid, '2026-02-01', 500, 500, '2026-02-10', 'paid'], [$skipped, '2026-02-01', 100, 0, null, 'skipped']] as [$loan, $date, $charge, $settled, $paidOn, $status]) {
+            DB::table('loan_interest_schedule')->insert(['loan_id' => $loan, 'due_date' => $date, 'interest_amount' => $charge, 'paid_amount' => $settled, 'paid_date' => $paidOn, 'status' => $status]);
+        }
+        foreach (['remaining', 'all'] as $view) {
+            $response = $this->get('/reports/audit-payables?as_of=2026-02-28&view='.$view)->assertOk();
+            $dom = new \DOMDocument;
+            @$dom->loadHTML($response->getContent());
+            $xpath = new \DOMXPath($dom);
+            $this->assertCount(1, $xpath->query('//a[@href="#audit-interest-due" and @data-audit-open]'));
+            $rows = $xpath->query('//*[@id="audit-interest-due"]//tr[@data-interest-due-loan]');
+            $this->assertCount(1, $rows);
+            $this->assertSame((string) $due, $rows->item(0)->getAttribute('data-interest-due-loan'));
+            $text = $rows->item(0)->textContent;
+            foreach (['2026-02-01', '2026-02-28', '1,500.00', '250.00', '1,250.00'] as $value) {
+                $this->assertStringContainsString($value, $text);
+            }
+            $this->assertStringNotContainsString('2026-04-01', $text);
+            $response->assertViewHas('report', fn ($report) => $report['summary']['LKR']['interest_due'] === 125000);
+        }
+        $this->get('/reports/audit-payables?as_of=2026-01-31')->assertOk()->assertSee('No unpaid loan interest is due on or before');
+    }
+
     public function test_plain_language_overview_reconciles_per_currency_and_keeps_future_interest_separate(): void
     {
         $run = $this->createRun();
@@ -247,7 +277,7 @@ class AuditPayablesTest extends TestCase
             $this->assertSame($expected[$sheet->getAttribute('data-currency')], $total);
             $this->assertSame($total, $parts);
         }
-        $this->assertCount(5, $xpath->query('//details[contains(@class, "audit-disclosure") and not(@open)]'));
+        $this->assertCount(6, $xpath->query('//details[contains(@class, "audit-disclosure") and not(@open)]'));
         $ids = [];
         foreach ($xpath->query('//*[@id]') as $node) {
             $ids[] = $node->getAttribute('id');
