@@ -60,8 +60,8 @@
 .loan-records-table .data-table th { background:transparent; color:var(--text-muted); font-size:12px; font-weight:500; text-align:left; padding:12px 16px; border-bottom:1px solid var(--border); }
 .loan-records-table .data-table td { padding:16px; font-size:13px; border-bottom:1px solid var(--border-light); font-variant-numeric:tabular-nums; }
 .loan-records-table .data-table tr:last-child td { border-bottom:0; }
-.loan-schedule-table :is(th,td):is(:nth-child(2),:nth-child(3),:nth-child(4)), .loan-principal-table :is(th,td):nth-child(3) { text-align:right; white-space:nowrap; }
-.loan-schedule-table :is(th,td):nth-child(5), .loan-schedule-table :is(th,td):nth-child(6) { text-align:center; }
+.loan-schedule-table :is(th,td):is(:nth-child(2),:nth-child(3),:nth-child(5)), .loan-principal-table :is(th,td):nth-child(3) { text-align:right; white-space:nowrap; }
+.loan-schedule-table :is(th,td):nth-child(6), .loan-schedule-table :is(th,td):nth-child(7) { text-align:center; }
 .loan-records-table td[colspan] { padding:48px 24px!important; text-align:center!important; line-height:1.7; color:var(--text-muted); white-space:normal!important; }
 .loan-records-table td[colspan] ion-icon { display:none; }
 .loan-records-table .action-btn { display:inline-flex; align-items:center; justify-content:center; min-width:40px; min-height:40px; color:var(--text-main); background:var(--bg-page); border:1px solid var(--border); border-radius:8px; cursor:pointer; }
@@ -247,12 +247,12 @@
  .loan-ledger .loan-schedule-table tbody>tr:not(.loan-payment-history-row)>td { display:flex!important; flex-direction:column; align-items:flex-start; justify-content:flex-start; gap:5px; padding:8px 0!important; border:0; text-align:left!important; min-width:0; width:auto; }
  .loan-ledger .loan-schedule-table td::before { position:static!important; width:auto!important; flex:none!important; font-size:12px; font-weight:400; color:var(--text-muted); }
  .loan-ledger .loan-schedule-table td:first-child { order:1; }
- .loan-ledger .loan-schedule-table td:nth-child(5) { order:2; align-items:flex-end!important; }
+ .loan-ledger .loan-schedule-table td:nth-child(6) { order:2; align-items:flex-end!important; }
  .loan-ledger .loan-schedule-table td:nth-child(2) { order:3; }
  .loan-ledger .loan-schedule-table td:nth-child(3) { order:4; align-items:flex-end!important; }
- .loan-ledger .loan-schedule-table td:nth-child(4) { order:5; }
- .loan-ledger .loan-schedule-table td:nth-child(6) { order:6; grid-column:1 / -1; flex-direction:row!important; flex-wrap:wrap; align-items:center!important; gap:8px!important; }
- .loan-ledger .loan-schedule-table td:nth-child(6)::before { display:none; }
+ .loan-ledger .loan-schedule-table td:nth-child(5) { order:5; }
+ .loan-ledger .loan-schedule-table td:nth-child(7) { order:6; grid-column:1 / -1; flex-direction:row!important; flex-wrap:wrap; align-items:center!important; gap:8px!important; }
+ .loan-ledger .loan-schedule-table td:nth-child(7)::before { display:none; }
  .loan-ledger .loan-schedule-table td[colspan] { grid-column:1 / -1; }
  .loan-ledger .loan-schedule-table tr.loan-payment-history-row { display:block; border:0; box-shadow:none; margin:0; padding:0; }
  .loan-ledger .loan-schedule-table tr.loan-payment-history-row>td { display:block!important; width:100%; }
@@ -263,7 +263,7 @@
  .loan-ledger .loan-schedule-table tbody>tr:not(.loan-payment-history-row) { padding:10px 8px!important; }
  .loan-ledger .loan-schedule-table tbody>tr:not(.loan-payment-history-row)>td { padding:6px 0!important; line-height:20px; gap:4px; }
  .loan-ledger .loan-schedule-table td::before { padding:0!important; margin:0!important; min-height:0!important; line-height:16px; }
- .loan-ledger .loan-schedule-table td:is(:nth-child(2),:nth-child(3),:nth-child(4)) { white-space:nowrap!important; }
+ .loan-ledger .loan-schedule-table td:is(:nth-child(2),:nth-child(3),:nth-child(5)) { white-space:nowrap!important; }
 }
 
 /* Use the shared master-data action controls for recorded payments. */
@@ -278,13 +278,20 @@
 .loan-payment-note p { margin:0; white-space:pre-wrap; line-height:1.6; color:var(--text-main); }
 .loan-payment-note small { display:block; margin-bottom:4px; color:var(--text-muted); font-size:12px; }
 @media(max-width:600px) {
- .loan-ledger .loan-schedule-table td:nth-child(6) { order:6; grid-column:1 / -1; flex-direction:column!important; align-items:flex-start!important; max-width:none; min-width:0; }
- .loan-ledger .loan-schedule-table td:nth-child(6)::before { display:block; }
- .loan-ledger .loan-schedule-table td:nth-child(7) { order:7; grid-column:1 / -1; flex-direction:row!important; flex-wrap:wrap; align-items:center!important; }
- .loan-ledger .loan-schedule-table td:nth-child(7)::before { display:none; }
+ .loan-ledger .loan-schedule-table td:nth-child(7) { order:6; grid-column:1 / -1; flex-direction:column!important; align-items:flex-start!important; max-width:none; min-width:0; }
+ .loan-ledger .loan-schedule-table td:nth-child(7)::before { display:block; }
+ .loan-ledger .loan-schedule-table td:nth-child(8) { order:7; grid-column:1 / -1; flex-direction:row!important; flex-wrap:wrap; align-items:center!important; }
+ .loan-ledger .loan-schedule-table td:nth-child(8)::before { display:none; }
  .loan-ledger .loan-interest-row-actions .action-btn { min-height:44px; min-width:44px; }
 }
 .loan-ledger .loan-records-table { overflow-x:visible; }
 .loan-ledger .loan-schedule-table :is(th,td) { padding-left:8px; padding-right:8px; }
 .loan-ledger .loan-interest-notes { min-width:100px; }
 .loan-ledger .loan-schedule-table td:last-child { white-space:normal!important; }
+
+.loan-interest-paid-dates time { display:block; white-space:nowrap; font-variant-numeric:tabular-nums; }
+@media(max-width:600px) {
+ .loan-ledger .loan-schedule-table td.loan-interest-paid-dates { order:6; align-items:flex-end!important; }
+ .loan-ledger .loan-schedule-table td:nth-child(7) { order:7; }
+ .loan-ledger .loan-schedule-table td:nth-child(8) { order:8; }
+}

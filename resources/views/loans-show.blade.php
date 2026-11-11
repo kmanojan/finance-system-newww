@@ -50,6 +50,7 @@
                             <th>Due date</th>
                             <th>Amount due</th>
                             <th>Paid amount</th>
+                            <th>Paid date</th>
                             <th>Remaining</th>
                             <th>Status</th>
                             <th>Note</th>
@@ -75,6 +76,14 @@
                                 {{ $loan->currency }} {{ number_format($paidAmt, 2) }}
                                 @php($payments = $interestPayments->get("LOAN-INT-{$loan->id}-{$sched->id}", collect()))
 
+                            </td>
+                            <td class="loan-interest-paid-dates">
+                                @php($paidDates = $payments->pluck('transaction_date')->push($paidAmt > 0 ? $sched->paid_date : null)->filter()->map(fn ($date) => substr((string) $date, 0, 10))->unique()->sort())
+                                @forelse($paidDates as $paidDate)
+                                    <time datetime="{{ $paidDate }}">{{ $paidDate }}</time>
+                                @empty
+                                    <span class="text-muted">—</span>
+                                @endforelse
                             </td>
                             <td>
                                 {{ $loan->currency }} {{ number_format($remAmt, 2) }}
@@ -146,7 +155,7 @@
 
                         @if($schedules->isEmpty())
                         <tr>
-                            <td colspan="7" class="text-center text-muted py-4">
+                            <td colspan="8" class="text-center text-muted py-4">
                                 <ion-icon name="calendar-outline"></ion-icon><br>
                                 @if($loan->interest_method === 'no_interest' || (($loan->interest_amount ?? 0) <= 0 && empty($loan->total_interest) && empty($loan->interest_rate)))
                                     This loan has no interest / zero periodic interest (Principal only). No interest schedules required.

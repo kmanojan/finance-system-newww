@@ -47,6 +47,7 @@ class LoanInterestNoteTest extends TestCase
         $this->assertDatabaseHas('transactions', ['amount' => 7000, 'description' => "Interest Payment to Test lender\nNote: Final interest balance"]);
         $this->assertDatabaseHas('loan_interest_schedule', ['id' => $this->scheduleId, 'paid_amount' => 10000, 'status' => 'paid']);
         $this->get("/loans/{$this->loanId}")->assertOk()->assertSee('<th>Note</th>', false)
+            ->assertSee('<th>Paid date</th>', false)->assertSee('<time datetime="2026-11-02">2026-11-02</time>', false)->assertSee('<time datetime="2026-11-03">2026-11-03</time>', false)
             ->assertSee('Cheque 001')->assertDontSee("alert('test')", false)->assertSee('Final interest balance');
         $this->assertDatabaseHas('loans', ['id' => $this->loanId, 'principal_amount' => 100000]);
     }
