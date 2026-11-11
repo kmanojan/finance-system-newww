@@ -30,8 +30,10 @@
 <h3>Borrowing and settlement history</h3><p>Each payment is shown once as principal or interest. Interest withheld at borrowing is labelled as a non-cash settlement.</p>
 <div class="audit-table-wrap" role="region" aria-label="Loan borrowing and settlement history" tabindex="0"><table class="audit-table"><thead><tr><th>Loan / lender</th><th>Date</th><th>Movement</th><th>Currency</th><th class="num">Amount</th><th>Reference</th><th>Notes / source</th></tr></thead><tbody>@forelse($report['loanActivity'] as $row)<tr><td>{{ $row['code'] }}<small>{{ $row['lender'] }}</small></td><td>{{ $row['date'] }}</td><td class="wrap">{{ $row['kind'] }}</td><td>{{ $row['currency'] }}</td><td class="num">{{ $money($row['amount']) }}</td><td class="wrap">{{ $row['reference'] ?: 'Not recorded' }}</td><td class="wrap">{{ $row['notes'] ?: '–' }}</td></tr>@empty<tr><td colspan="7">No dated borrowing or settlement records in scope.</td></tr>@endforelse</tbody></table></div>
 @endunless
+@if($pdf)
 <h3>Interest schedule reconciliation</h3>
 <div class="audit-table-wrap" role="region" aria-label="Loan interest schedule reconciliation" tabindex="0"><table class="audit-table"><thead><tr><th>Loan</th><th>Due on</th><th>Currency</th><th class="num">Scheduled charge</th><th class="num">Paid by cutoff</th><th class="num">Unpaid</th><th>Classification</th></tr></thead><tbody>@forelse($report['interestSchedule'] as $row)<tr><td>{{ $row['code'] }}</td><td>{{ $row['due_on'] }}</td><td>{{ $row['currency'] }}</td><td class="num">{{ $money($row['charge']) }}</td><td class="num">{{ $money($row['paid']) }}</td><td class="num">{{ $money($row['balance']) }}</td><td class="wrap">{{ $row['classification'] }}</td></tr>@empty<tr><td colspan="7">No recorded interest schedules in scope.</td></tr>@endforelse</tbody></table></div>
+@endif
 </section>
 @endif
 
