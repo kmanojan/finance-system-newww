@@ -201,7 +201,8 @@ class AuditPayablesTest extends TestCase
         $this->createRun('2026-04', employee: $employee);
 
         $response = $this->get('/reports/audit-payables?as_of=2026-04-30')->assertOk()
-            ->assertSee('Total pending salary')->assertSee('33,200.00')->assertSee('Unpaid salary by payroll month');
+            ->assertSee('Total pending salary')->assertSee('33,200.00')
+            ->assertDontSee('Unpaid salary by payroll month')->assertDontSee('aria-label="Employee unpaid salary balances"', false);
         $report = $response->viewData('report');
         $this->assertCount(3, $report['salaries']);
         $totals = collect($report['salaryTotals'])->keyBy('currency');

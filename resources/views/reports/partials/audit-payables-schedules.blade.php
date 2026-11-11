@@ -65,16 +65,8 @@
         </tbody>
     </table>
 </div>
-@if($report['salaries'])
-<details class="audit-disclosure">
-    <summary><span class="audit-disclosure-title">Unpaid salary by payroll month</span></summary>
-@endif
-@endif
-@if($pdf || $report['salaries'])
+@else
 <div class="audit-table-wrap" role="region" aria-label="Employee unpaid salary balances" tabindex="0"><table class="audit-table"><thead><tr><th>Employee / code</th><th>Payroll month / company</th><th>Salary due on</th><th>Currency</th><th class="num">Net salary</th><th class="num">Paid by cutoff</th><th class="num">Remaining</th></tr></thead><tbody>@forelse($report['salaries'] as $row)<tr><td>{{ $row['name'] }}<small>{{ $row['code'] }}</small></td><td>{{ substr($row['month'],0,7) }} · #{{ $row['run_id'] }}<small>{{ $row['company'] }}</small></td><td>{{ $row['due_on'] }}</td><td>{{ $row['currency'] }}</td><td class="num">{{ $money($row['due']) }}</td><td class="num">{{ $money($row['paid']) }}</td><td class="num audit-total">{{ $money($row['balance']) }}</td></tr>@empty<tr><td colspan="7">No unpaid employee balances from approved payrolls in scope. Review draft payrolls and missing months separately.</td></tr>@endforelse</tbody></table></div>
-@endif
-@if(!$pdf && $report['salaries'])
-</details>
 @endif
 @unless($remainingOnly)
 <h3>Employee salary payment allocations</h3><p>These are the employee portions of each salary release. Do not add them to the release totals in {{ isset($onlySection) ? 'Payments already recorded' : 'section 5' }}; they are the same payments. Reversed payments are shown for traceability and excluded from balances when reversed by cutoff.</p><div class="audit-table-wrap" role="region" aria-label="Employee salary payments" tabindex="0"><table class="audit-table"><thead><tr><th>Employee / code</th><th>Payroll / company</th><th>Paid on / release</th><th>Currency</th><th class="num">Allocated amount</th><th>Reference / status at cutoff</th></tr></thead><tbody>@forelse($report['salaryPayments'] as $row)<tr><td>{{ $row['name'] }}<small>{{ $row['code'] }}</small></td><td>{{ substr($row['month'],0,7) }} · #{{ $row['run_id'] }}<small>{{ $row['company'] }}</small></td><td>{{ $row['date'] }}<small>Payment #{{ $row['payment_id'] }}</small></td><td>{{ $row['currency'] }}</td><td class="num">{{ $money($row['amount']) }}</td><td class="wrap">{{ $row['reference'] }}<small>{{ $row['effective'] ? 'Counts at cutoff' : 'Reversed by cutoff' }}@if(!$row['effective']) · {{ $row['reversed_on'] }}@endif</small></td></tr>@empty<tr><td colspan="6">No recorded salary payment allocations in scope.</td></tr>@endforelse</tbody></table></div>
