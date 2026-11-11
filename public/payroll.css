@@ -1,4 +1,11 @@
 /* Payroll uses the shared finance tokens. Tables retain a local scroll area on narrow screens. */
+.pr-salary-register{border-block:1px solid var(--border)}
+.pr-salary-filters{display:grid;grid-template-columns:minmax(0,1fr) minmax(150px,200px);gap:12px;border-bottom:1px solid var(--border)}
+.pr-salary-register .pr-field :is(input,select),.pr-salary-paging .pr-btn{min-height:44px}
+.pr-salary-register [hidden]{display:none}
+.pr-salary-register [data-employee-empty] td{white-space:normal}
+.pr-salary-register .pr-table-wrap:focus-visible{outline:2px solid var(--primary);outline-offset:-2px}
+@media(max-width:600px){.pr-salary-filters{grid-template-columns:1fr}.pr-salary-register .pr-table :is(th,td):first-child{min-width:130px;max-width:170px}}
 .pr-history-options{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;margin:18px 0}.pr-history-options>.pr-field{min-width:260px;flex:1}.payroll-workspace progress{display:block;width:100%;height:10px;margin-top:20px;accent-color:var(--primary)}@media(max-width:600px){.pr-history-options>.pr-field{min-width:0;width:100%;flex-basis:100%}.pr-history-options>.pr-btn{width:100%;justify-content:center;min-height:44px}}
 .payroll-workspace{max-width:1440px;margin:0 auto;color:var(--text-heading);font-size:14px;line-height:1.5;min-width:0}
 .pr-header{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;margin-bottom:24px;flex-wrap:wrap}.pr-header h1{font-size:26px;line-height:1.25;font-weight:600;margin:6px 0 8px}.pr-header p{margin:0;color:var(--text-muted)}.pr-back{font-size:13px;color:var(--text-muted)}
