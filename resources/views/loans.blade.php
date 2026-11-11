@@ -45,7 +45,7 @@
         </nav>
         <form method="GET" action="/loans" class="li-filters" role="search" aria-label="Search and filter loans">
             <input type="hidden" name="status" value="{{ $currStatus }}">
-            <div class="li-field li-search"><label for="loan-search">Search loans</label><div><ion-icon name="search-outline" aria-hidden="true"></ion-icon><input id="loan-search" name="search" type="search" placeholder="Loan code, lender or purpose" value="{{ request('search') }}"></div></div>
+            <div class="li-field li-search"><label for="loan-search">Search loans</label><div><ion-icon name="search-outline" aria-hidden="true"></ion-icon><input id="loan-search" name="search" type="search" maxlength="255" placeholder="Code, amount, description…" value="{{ request('search') }}"></div></div>
             <details class="li-more-filters" @if(request('party_id') || request('start_date') || request('end_date') || request('from') || request('to')) open @endif>
                 <summary><ion-icon name="options-outline" aria-hidden="true"></ion-icon> Filters</summary>
                 <div class="li-filter-fields">

@@ -7,6 +7,7 @@ use App\Services\LedgerPostingService;
 use App\Services\LoanBalanceService;
 use App\Services\LoanFlowService;
 use App\Services\LoanInterestPaymentService;
+use App\Services\LoanMentionSearch;
 use App\Services\LoanPrincipalCorrectionService;
 use App\Services\LoanSettlementNoteService;
 use App\Services\PeriodLockService;
@@ -48,19 +49,17 @@ class LoanController extends Controller
         if ($request->filled('status') && $request->input('status') !== 'all') {
             $query->where('status', '=', $request->input('status'));
         }
-        if ($request->filled('search')) {
-            $search = '%'.$request->input('search').'%';
-            $hasLoanCode = Schema::hasColumn('loans', 'loan_code');
-            $query->where(function ($q) use ($search, $hasLoanCode) {
-                $q->where('lender_name', 'LIKE', $search)
-                    ->orWhere('purpose', 'LIKE', $search);
-                if ($hasLoanCode) {
-                    $q->orWhere('loan_code', 'LIKE', $search);
-                }
-            });
-        }
-
+        $search = $request->validate(['search' => 'nullable|string|max:255'])['search'] ?? '';
         $loans = $query->get();
+        $loanIds = $loans->pluck('id');
+        $schedulesByLoan = DB::table('loan_interest_schedule')->whereIntegerInRaw('loan_id', $loanIds)
+            ->orderBy('due_date')->get()->groupBy('loan_id');
+        $recordsByLoan = DB::table('loan_principal_records')->whereIntegerInRaw('loan_id', $loanIds)
+            ->orderByDesc('record_date')->get()->groupBy('loan_id');
+        $parties = DB::table('parties')->orderBy('name')->get();
+        $partiesById = $parties->keyBy('id');
+        $bankAccounts = DB::table('bank_accounts')->get();
+        $banksById = $bankAccounts->keyBy('id');
 
         $totalBorrowed = 0;
         $totalPrincipalRepaid = 0;
@@ -69,17 +68,64 @@ class LoanController extends Controller
         $thisMonthPayable = 0;
         $totalOutstandingInterest = 0;
 
-        foreach ($loans as $loan) {
-            $schedules = DB::table('loan_interest_schedule')->where('loan_id', $loan->id)->get();
-            $balance = LoanBalanceService::calculate($loan, $schedules);
+        foreach ($loans as $key => $loan) {
+            $schedules = $schedulesByLoan->get($loan->id, collect());
+            $records = $recordsByLoan->get($loan->id, collect());
+            $balance = LoanBalanceService::calculate($loan, $schedules, $records);
+
+            $tracksOutstanding = in_array($loan->status, ['active', 'pending', 'defaulted']);
+            $loan->next_due_date = 'N/A';
+            if ($tracksOutstanding) {
+                $nextDue = $schedules->first(fn ($row) => in_array($row->status, ['pending', 'partially_paid']));
+                $loan->next_due_date = $nextDue->due_date ?? ($loan->maturity_date ?: 'N/A');
+            }
+
+            $lastRepayment = $records->firstWhere('record_type', 'repayment');
+            $loan->settled_date = $lastRepayment ? $lastRepayment->record_date : ($loan->status === 'settled' ? date('Y-m-d', strtotime($loan->updated_at)) : null);
+            $bank = $banksById->get($loan->bank_account_id);
+            $loan->bank_name = $bank?->bank_name;
+            $loan->account_no = $bank?->account_no;
+
+            if ($search !== '' && ! LoanMentionSearch::matches([
+                'id' => $loan->id,
+                'loan_code' => ($loan->loan_code ?? null) ?: 'LN-'.str_pad($loan->id, 4, '0', STR_PAD_LEFT),
+                'lender_name' => $loan->lender_name,
+                'party_name' => $partiesById->get($loan->party_id)?->name,
+                'purpose' => LoanMentionSearch::plainDescription($loan->purpose),
+                'principal_amount' => (float) $loan->principal_amount,
+                'currency' => $loan->currency,
+                'status' => $loan->status,
+            ], $search, extraFields: [
+                $loan->claimed_date,
+                $loan->claimed_date ? date('d M Y', strtotime($loan->claimed_date)) : null,
+                $loan->next_due_date !== 'N/A' ? $loan->next_due_date : null,
+                $loan->status === 'settled' ? $loan->settled_date : null,
+                $loan->maturity_date,
+                $loan->bank_name,
+                $loan->account_no,
+            ], extraAmounts: [
+                $balance['full_settlement_amount'],
+                $balance['outstanding_principal'],
+                $balance['pending_interest'],
+                $balance['total_borrowed'],
+                $balance['principal_repaid'],
+                $balance['interest_paid'],
+            ])) {
+                $loans->forget($key);
+
+                continue;
+            }
+
             foreach ($balance as $field => $value) {
                 $loan->$field = $value;
             }
-            $outstandingPrincipal = $balance['outstanding_principal'];
-            $loanPendingInterest = $balance['pending_interest'];
             $totalBorrowed += $balance['total_borrowed'];
             $totalPrincipalRepaid += $balance['principal_repaid'];
             $totalInterestPaid += $balance['interest_paid'];
+            if ($tracksOutstanding) {
+                $totalOutstandingPrincipal += $balance['outstanding_principal'];
+                $totalOutstandingInterest += $balance['pending_interest'];
+            }
             if ($loan->status === 'active') {
                 $thisMonthPayable += $schedules->whereIn('status', ['pending', 'partially_paid', 'overdue'])
                     ->filter(fn ($row) => Carbon::parse($row->due_date)->isCurrentMonth())
@@ -89,38 +135,6 @@ class LoanController extends Controller
             $loan->net_disbursed = ! empty($loan->is_upfront_interest ?? null)
                 ? max(0, ($loan->principal_amount ?? 0) - (($loan->upfront_interest_amount ?? null) ?: ($loan->interest_amount ?? 0)))
                 : ($loan->principal_amount ?? 0);
-
-            $settledRecord = DB::table('loan_principal_records')
-                ->where('loan_id', $loan->id)
-                ->where('record_type', 'repayment')
-                ->orderBy('record_date', 'desc')
-                ->first();
-            $loan->settled_date = $settledRecord ? $settledRecord->record_date : ($loan->status === 'settled' ? date('Y-m-d', strtotime($loan->updated_at)) : null);
-
-            if (in_array($loan->status, ['active', 'pending', 'defaulted'])) {
-                $totalOutstandingPrincipal += $outstandingPrincipal;
-                $totalOutstandingInterest += $loanPendingInterest;
-
-                // Check next due date
-                $nextDue = DB::table('loan_interest_schedule')
-                    ->where('loan_id', $loan->id)
-                    ->whereIn('status', ['pending', 'partially_paid'])
-                    ->orderBy('due_date', 'asc')
-                    ->first();
-
-                $loan->next_due_date = $nextDue ? $nextDue->due_date : (($loan->maturity_date ?? null) ?: 'N/A');
-            } else {
-                $loan->next_due_date = 'N/A';
-            }
-            // Attach linked bank account details
-            if (! empty($loan->bank_account_id)) {
-                $bank = DB::table('bank_accounts')->where('id', $loan->bank_account_id)->first();
-                $loan->bank_name = $bank ? $bank->bank_name : null;
-                $loan->account_no = $bank ? $bank->account_no : null;
-            } else {
-                $loan->bank_name = null;
-                $loan->account_no = null;
-            }
         }
 
         $totalWantToPaid = $loans->whereIn('status', ['active', 'pending', 'defaulted'])->sum('total_outstanding');
@@ -130,10 +144,7 @@ class LoanController extends Controller
         $activeLoansCount = $loans->where('status', 'active')->count();
         $settledLoansCount = $loans->where('status', 'settled')->count();
 
-        $parties = DB::table('parties')->orderBy('name')->get();
-
         // Load Bank Accounts with live balances
-        $bankAccounts = DB::table('bank_accounts')->get();
         foreach ($bankAccounts as $acc) {
             $inflow = DB::table('transactions')->where('bank_account_id', $acc->id)->where('type', 'income')->sum('amount');
             $outflow = DB::table('transactions')->where('bank_account_id', $acc->id)->where('type', 'expense')->sum('amount');
