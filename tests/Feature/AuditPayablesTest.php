@@ -35,14 +35,14 @@ class AuditPayablesTest extends TestCase
             'claimed_date' => '2026-01-01', 'interest_method' => 'no_interest', 'loan_type' => 'interest_separate', 'status' => 'active']);
     }
 
-    private function createRun(string $month = '2026-01', bool $approve = true, string $name = 'Review Employee'): int
+    private function createRun(string $month = '2026-01', bool $approve = true, string $name = 'Review Employee', ?Employee $employee = null): int
     {
-        $employee = Employee::create(['full_name' => $name, 'first_name' => $name, 'last_name' => 'Audit', 'employee_code' => 'AUD-'.Str::random(6), 'basic_salary' => 30000, 'currency' => 'LKR']);
+        $employee ??= Employee::create(['full_name' => $name, 'first_name' => $name, 'last_name' => 'Audit', 'employee_code' => 'AUD-'.Str::random(6), 'basic_salary' => 30000, 'currency' => 'LKR']);
         foreach (['EPF_EE' => ['deduction', 'percentage', 8], 'EPF_ER' => ['employer_contribution', 'percentage', 12], 'ETF_ER' => ['employer_contribution', 'percentage', 3], 'APIT' => ['deduction', 'fixed_amount', 1000]] as $code => [$type, $method, $value]) {
             $component = SalaryComponent::firstOrCreate(['code' => $code], ['name' => $code, 'type' => $type, 'calculation_type' => $method, 'calculation_base' => 'on_epf_base', 'is_active' => true]);
-            $employee->salaryComponents()->create(['salary_component_id' => $component->id, 'value' => $value, 'is_enabled' => true]);
+            $employee->salaryComponents()->firstOrCreate(['salary_component_id' => $component->id], ['value' => $value, 'is_enabled' => true]);
         }
-        $id = PayrollService::create(['month' => $month, 'company_id' => 1, 'department_id' => 1, 'currency' => 'LKR', 'employee_ids' => [$employee->id],
+        $id = PayrollService::create(['month' => $month, 'company_id' => 1, 'department_id' => 1, 'currency' => $employee->currency, 'employee_ids' => [$employee->id],
             'salary_due_date' => $month.'-28', 'statutory_due_date' => $month.'-28', 'tax_due_date' => $month.'-15']);
         if ($approve) {
             DB::table('payroll_items')->where('payroll_run_id', $id)->update(['reviewed' => true]);
@@ -184,7 +184,31 @@ class AuditPayablesTest extends TestCase
         $this->assertSame($before, DB::table('payroll_runs')->pluck('status', 'id')->all());
         $this->assertDatabaseCount('payroll_payments', 0);
         $this->assertDatabaseCount('journal_entries', 0);
-        $this->get('/reports/audit-payables?as_of=2026-03-31')->assertOk()->assertSee('Unapproved payrolls')->assertSee('26,600.00')->assertSee('No valid payroll in scope');
+        $this->get('/reports/audit-payables?as_of=2026-03-31')->assertOk()
+            ->assertSee('2 payrolls awaiting approval')->assertSee('1 gap in payroll records')
+            ->assertDontSee('id="audit-review"', false)->assertDontSee('id="audit-exceptions"', false);
+    }
+
+    public function test_employee_salary_totals_combine_unpaid_months_and_keep_currencies_separate(): void
+    {
+        $january = $this->createRun();
+        $employee = Employee::findOrFail(DB::table('payroll_items')->where('payroll_run_id', $january)->value('employee_id'));
+        $this->createRun('2026-02', employee: $employee);
+        $march = $this->createRun('2026-03', employee: $employee);
+        $this->pay($january, 'salary', 20000, '2026-02-01');
+        $this->pay($march, 'salary', 26600, '2026-04-01');
+        $employee->update(['currency' => 'USD']);
+        $this->createRun('2026-04', employee: $employee);
+
+        $response = $this->get('/reports/audit-payables?as_of=2026-04-30')->assertOk()
+            ->assertSee('Total pending salary')->assertSee('33,200.00')->assertSee('Unpaid salary by payroll month');
+        $report = $response->viewData('report');
+        $this->assertCount(3, $report['salaries']);
+        $totals = collect($report['salaryTotals'])->keyBy('currency');
+        $this->assertSame([2, 3320000], [$totals['LKR']['months'], $totals['LKR']['balance']]);
+        $this->assertSame([1, 2660000], [$totals['USD']['months'], $totals['USD']['balance']]);
+        $this->assertSame($report['summary']['LKR']['salary'], $totals['LKR']['balance']);
+        $this->assertSame($report['summary']['USD']['salary'], $totals['USD']['balance']);
     }
 
     public function test_salary_privacy_date_validation_and_exports_share_the_same_cutoff(): void
@@ -277,7 +301,7 @@ class AuditPayablesTest extends TestCase
             $this->assertSame($expected[$sheet->getAttribute('data-currency')], $total);
             $this->assertSame($total, $parts);
         }
-        $this->assertCount(6, $xpath->query('//details[contains(@class, "audit-disclosure") and not(@open)]'));
+        $this->assertCount(4, $xpath->query('//section[@class="audit-details"]/details[not(@open)]'));
         $ids = [];
         foreach ($xpath->query('//*[@id]') as $node) {
             $ids[] = $node->getAttribute('id');

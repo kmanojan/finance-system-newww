@@ -307,7 +307,21 @@ class AuditPayablesService
         ksort($summary);
         usort($loanActivity, fn ($a, $b) => [$a['date'], $a['loan_id']] <=> [$b['date'], $b['loan_id']]);
 
-        return compact('asOf', 'periodEnd', 'summary', 'loans', 'loanActivity', 'interestSchedule', 'salaries', 'payrollMonths', 'statutory', 'payments', 'salaryPayments', 'drafts', 'draftSummary', 'exceptions', 'coverage') +
+        $salaryTotals = collect($salaries)
+            ->groupBy(fn ($row) => $row['employee_id'].':'.$row['currency'])
+            ->map(function ($rows) {
+                $latest = $rows->last();
+
+                return [
+                    'employee_id' => $latest['employee_id'], 'name' => $latest['name'],
+                    'code' => $latest['code'], 'currency' => $latest['currency'],
+                    'months' => $rows->pluck('month')->unique()->count(),
+                    'balance' => $rows->sum('balance'),
+                ];
+            })
+            ->sortBy(['name', 'code', 'currency'])->values()->all();
+
+        return compact('asOf', 'periodEnd', 'summary', 'loans', 'loanActivity', 'interestSchedule', 'salaries', 'salaryTotals', 'payrollMonths', 'statutory', 'payments', 'salaryPayments', 'drafts', 'draftSummary', 'exceptions', 'coverage') +
             ['generatedAt' => now('Asia/Colombo')->format('Y-m-d H:i T')];
     }
 

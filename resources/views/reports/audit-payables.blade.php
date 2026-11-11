@@ -20,8 +20,6 @@
         'salaries' => ['Employee salaries', 'Salary after deductions, payments made and what each employee is still owed.', $countLabel(count($report['payrollMonths']), 'payroll')],
         'statutory' => ['EPF, ETF & tax', 'Contributions and deductions to pay separately from employee salaries.', $countLabel(count($report['statutory']), 'obligation')],
         'payments' => ['Payments already recorded', 'Payment dates, references and reversals. These are already reflected in the balances.', $countLabel(count($report['payments']), 'payment')],
-        'review' => ['Unapproved payrolls & missing months', 'Amounts that need confirmation before they can be included.', $draftCount.' unapproved'],
-        'exceptions' => ['Checks before sharing', 'Source records to verify and the final review checklist.', $countLabel($exceptionCount, 'check')],
     ];
     if ($remainingOnly) unset($sections['payments']);
 @endphp
@@ -102,7 +100,6 @@
             <div class="audit-empty-overview">
                 <h3>No confirmed balances for this date</h3>
                 <p>This does not mean nothing is owed. Loans need a recorded borrowing date and activation; payroll needs approval and a completed month.</p>
-                <a href="#audit-review" data-audit-open>Check payroll records</a>
                 <a href="#audit-loans" data-audit-open>Check loan records</a>
             </div>
         @endforelse
@@ -119,13 +116,13 @@
             </div>
             <ul>
                 @if($draftCount)
-                    <li><a href="#audit-review" data-audit-open>{{ $draftCount }} {{ \Illuminate\Support\Str::plural('payroll', $draftCount) }} awaiting approval</a><span>Estimates are excluded from the total.</span></li>
+                    <li><strong>{{ $draftCount }} {{ \Illuminate\Support\Str::plural('payroll', $draftCount) }} awaiting approval</strong><span>Estimates are excluded from the total.</span></li>
                 @endif
                 @if($gapCount)
-                    <li><a href="#audit-review" data-audit-open>{{ $gapCount }} {{ \Illuminate\Support\Str::plural('gap', $gapCount) }} in payroll records</a><span>Missing amounts are unknown, not zero.</span></li>
+                    <li><strong>{{ $gapCount }} {{ \Illuminate\Support\Str::plural('gap', $gapCount) }} in payroll records</strong><span>Missing amounts are unknown, not zero.</span></li>
                 @endif
                 @if($exceptionCount)
-                    <li><a href="#audit-exceptions" data-audit-open>{{ $exceptionCount }} source {{ \Illuminate\Support\Str::plural('check', $exceptionCount) }}</a><span>Review missing dates or conflicting records.</span></li>
+                    <li><strong>{{ $exceptionCount }} source {{ \Illuminate\Support\Str::plural('check', $exceptionCount) }}</strong><span>See the report exports for details.</span></li>
                 @endif
             </ul>
         </aside>
