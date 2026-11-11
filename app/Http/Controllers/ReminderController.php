@@ -88,36 +88,47 @@ class ReminderController extends Controller
             if ($statusFilter === 'pending') {
                 $schedQuery->whereIn('loan_interest_schedule.status', $openSchedules);
             } elseif ($statusFilter === 'completed') {
-                $schedQuery->where('loan_interest_schedule.status', 'paid');
+                $schedQuery->whereIn('loan_interest_schedule.status', [...$openSchedules, 'paid']);
             }
 
             $schedules = $schedQuery->get();
+            $linkedPayments = DB::table('transactions')
+                ->where('reference_no', 'like', 'LOAN-INT-%')
+                ->where('type', 'expense')
+                ->where('payment_status', 'completed')
+                ->where('transaction_date', '<=', $todayKey)
+                ->groupBy('reference_no', 'currency')
+                ->select('reference_no', 'currency')->selectRaw('SUM(amount) as paid')
+                ->get()->keyBy(fn ($payment) => $payment->reference_no.':'.$payment->currency);
+            $coveredMaturities = [];
 
             foreach ($schedules as $s) {
+                $isOpen = in_array($s->status, $openSchedules, true);
+                if ($isOpen && ($s->interest_amount <= 0 || $s->loan_status === 'pending')) {
+                    continue;
+                }
+                // The schedule may already include its linked payments. Use the larger recorded amount rather than summing them twice.
+                $linkedPaid = $linkedPayments->get("LOAN-INT-{$s->loan_id}-{$s->id}:{$s->currency}")->paid ?? 0;
+                $paid = max($s->paid_amount ?? 0, $linkedPaid);
+                $interestDue = max(0, round($s->interest_amount - $paid, 2));
+                $status = match (true) {
+                    $s->status === 'paid', $isOpen && $interestDue <= 0 => 'completed',
+                    $isOpen => 'pending',
+                    default => $s->status ?? 'unknown',
+                };
+                if ($statusFilter !== 'all' && $status !== $statusFilter) {
+                    continue;
+                }
                 $dueDateFormatted = date('Y-m-d', strtotime($s->due_date));
-
-                // Only consider this schedule a maturity schedule IF the loan explicitly has a maturity_date set AND its due_date matches the maturity_date
-                $isMaturitySchedule = false;
                 $principalMaturityDue = 0;
-
-                if (in_array($s->status, $openSchedules, true) && ! empty($s->maturity_date) && date('Y-m-d', strtotime($s->maturity_date)) === $dueDateFormatted) {
-                    $isMaturitySchedule = true;
-                    $repayments = DB::table('loan_principal_records')
-                        ->where('loan_id', $s->loan_id)
-                        ->where('record_type', 'repayment')
-                        ->sum('amount');
-                    $draws = DB::table('loan_principal_records')
-                        ->where('loan_id', $s->loan_id)
-                        ->where('record_type', 'draw')
-                        ->sum('amount');
-
-                    $outstandingPrincipal = max(0, $s->principal_amount + $draws - $repayments);
-                    $principalMaturityDue = $outstandingPrincipal;
+                if ($status === 'pending' && in_array($s->loan_status, ['active', 'defaulted'], true)
+                    && $s->maturity_date === $dueDateFormatted && ! isset($coveredMaturities[$s->loan_id])) {
+                    $principalMaturityDue = $this->outstandingPrincipal($s->loan_id, $s->principal_amount);
+                    $coveredMaturities[$s->loan_id] = true;
                 }
 
-                $interestDue = max(0, $s->interest_amount - ($s->paid_amount ?? 0));
-                $totalAmountDue = $interestDue + $principalMaturityDue;
-                $title = ($isMaturitySchedule && $principalMaturityDue > 0)
+                $totalAmountDue = ($status === 'completed' ? 0 : $interestDue) + $principalMaturityDue;
+                $title = $principalMaturityDue > 0
                     ? "Loan Maturity & Interest: {$s->lender_name}"
                     : "Loan Interest: {$s->lender_name}";
 
@@ -127,11 +138,7 @@ class ReminderController extends Controller
                     'type' => 'loan',
                     'due_date' => $dueDateFormatted,
                     'amount_formatted' => $s->currency.' '.number_format($totalAmountDue, 2),
-                    'status' => match (true) {
-                        $s->status === 'paid' => 'completed',
-                        in_array($s->status, $openSchedules, true) => 'pending',
-                        default => $s->status ?? 'unknown',
-                    },
+                    'status' => $status,
                     'is_system' => true,
                     'link' => "/loans/{$s->loan_id}",
                 ]);
@@ -140,42 +147,28 @@ class ReminderController extends Controller
             // Also check active loans for Principal Maturity Due Date if not already covered by pending schedules
             if ($statusFilter !== 'completed' && Schema::hasTable('loans')) {
                 $activeLoans = DB::table('loans')
-                    ->where('status', 'active')
+                    ->whereIn('status', ['active', 'defaulted'])
                     ->whereNotNull('maturity_date')
                     ->get();
 
                 foreach ($activeLoans as $al) {
-                    $matDateFormatted = date('Y-m-d', strtotime($al->maturity_date));
-
-                    // Check if this loan's maturity date was already attached to an interest schedule reminder on that date
-                    $alreadyCovered = $allReminders->contains(function ($r) use ($al, $matDateFormatted) {
-                        return $r->type === 'loan' && $r->link === "/loans/{$al->id}" && $r->due_date === $matDateFormatted && str_contains($r->title, 'Maturity');
-                    });
-
-                    if (! $alreadyCovered) {
-                        $repayments = DB::table('loan_principal_records')
-                            ->where('loan_id', $al->id)
-                            ->where('record_type', 'repayment')
-                            ->sum('amount');
-                        $draws = DB::table('loan_principal_records')
-                            ->where('loan_id', $al->id)
-                            ->where('record_type', 'draw')
-                            ->sum('amount');
-                        $outstandingPrincipal = max(0, $al->principal_amount + $draws - $repayments);
-
-                        if ($outstandingPrincipal > 0) {
-                            $allReminders->push((object) [
-                                'id' => 'loan_mat_'.$al->id,
-                                'title' => "Loan Principal Repayment: {$al->lender_name}",
-                                'type' => 'loan',
-                                'due_date' => $matDateFormatted,
-                                'amount_formatted' => $al->currency.' '.number_format($outstandingPrincipal, 2),
-                                'status' => 'pending',
-                                'is_system' => true,
-                                'link' => "/loans/{$al->id}",
-                            ]);
-                        }
+                    if (isset($coveredMaturities[$al->id])) {
+                        continue;
                     }
+                    $outstandingPrincipal = $this->outstandingPrincipal($al->id, $al->principal_amount);
+                    if ($outstandingPrincipal <= 0) {
+                        continue;
+                    }
+                    $allReminders->push((object) [
+                        'id' => 'loan_mat_'.$al->id,
+                        'title' => "Loan Principal Repayment: {$al->lender_name}",
+                        'type' => 'loan',
+                        'due_date' => date('Y-m-d', strtotime($al->maturity_date)),
+                        'amount_formatted' => $al->currency.' '.number_format($outstandingPrincipal, 2),
+                        'status' => 'pending',
+                        'is_system' => true,
+                        'link' => "/loans/{$al->id}",
+                    ]);
                 }
             }
         }
@@ -337,6 +330,15 @@ class ReminderController extends Controller
             'todayKey', 'priority', 'window', 'monthKey', 'prevMonth', 'nextMonth', 'monthTitle',
             'carbonMonth', 'monthReminders', 'monthDays', 'daysByDate', 'selectedDate'
         ));
+    }
+
+    private function outstandingPrincipal(int $loanId, float $principal): float
+    {
+        $movement = DB::table('loan_principal_records')->where('loan_id', $loanId)
+            ->selectRaw("COALESCE(SUM(CASE record_type WHEN 'draw' THEN amount WHEN 'repayment' THEN -amount ELSE 0 END), 0) as net_movement")
+            ->first()->net_movement;
+
+        return max(0, round($principal + $movement, 2));
     }
 
     private function manualReminders(): Builder

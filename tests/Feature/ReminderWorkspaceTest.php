@@ -72,4 +72,39 @@ class ReminderWorkspaceTest extends TestCase
         $this->delete('/reminders/'.$id)->assertRedirect();
         $this->assertDatabaseMissing('reminders', ['id' => $id]);
     }
+
+    public function test_overdue_loan_reminders_use_recorded_balances_even_when_the_schedule_status_is_stale(): void
+    {
+        $this->travelTo(now()->setDate(2026, 11, 11)->startOfDay());
+        $this->actingAs(User::factory()->create(['role' => 'admin', 'is_active' => true]));
+        DB::table('companies')->insert(['id' => 1, 'name' => 'Reminder company', 'base_currency' => 'LKR']);
+        DB::table('departments')->insert(['id' => 1, 'company_id' => 1, 'name' => 'Finance']);
+        DB::table('categories')->insert(['id' => 1, 'company_id' => 1, 'name' => 'Interest', 'type' => 'expense']);
+        $loan = DB::table('loans')->insertGetId(['lender_name' => 'Interest lender', 'currency' => 'LKR', 'principal_amount' => 1000, 'status' => 'active']);
+        $settled = DB::table('loans')->insertGetId(['lender_name' => 'Settled lender', 'currency' => 'LKR', 'principal_amount' => 1000, 'status' => 'settled']);
+        $maturity = DB::table('loans')->insertGetId(['lender_name' => 'Principal lender', 'currency' => 'LKR', 'principal_amount' => 1000, 'status' => 'active', 'maturity_date' => '2026-11-06']);
+        $schedule = fn ($loanId, $charge, $paid = 0) => DB::table('loan_interest_schedule')->insertGetId([
+            'loan_id' => $loanId, 'due_date' => '2026-11-06', 'interest_amount' => $charge, 'paid_amount' => $paid, 'status' => 'pending',
+        ]);
+        $fullyPaid = $schedule($loan, 100);
+        $partPaid = $schedule($loan, 100, 25);
+        $zero = $schedule($settled, 0);
+        $schedule($maturity, 0);
+        foreach ([[$fullyPaid, 100, '2026-11-07'], [$partPaid, 25, '2026-11-07'], [$partPaid, 75, '2026-11-12']] as [$period, $amount, $date]) {
+            DB::table('transactions')->insert(['type' => 'expense', 'payment_status' => 'completed', 'reference_no' => "LOAN-INT-{$loan}-{$period}",
+                'amount' => $amount, 'currency' => 'LKR', 'transaction_date' => $date, 'department_id' => 1, 'category_id' => 1]);
+        }
+
+        $pending = $this->get('/reminders?type=loan&when=overdue')->assertOk()
+            ->assertViewHas('priority', ['overdue' => 2, 'today' => 0, 'week' => 0])
+            ->assertDontSee('data-reminder-row="loan_'.$fullyPaid.'"', false)
+            ->assertDontSee('data-reminder-row="loan_'.$zero.'"', false);
+        $balances = $pending->viewData('listReminders')->pluck('amount_formatted', 'id');
+        $this->assertSame('LKR 75.00', $balances['loan_'.$partPaid]);
+        $this->assertSame('LKR 1,000.00', $balances['loan_mat_'.$maturity]);
+        $this->get('/reminders?type=loan&status=completed')->assertOk()
+            ->assertSee('data-reminder-row="loan_'.$fullyPaid.'"', false)
+            ->assertDontSee('data-reminder-row="loan_'.$partPaid.'"', false);
+        $this->assertDatabaseHas('loan_interest_schedule', ['id' => $fullyPaid, 'status' => 'pending', 'paid_amount' => 0]);
+    }
 }
