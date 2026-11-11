@@ -3,11 +3,10 @@
 A single reminders engine aggregating: cheque deposit dates, recurring invoice generation, loan interest due dates (§7), loan principal maturity dues, invoice due dates, payment milestones, budget threshold alerts, and custom manual reminders.
 
 ## List & Calendar Screens
-- **List View Columns:** Type (Cheque/Invoice/Loan Interest/Milestone/Budget Alert/Custom), Title, Due Date, Days Left/Overdue, Linked Record (click-through to source in new tab), Status (Pending/Snoozed/Settled/Dismissed), Actions (Settle / No Longer Needed / Snooze / View Source).
-- **Filters:** Month navigation, View toggle (List vs Calendar), Search.
-- **Calendar View:** All scheduled events plotted on an equal-height month grid.
-  - **Interactive Date Click & Modal:** Clicking any calendar day opens the **Date Activities Modal** displaying all scheduled items for that date with type badges, amounts, due dates, statuses (*Pending*, *Settled*, *Overdue*), and direct *"View Source"* links.
-  - **1-Click Quick Add:** If no events exist for a clicked date, the modal provides a *"Create Reminder for this Date"* action that automatically pre-fills the clicked date in the creation form.
+- **List view:** Pending reminders are grouped as Overdue, Due today, or Upcoming. The urgency counts filter the list to overdue reminders, reminders due today, or reminders due in the next seven days. The list shows the reminder type, due date, amount, status, and available actions.
+- **Filters:** Search by title, notes, date, or amount and narrow by type and status. List and Calendar share the same filters. The calendar provides previous month, next month, and Today controls.
+- **Calendar view:** Each day shows its reminder count. Select a date to view its agenda with full reminder titles, amounts, due dates, statuses, and source links. Arrow keys move focus between days; Enter selects a day. The agenda sits next to the calendar on wide screens and below it on smaller screens.
+- **Quick add:** Add a custom reminder from a day's agenda to prefill its due date. Custom reminders can be marked complete, snoozed for 24 hours, reopened, or deleted. Manage system reminders from their source records.
 
 ## Create / Edit Reminder (manual/custom type only — most reminders auto-generate)
 - Title *(required)*

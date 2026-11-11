@@ -15,7 +15,7 @@
         const title = card.querySelector('.modal-title,h2,h3');
         if (title) { title.id ||= `${next.id}-title`; card.setAttribute('aria-labelledby',title.id); }
         card.querySelectorAll('.btn-close').forEach(el => el.setAttribute('aria-label','Close dialog'));
-        requestAnimationFrame(() => (card.querySelector(focusable) || card).focus());
+        requestAnimationFrame(() => (card.querySelector('[autofocus]:not([disabled])') || card.querySelector(focusable) || card).focus());
     }
     document.addEventListener('keydown', e => {
         if (!current || e.key !== 'Tab') return;

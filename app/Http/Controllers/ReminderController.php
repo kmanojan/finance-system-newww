@@ -3,31 +3,47 @@
 namespace App\Http\Controllers;
 
 use Carbon\Carbon;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 class ReminderController extends Controller
 {
     public function index(Request $request)
     {
-
-        $viewMode = $request->query('view', 'list'); // 'list' or 'calendar'
-        $typeFilter = $request->query('type', 'all');
-        $statusFilter = $request->query('status', 'pending');
+        $types = ['invoice' => 'Invoice', 'loan' => 'Loan', 'cheque' => 'Cheque', 'milestone' => 'Milestone', 'custom' => 'Custom'];
+        $viewMode = $request->query('view') === 'calendar' ? 'calendar' : 'list';
+        $typeFilter = $request->query('type');
+        $typeFilter = in_array($typeFilter, array_keys($types), true) ? $typeFilter : 'all';
+        $statusFilter = $request->query('status');
+        $statusFilter = in_array($statusFilter, ['pending', 'completed', 'snoozed', 'all'], true) ? $statusFilter : 'pending';
+        $includeSystem = $statusFilter !== 'snoozed';
+        $inactiveInvoices = ['paid', 'cancelled', 'draft', 'pending_approval', 'rejected'];
+        $openSchedules = ['pending', 'partially_paid', 'overdue'];
+        $openCheques = ['pending_deposit', 'received', 'issued'];
+        $paidCheques = ['deposited', 'cleared'];
+        $inactiveMilestones = ['paid', 'completed', 'skipped', 'invoiced'];
         $requestedMonth = $request->query('month');
+        $requestedMonth = is_string($requestedMonth) && preg_match('/^[1-9][0-9]{3}-(0[1-9]|1[0-2])$/D', $requestedMonth) ? $requestedMonth : null;
+        $search = $request->query('search');
+        $search = is_string($search) ? Str::substr(trim($search), 0, 255) : '';
+        $today = today();
+        $todayKey = $today->toDateString();
+        $weekEnd = $today->copy()->addDays(7)->toDateString();
 
         // System & Custom Reminders Container
         $allReminders = collect();
 
         // 1. Client Invoices Due Dates
-        if (Schema::hasTable('invoices')) {
+        if ($includeSystem && in_array($typeFilter, ['all', 'invoice'], true) && Schema::hasTable('invoices')) {
             $invQuery = DB::table('invoices')
                 ->leftJoin('parties', 'invoices.client_id', '=', 'parties.id')
                 ->select('invoices.*', 'parties.name as client_name');
 
             if ($statusFilter === 'pending') {
-                $invQuery->whereNotIn('invoices.status', ['paid', 'cancelled', 'draft', 'pending_approval', 'rejected']);
+                $invQuery->whereNotIn('invoices.status', $inactiveInvoices);
             } elseif ($statusFilter === 'completed') {
                 $invQuery->where('invoices.status', 'paid');
             }
@@ -45,15 +61,19 @@ class ReminderController extends Controller
                     'type' => 'invoice',
                     'due_date' => $dueDateFormatted,
                     'amount_formatted' => ($inv->currency ?? 'LKR').' '.number_format($inv->grand_total > 0 ? $inv->grand_total : $inv->amount, 2),
-                    'status' => $inv->status === 'paid' ? 'completed' : 'pending',
+                    'status' => match (true) {
+                        $inv->status === 'paid' => 'completed',
+                        in_array($inv->status, $inactiveInvoices, true) => $inv->status,
+                        default => 'pending',
+                    },
                     'is_system' => true,
-                    'link' => '/invoices',
+                    'link' => '/invoices?'.http_build_query(['search' => $inv->invoice_no]),
                 ]);
             }
         }
 
         // 2. Loan Interest & Maturity Schedules
-        if (Schema::hasTable('loan_interest_schedule')) {
+        if ($includeSystem && in_array($typeFilter, ['all', 'loan'], true) && Schema::hasTable('loan_interest_schedule')) {
             $schedQuery = DB::table('loan_interest_schedule')
                 ->join('loans', 'loan_interest_schedule.loan_id', '=', 'loans.id')
                 ->select(
@@ -66,7 +86,7 @@ class ReminderController extends Controller
                 );
 
             if ($statusFilter === 'pending') {
-                $schedQuery->whereIn('loan_interest_schedule.status', ['pending', 'partially_paid', 'overdue']);
+                $schedQuery->whereIn('loan_interest_schedule.status', $openSchedules);
             } elseif ($statusFilter === 'completed') {
                 $schedQuery->where('loan_interest_schedule.status', 'paid');
             }
@@ -80,7 +100,7 @@ class ReminderController extends Controller
                 $isMaturitySchedule = false;
                 $principalMaturityDue = 0;
 
-                if (! empty($s->maturity_date) && date('Y-m-d', strtotime($s->maturity_date)) === $dueDateFormatted) {
+                if (in_array($s->status, $openSchedules, true) && ! empty($s->maturity_date) && date('Y-m-d', strtotime($s->maturity_date)) === $dueDateFormatted) {
                     $isMaturitySchedule = true;
                     $repayments = DB::table('loan_principal_records')
                         ->where('loan_id', $s->loan_id)
@@ -107,14 +127,18 @@ class ReminderController extends Controller
                     'type' => 'loan',
                     'due_date' => $dueDateFormatted,
                     'amount_formatted' => $s->currency.' '.number_format($totalAmountDue, 2),
-                    'status' => $s->status === 'paid' ? 'completed' : 'pending',
+                    'status' => match (true) {
+                        $s->status === 'paid' => 'completed',
+                        in_array($s->status, $openSchedules, true) => 'pending',
+                        default => $s->status ?? 'unknown',
+                    },
                     'is_system' => true,
                     'link' => "/loans/{$s->loan_id}",
                 ]);
             }
 
             // Also check active loans for Principal Maturity Due Date if not already covered by pending schedules
-            if (Schema::hasTable('loans')) {
+            if ($statusFilter !== 'completed' && Schema::hasTable('loans')) {
                 $activeLoans = DB::table('loans')
                     ->where('status', 'active')
                     ->whereNotNull('maturity_date')
@@ -157,12 +181,12 @@ class ReminderController extends Controller
         }
 
         // 3. Cheque Deposit / Clearance Dates
-        if (Schema::hasTable('cheques')) {
+        if ($includeSystem && in_array($typeFilter, ['all', 'cheque'], true) && Schema::hasTable('cheques')) {
             $cheqQuery = DB::table('cheques');
             if ($statusFilter === 'pending') {
-                $cheqQuery->whereIn('status', ['pending_deposit', 'received', 'issued']);
+                $cheqQuery->whereIn('status', $openCheques);
             } elseif ($statusFilter === 'completed') {
-                $cheqQuery->whereIn('status', ['deposited', 'cleared']);
+                $cheqQuery->whereIn('status', $paidCheques);
             }
             $cheques = $cheqQuery->get();
             foreach ($cheques as $c) {
@@ -173,7 +197,11 @@ class ReminderController extends Controller
                     'type' => 'cheque',
                     'due_date' => $cDate,
                     'amount_formatted' => $c->currency.' '.number_format($c->amount, 2),
-                    'status' => in_array($c->status, ['deposited', 'cleared']) ? 'completed' : 'pending',
+                    'status' => match (true) {
+                        in_array($c->status, $paidCheques, true) => 'completed',
+                        in_array($c->status, $openCheques, true) => 'pending',
+                        default => $c->status ?? 'unknown',
+                    },
                     'is_system' => true,
                     'link' => '/cheques',
                 ]);
@@ -181,13 +209,13 @@ class ReminderController extends Controller
         }
 
         // 4. Payment Milestones
-        if (Schema::hasTable('payment_milestones')) {
+        if ($includeSystem && in_array($typeFilter, ['all', 'milestone'], true) && Schema::hasTable('payment_milestones')) {
             $pmQuery = DB::table('payment_milestones')
                 ->leftJoin('projects', 'payment_milestones.project_id', '=', 'projects.id')
                 ->select('payment_milestones.*', 'projects.name as project_name', 'projects.currency');
 
             if ($statusFilter === 'pending') {
-                $pmQuery->whereNotIn('payment_milestones.status', ['paid', 'completed', 'skipped', 'invoiced']);
+                $pmQuery->whereNotIn('payment_milestones.status', $inactiveMilestones);
             } elseif ($statusFilter === 'completed') {
                 $pmQuery->whereIn('payment_milestones.status', ['paid', 'completed']);
             }
@@ -205,89 +233,119 @@ class ReminderController extends Controller
                     'type' => 'milestone',
                     'due_date' => $dueDateFormatted,
                     'amount_formatted' => ($m->currency ?? 'LKR').' '.number_format($m->amount, 2),
-                    'status' => in_array($m->status, ['paid', 'completed']) ? 'completed' : 'pending',
+                    'status' => match (true) {
+                        in_array($m->status, ['paid', 'completed'], true) => 'completed',
+                        in_array($m->status, $inactiveMilestones, true) => $m->status,
+                        default => 'pending',
+                    },
                     'is_system' => true,
                     'link' => $m->project_id ? "/projects/{$m->project_id}#milestones" : '/projects',
                 ]);
             }
         }
 
-        // 5. Custom Reminders (excluding auto-synced system loan records)
-        $custQuery = DB::table('reminders')->where(function ($q) {
-            $q->whereNull('reference_type')
-                ->orWhere('reference_type', '!=', 'Loan')
-                ->orWhereNull('reference_id');
-        });
-        if ($statusFilter && $statusFilter !== 'all') {
-            $custQuery->where('status', $statusFilter);
-        }
-        $customs = $custQuery->get();
-        foreach ($customs as $cm) {
-            $allReminders->push((object) [
-                'id' => 'custom_'.$cm->id,
-                'title' => $cm->title,
-                'type' => 'custom',
-                'due_date' => date('Y-m-d', strtotime($cm->due_date)),
-                'amount_formatted' => '-',
-                'status' => $cm->status,
-                'is_system' => false,
-                'link' => null,
-                'notes' => $cm->notes,
-            ]);
-        }
-
-        // Apply Type Filter
-        if ($typeFilter && $typeFilter !== 'all') {
-            $allReminders = $allReminders->where('type', $typeFilter);
-        }
-
-        $allReminders = $allReminders->sortBy('due_date')->values();
-
-        // Resolve active calendar month
-        $defaultMonth = date('Y-m');
-        if (! $requestedMonth) {
-            $currentMonthEvents = $allReminders->filter(function ($r) use ($defaultMonth) {
-                return str_starts_with($r->due_date, $defaultMonth);
-            });
-            if ($currentMonthEvents->isEmpty() && $allReminders->isNotEmpty()) {
-                // Auto jump to month of first upcoming reminder
-                $firstUpcoming = $allReminders->first(function ($r) {
-                    return strtotime($r->due_date) >= strtotime(date('Y-m-01'));
-                }) ?? $allReminders->first();
-
-                if ($firstUpcoming) {
-                    $defaultMonth = date('Y-m', strtotime($firstUpcoming->due_date));
+        if (in_array($typeFilter, ['all', 'custom'], true)) {
+            foreach ($this->manualReminders()->get() as $reminder) {
+                $status = $reminder->status === 'settled' ? 'completed' : ($reminder->status ?: 'unknown');
+                $snoozedUntil = $reminder->snoozed_until ? Carbon::parse($reminder->snoozed_until) : null;
+                if ($status === 'snoozed' && $snoozedUntil?->isPast()) {
+                    $status = 'pending';
                 }
+                if ($statusFilter !== 'all' && $status !== $statusFilter) {
+                    continue;
+                }
+
+                $allReminders->push((object) [
+                    'id' => 'custom_'.$reminder->id,
+                    'manual_id' => $reminder->id,
+                    'title' => $reminder->title,
+                    'type' => 'custom',
+                    'due_date' => date('Y-m-d', strtotime($reminder->due_date)),
+                    'amount_formatted' => '-',
+                    'status' => $status,
+                    'is_system' => false,
+                    'link' => null,
+                    'notes' => $reminder->notes,
+                    'snoozed_until' => $status === 'snoozed' ? $snoozedUntil : null,
+                ]);
             }
         }
 
-        $monthParam = $requestedMonth ?: $defaultMonth;
-        try {
-            $carbonMonth = Carbon::parse($monthParam.'-01');
-        } catch (\Exception $e) {
-            $carbonMonth = Carbon::parse(date('Y-m-01'));
+        foreach ($allReminders as $reminder) {
+            $reminder->group = match (true) {
+                $reminder->status !== 'pending' => $reminder->status,
+                $reminder->due_date < $todayKey => 'overdue',
+                $reminder->due_date === $todayKey => 'today',
+                default => 'upcoming',
+            };
         }
 
-        $year = (int) $carbonMonth->format('Y');
-        $month = (int) $carbonMonth->format('m');
+        if ($search !== '') {
+            $allReminders = $allReminders->filter(fn ($reminder) => Str::contains(implode(' ', [
+                $reminder->title, $types[$reminder->type], $reminder->notes ?? null,
+                $reminder->due_date, $reminder->amount_formatted, str_replace(',', '', $reminder->amount_formatted),
+                $reminder->group, $reminder->status,
+            ]), $search, ignoreCase: true));
+        }
+        $allReminders = $allReminders->sortBy('due_date')->values();
+
+        $priority = [
+            'overdue' => $allReminders->where('group', 'overdue')->count(),
+            'today' => $allReminders->where('group', 'today')->count(),
+            'week' => $allReminders->where('group', 'upcoming')->where('due_date', '<=', $weekEnd)->count(),
+        ];
+        $window = $request->query('when');
+        $window = $viewMode === 'list' && in_array($statusFilter, ['pending', 'all'], true)
+            && in_array($window, array_keys($priority), true) ? $window : null;
+        $listReminders = match ($window) {
+            'overdue', 'today' => $allReminders->where('group', $window),
+            'week' => $allReminders->where('group', 'upcoming')->where('due_date', '<=', $weekEnd),
+            default => $allReminders,
+        };
+
+        $defaultMonth = $today->format('Y-m');
+        if (! $requestedMonth && $allReminders->isNotEmpty()
+            && $allReminders->doesntContain(fn ($reminder) => str_starts_with($reminder->due_date, $defaultMonth))) {
+            $firstEvent = $allReminders->first(fn ($reminder) => $reminder->due_date > $todayKey) ?? $allReminders->first();
+            $defaultMonth = substr($firstEvent->due_date, 0, 7);
+        }
+
+        $carbonMonth = Carbon::parse(($requestedMonth ?? $defaultMonth).'-01');
         $monthKey = $carbonMonth->format('Y-m');
         $prevMonth = $carbonMonth->copy()->subMonth()->format('Y-m');
         $nextMonth = $carbonMonth->copy()->addMonth()->format('Y-m');
         $monthTitle = $carbonMonth->format('F Y');
+        $monthReminders = $allReminders->filter(fn ($reminder) => str_starts_with($reminder->due_date, $monthKey));
+        $monthDays = [];
+        $daysByDate = $monthReminders->groupBy('due_date');
+        for ($day = 1; $day <= $carbonMonth->daysInMonth; $day++) {
+            $date = $carbonMonth->copy()->day($day);
+            $monthDays[$date->toDateString()] = [
+                'date' => $date,
+                'items' => $daysByDate->get($date->toDateString(), collect()),
+            ];
+        }
+        $dateFilter = $request->query('date');
+        $selectedDate = match (true) {
+            is_string($dateFilter) && isset($monthDays[$dateFilter]) => $dateFilter,
+            isset($monthDays[$todayKey]) => $todayKey,
+            default => $monthReminders->first()?->due_date ?? array_key_first($monthDays),
+        };
 
         return view('reminders', compact(
-            'allReminders',
-            'viewMode',
-            'typeFilter',
-            'statusFilter',
-            'monthKey',
-            'prevMonth',
-            'nextMonth',
-            'monthTitle',
-            'year',
-            'month',
-            'carbonMonth'
+            'listReminders', 'viewMode', 'types', 'typeFilter', 'statusFilter', 'search',
+            'todayKey', 'priority', 'window', 'monthKey', 'prevMonth', 'nextMonth', 'monthTitle',
+            'carbonMonth', 'monthReminders', 'monthDays', 'daysByDate', 'selectedDate'
         ));
+    }
+
+    private function manualReminders(): Builder
+    {
+        return DB::table('reminders')->where(function ($query) {
+            $query->whereNull('reference_type')
+                ->orWhere('reference_type', '!=', 'Loan')
+                ->orWhereNull('reference_id');
+        });
     }
 
     public function store(Request $request)
@@ -321,7 +379,11 @@ class ReminderController extends Controller
         $request->validate(['status' => 'required|in:pending,completed,settled,snoozed', 'snoozed_until' => 'nullable|date|after:now']);
         $status = $request->input('status');
 
-        DB::table('reminders')->where('id', $id)->update([
+        abort_unless(ctype_digit((string) $id), 404);
+        $reminder = $this->manualReminders()->where('id', $id);
+        abort_unless($reminder->exists(), 404);
+
+        $reminder->update([
             'status' => $status,
             'snoozed_until' => $status === 'snoozed' ? ($request->input('snoozed_until') ?: now()->addDay()) : null,
             'updated_at' => now(),
@@ -332,7 +394,8 @@ class ReminderController extends Controller
 
     public function destroy($id)
     {
-        DB::table('reminders')->where('id', $id)->delete();
+        abort_unless(ctype_digit((string) $id), 404);
+        abort_unless($this->manualReminders()->where('id', $id)->delete(), 404);
 
         return back()->with('success', 'Reminder deleted!');
     }
