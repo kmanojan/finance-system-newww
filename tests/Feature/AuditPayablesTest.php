@@ -236,6 +236,8 @@ class AuditPayablesTest extends TestCase
         $xml = $zip->getFromName('xl/worksheets/sheet1.xml');
         $this->assertStringContainsString('2026-02-28', $xml);
         $this->assertStringContainsString('Review Employee', $xml);
+        $this->assertStringContainsString('Total pending salary', $xml);
+        $this->assertStringNotContainsString('Salary due on', $xml);
         $this->assertStringContainsString('AUD-0001 (#'.$loanId.') Audit Export Lender', $xml);
         $this->assertStringContainsString('Unapproved payrolls', $xml);
         $this->assertStringContainsString('<c t="n" s="1"><v>26600.00</v></c>', $xml);
@@ -400,10 +402,10 @@ class AuditPayablesTest extends TestCase
     {
         $this->createRun();
         $report = AuditPayablesService::build('2026-02-28');
-        $row = $report['salaries'][0];
-        $report['salaries'] = [];
+        $row = $report['salaryTotals'][0];
+        $report['salaryTotals'] = [];
         for ($i = 1; $i <= 1000; $i++) {
-            $report['salaries'][] = ['name' => 'Synthetic employee '.$i, 'code' => str_repeat('REFERENCE', 30)] + $row;
+            $report['salaryTotals'][] = ['name' => 'Synthetic employee '.$i, 'code' => str_repeat('REFERENCE', 30)] + $row;
         }
         $pdf = app(AuditPayablesPdf::class)->render($report);
         $this->assertStringStartsWith('%PDF-', $pdf);
