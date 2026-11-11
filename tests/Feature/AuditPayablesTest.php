@@ -216,6 +216,10 @@ class AuditPayablesTest extends TestCase
     {
         $this->createRun();
         $loanId = $this->loan(['loan_code' => 'AUD-0001', 'lender_name' => 'Audit Export Lender']);
+        DB::table('loan_interest_schedule')->insert([
+            ['loan_id' => $loanId, 'due_date' => '2026-02-15', 'interest_amount' => 1200, 'status' => 'pending'],
+            ['loan_id' => $loanId, 'due_date' => '2026-03-15', 'interest_amount' => 500, 'status' => 'pending'],
+        ]);
         foreach (['viewer', 'employee'] as $role) {
             $this->actingAs(User::factory()->create(['role' => $role, 'is_active' => true]));
             foreach (['/reports/audit-payables', '/reports/export/audit-payables/pdf', '/reports/export/audit-payables/xlsx'] as $path) {
@@ -233,14 +237,29 @@ class AuditPayablesTest extends TestCase
         $this->assertStringContainsString('2026-02-28', $xlsx->headers->get('content-disposition'));
         $zip = new \ZipArchive;
         $this->assertTrue($zip->open($xlsx->baseResponse->getFile()->getPathname()));
-        $xml = $zip->getFromName('xl/worksheets/sheet1.xml');
-        $this->assertStringContainsString('2026-02-28', $xml);
-        $this->assertStringContainsString('Review Employee', $xml);
-        $this->assertStringContainsString('Total pending salary', $xml);
-        $this->assertStringNotContainsString('Salary due on', $xml);
-        $this->assertStringContainsString('AUD-0001 (#'.$loanId.') Audit Export Lender', $xml);
-        $this->assertStringContainsString('Unapproved payrolls', $xml);
-        $this->assertStringContainsString('<c t="n" s="1"><v>26600.00</v></c>', $xml);
+        $workbook = simplexml_load_string($zip->getFromName('xl/workbook.xml'));
+        $titles = [];
+        foreach ($workbook->sheets->sheet as $sheet) {
+            $titles[] = (string) $sheet['name'];
+        }
+        $this->assertSame(['Loan Principal', 'Loan Interest', 'Employee Salaries', 'Employee Funds and Tax'], $titles);
+        [$principal, $interest, $salaries, $funds] = array_map(fn ($id) => $zip->getFromName('xl/worksheets/sheet'.$id.'.xml'), range(1, 4));
+        foreach ([$principal, $interest, $salaries, $funds] as $worksheet) {
+            $this->assertStringContainsString('2026-02-28', $worksheet);
+        }
+        $this->assertStringContainsString('AUD-0001 (#'.$loanId.') Audit Export Lender', $principal);
+        $this->assertStringNotContainsString('Interest schedule reconciliation', $principal);
+        $this->assertStringContainsString('Interest schedule reconciliation', $interest);
+        $this->assertStringContainsString('Review Employee', $salaries);
+        $this->assertStringContainsString('Total pending salary', $salaries);
+        $this->assertStringNotContainsString('Salary due on', $salaries);
+        $this->assertStringContainsString('Unapproved payrolls', $salaries);
+        $this->assertStringContainsString('EPF, ETF, tax and other payroll obligations', $funds);
+        foreach ([[$principal, '100000.00'], [$interest, '1200.00'], [$salaries, '26600.00'], [$funds, '7900.00']] as [$worksheet, $amount]) {
+            $total = simplexml_load_string($worksheet)->sheetData->row[4]->c[1];
+            $this->assertSame('n', (string) $total['t']);
+            $this->assertSame($amount, (string) $total->v);
+        }
         $zip->close();
         $this->assertDatabaseCount('payroll_payments', 0);
     }
