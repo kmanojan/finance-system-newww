@@ -135,6 +135,12 @@ class AuditPayablesTest extends TestCase
         $this->assertSame(0, $feb['summary']['LKR']['etf']);
         $this->assertSame(100000, $feb['summary']['LKR']['apit']);
         $this->assertSame(1360000, $feb['summary']['LKR']['total']);
+        $this->get('/reports/audit-payables?as_of=2026-02-28&view=remaining')->assertOk()
+            ->assertSeeInOrder([
+                '<dt>EPF total</dt>', '<dd><span>LKR</span> 6,000.00</dd>',
+                '<dt>ETF total</dt>', '<dd><span>LKR</span> 0.00</dd>',
+                '<dt>APIT total</dt>', '<dd><span>LKR</span> 1,000.00</dd>',
+            ], false);
         $this->assertCount(1, $feb['salaries']);
         $this->assertCount(1, $feb['salaryPayments']);
         $epf = collect($feb['statutory'])->firstWhere('kind', 'epf');

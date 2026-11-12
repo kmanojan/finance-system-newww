@@ -140,6 +140,23 @@
                     @if($key === 'interest-due')
                         @include('reports.partials.audit-loan-interest-due')
                     @else
+                        @if($key === 'statutory')
+                            <div class="audit-statutory-totals">
+                                <h3>Recorded totals still to pay</h3>
+                                <dl class="audit-statutory-cards">
+                                    @foreach(['epf' => 'EPF total', 'etf' => 'ETF total', 'apit' => 'APIT total'] as $kind => $title)
+                                        <div>
+                                            <dt>{{ $title }}</dt>
+                                            @forelse($report['summary'] as $currency => $totals)
+                                                <dd><span>{{ $currency }}</span> {{ $money($totals[$kind]) }}</dd>
+                                            @empty
+                                                <dd>—</dd>
+                                            @endforelse
+                                        </div>
+                                    @endforeach
+                                </dl>
+                            </div>
+                        @endif
                         @include('reports.partials.audit-payables-schedules', ['pdf' => false, 'onlySection' => $key])
                     @endif
                 </div>

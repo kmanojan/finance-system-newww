@@ -63,6 +63,12 @@ html[data-theme="dark"] .audit-filter :is(input,select) { color-scheme:dark; }
 .audit-detail-body>section>h2 { display:none; }
 .audit-detail-body h3 { font-size:16px; font-weight:500; margin:24px 0 8px; }
 .audit-detail-body p { margin:8px 0 16px; max-width:100ch; }
+.audit-statutory-totals h3 { margin:0 0 10px; font-size:14px; }
+.audit-statutory-cards { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin:0 0 16px; }
+.audit-statutory-cards>div { min-width:0; padding:14px 16px; border:1px solid var(--border); border-radius:var(--radius-control); background:var(--bg-card); }
+.audit-statutory-cards dt { color:var(--text-muted); font-size:13px; }
+.audit-statutory-cards dd { margin:4px 0 0; color:var(--text-heading); font-size:20px; font-weight:600; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.audit-statutory-cards dd span { color:var(--text-muted); font-size:12px; font-weight:500; }
 .audit-note,.audit-empty,.audit-empty-overview,.audit-notice { padding:24px; border:1px solid var(--border); border-radius:var(--radius-card); background:var(--bg-card); }
 .audit-empty-overview h3 { margin:0; font-size:18px; font-weight:500; }
 .audit-empty-overview p { max-width:75ch; margin-bottom:16px; }
@@ -96,6 +102,7 @@ html[data-theme="dark"] .audit-filter :is(input,select) { color-scheme:dark; }
     .audit-balance-sheet { grid-template-columns:minmax(0,2fr) minmax(0,3fr); }
 }
 @media(max-width:700px) {
+    .audit-statutory-cards { grid-template-columns:minmax(0,1fr); gap:8px; }
     .audit-header { gap:16px; }
     .audit-header p { font-size:14px; }
     .audit-balance-sheet { grid-template-columns:minmax(0,1fr); }
