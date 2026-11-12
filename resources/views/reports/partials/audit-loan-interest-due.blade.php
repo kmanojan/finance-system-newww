@@ -8,7 +8,7 @@
             @forelse($interestDueLoans as $loan)
                 @php($periods = $interestDuePeriods->get($loan['id'], collect())->sortBy('due_on'))
                 <tr data-interest-due-loan="{{ $loan['id'] }}">
-                    <td class="wrap"><a href="/loans/{{ $loan['id'] }}">{{ $loan['code'] }}</a><small>{{ $loan['lender'] }}</small></td>
+                    <td class="wrap"><a href="/loans/{{ $loan['id'] }}" target="_blank" rel="noopener noreferrer" aria-label="{{ $loan['code'] }} (opens in a new tab)">{{ $loan['code'] }}</a><small>{{ $loan['lender'] }}</small></td>
                     <td class="num">{{ $loan['currency'] }} {{ $money($loan['original']) }}</td>
                     <td>@foreach($periods as $period)<small>{{ $period['due_on'] }} · {{ $period['due_on'] < $report['asOf'] ? 'Overdue' : 'Due on reporting date' }}</small>@endforeach</td>
                     <td class="num">{{ $money($periods->sum('charge')) }}</td>
