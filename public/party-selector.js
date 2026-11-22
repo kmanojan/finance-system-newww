@@ -6,29 +6,15 @@
         wrapper.querySelector('.party-select-trigger').setAttribute('aria-expanded', 'false');
         if (restoreFocus) wrapper.querySelector('.party-select-trigger').focus();
     }
-    function phoneSearchDigits(value) {
-        const digits = value.replace(/[^0-9]/g, '');
-        return digits.replace(/^(?:0|94|0094)([1-9][0-9]{8})$/, '$1');
-    }
     window.filterPartyList = (wrapperId, query) => {
         const wrapper = document.getElementById(wrapperId);
         const q = query.toLocaleLowerCase().trim();
-        const count = wrapper.querySelector('[data-party-count]');
-        const terms = q.split(/\s+/).filter(Boolean);
-        const phone = count && /^[0-9+().\p{Pd}\s]+$/u.test(q) ? phoneSearchDigits(q) : '';
         let matches = 0;
         wrapper.querySelectorAll('.party-option-item').forEach(option => {
-            const text = (option.dataset.search || '').toLocaleLowerCase();
-            const matchesText = count ? terms.every(term => text.includes(term)) : text.includes(q);
-            const matchesPhone = phone && phoneSearchDigits(option.dataset.phone || '').includes(phone);
-            option.hidden = !!option.dataset.id && !matchesText && !matchesPhone;
+            option.hidden = !!option.dataset.id && !(option.dataset.search || '').toLocaleLowerCase().includes(q);
             if (option.dataset.id && !option.hidden) matches++;
         });
         wrapper.querySelector('.party-no-results').hidden = matches > 0;
-        if (count) {
-            count.textContent = `${matches} ${matches === 1 ? 'result' : 'results'}`;
-            if (!q) wrapper.querySelector('.party-options-list').scrollTop = 0;
-        }
     };
     window.togglePartyDropdown = wrapperId => {
         const wrapper = document.getElementById(wrapperId);
@@ -69,9 +55,6 @@
             }
         } else label.textContent = wrapper.dataset.placeholder;
         wrapper.querySelector('.party-clear').hidden = !id;
-        wrapper.querySelectorAll('.party-option-item[aria-pressed]').forEach(option => {
-            option.setAttribute('aria-pressed', String(option.dataset.id === input.value));
-        });
         close(wrapper, !silent);
         if (silent) return;
         input.dispatchEvent(new Event('input', {bubbles: true}));
@@ -89,21 +72,9 @@
     wrappers().forEach(wrapper => {
         wrapper.querySelector('.party-select-trigger').addEventListener('click', () => togglePartyDropdown(wrapper.id));
         wrapper.querySelector('.party-clear').addEventListener('click', () => selectPartyOption(wrapper.id, '', '', ''));
-        const search = wrapper.querySelector('.party-search-input');
-        search.addEventListener('input', event => filterPartyList(wrapper.id, event.target.value));
-        wrapper.querySelector('[data-party-clear-search]')?.addEventListener('click', () => {
-            search.value = '';
-            filterPartyList(wrapper.id, '');
-            search.focus();
-        });
+        wrapper.querySelector('.party-search-input').addEventListener('input', event => filterPartyList(wrapper.id, event.target.value));
         wrapper.querySelectorAll('.party-option-item').forEach(option => option.addEventListener('click', () => selectPartyOption(wrapper.id, option.dataset.id, option.dataset.name, option.dataset.types)));
         wrapper.addEventListener('keydown', event => {
-            if (event.isComposing) return;
-            if (event.key === 'Enter' && event.target === search && wrapper.classList.contains('project-party-picker')) {
-                event.preventDefault();
-                if (search.value.trim()) wrapper.querySelector('.party-option-item:not([hidden])')?.click();
-                return;
-            }
             if (event.key === 'Escape' && !wrapper.querySelector('.party-dropdown-menu').hidden) {
                 event.preventDefault(); event.stopPropagation(); close(wrapper, true);
             }
@@ -113,10 +84,6 @@
                 else {
                     const options = [...wrapper.querySelectorAll('.party-option-item')].filter(option => !option.hidden);
                     const index = options.indexOf(document.activeElement);
-                    if (index === 0 && event.key === 'ArrowUp' && wrapper.classList.contains('project-party-picker')) {
-                        search.focus();
-                        return;
-                    }
                     const next = index < 0 ? (event.key === 'ArrowDown' ? 0 : options.length - 1) : (index + (event.key === 'ArrowDown' ? 1 : -1) + options.length) % options.length;
                     options[next]?.focus();
                 }

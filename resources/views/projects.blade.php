@@ -127,8 +127,8 @@
                 </div>
                 <div class="form-row" style="margin-top: 1.5rem;">
                     <div class="form-col">
-                        <label class="form-label" id="create_project_client_label" for="create_project_client_trigger">Client (optional)</label>
-                        <x-party-selector name="client_id" id="create_project_client" :parties="$clients" variant="project" placeholder="Select client" />
+                        <label class="form-label">Client (Optional)</label>
+                        <x-client-selector name="client_id" :clients="$clients" :multiple="false" />
                     </div>
                     <div class="form-col">
                         <label class="form-label">Status</label>
@@ -185,8 +185,13 @@
                 </div>
                 <div class="form-row" style="margin-top: 1.5rem;">
                     <div class="form-col">
-                        <label class="form-label" id="edit_project_client_{{ $project->id }}_label" for="edit_project_client_{{ $project->id }}_trigger">Client (optional)</label>
-                        <x-party-selector name="client_id" :id="'edit_project_client_'.$project->id" :parties="$clients" :selected="$clientPivot?->party_id" variant="project" placeholder="Select client" />
+                        <label class="form-label">Client (Optional)</label>
+                        <select name="client_id" class="form-control">
+                            <option value="">-- No Client --</option>
+                            @foreach($clients as $c)
+                                <option value="{{ $c->id }}" {{ ($clientPivot && $clientPivot->party_id == $c->id) ? 'selected' : '' }}>{{ $c->name }}</option>
+                            @endforeach
+                        </select>
                     </div>
                     <div class="form-col">
                         <label class="form-label">Budget Limit</label>
