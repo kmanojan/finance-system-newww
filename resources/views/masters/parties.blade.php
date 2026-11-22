@@ -49,11 +49,16 @@
                     <option value="{{ $partyType }}" @selected(request('type') === $partyType)>{{ ucfirst($partyType) }}</option>
                 @endforeach
             </select>
+            @if(request()->filled('status'))
+                <input type="hidden" name="status" value="{{ request('status') }}">
+            @endif
             <div class="search-input">
-                <ion-icon name="search-outline"></ion-icon>
-                <input type="text" name="search" value="{{ request('search') }}" placeholder="Search parties by name, email, phone...">
+                <label for="party-search" class="sr-only">Search parties</label>
+                <ion-icon name="search-outline" aria-hidden="true"></ion-icon>
+                <input id="party-search" type="search" name="search" value="{{ $search }}" placeholder="Name, email, phone, or code">
             </div>
-            @if(request('search') || request('type') || request('status') || request('party_id'))
+            <button type="submit" class="btn btn-outline">Search</button>
+            @if($search !== '' || request('type') || request('status') || request('party_id'))
                 <a href="/master/parties" class="btn btn-outline" style="padding:0.4rem 0.75rem; font-size:0.85rem;" title="Clear Filters">Clear</a>
             @endif
         </form>

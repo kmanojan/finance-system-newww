@@ -19,14 +19,31 @@ class PartyController extends Controller
             $query->where('parties.id', $request->integer('party_id'));
         }
 
-        if ($request->filled('search')) {
-            $search = '%'.$request->input('search').'%';
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'LIKE', $search)
-                    ->orWhere('contact_person', 'LIKE', $search)
-                    ->orWhere('email', 'LIKE', $search)
-                    ->orWhere('phone', 'LIKE', $search)
-                    ->orWhere('types', 'LIKE', $search);
+        $search = $request->query('search');
+        $search = is_string($search) ? trim($search) : '';
+        if ($search !== '') {
+            $pattern = '%'.strtr(mb_strtolower($search), ['!' => '!!', '%' => '!%', '_' => '!_']).'%';
+            $query->where(function ($matches) use ($pattern, $search) {
+                foreach (['name', 'contact_person', 'email', 'phone', 'types', 'address', 'tax_id'] as $field) {
+                    $matches->orWhereRaw("LOWER(parties.{$field}) LIKE ? ESCAPE '!'", [$pattern]);
+                }
+                $matches->orWhereExists(fn ($employee) => $employee->selectRaw('1')->from('employees')
+                    ->whereColumn('employees.party_id', 'parties.id')
+                    ->whereRaw("LOWER(employees.employee_code) LIKE ? ESCAPE '!'", [$pattern]));
+
+                if (preg_match('/^[0-9+().\p{Pd}\s]+$/uD', $search)) {
+                    $digits = preg_replace('/[^0-9]/', '', $search);
+                    if ($digits !== '') {
+                        $separators = [' ', '-', '–', '‑', '(', ')', '+', '.', "\u{00A0}", "\u{202F}"];
+                        $phone = str_repeat('REPLACE(', count($separators)).'parties.phone'.str_repeat(", ?, '')", count($separators));
+                        $matches->orWhereRaw("{$phone} LIKE ?", [...$separators, '%'.$digits.'%']);
+                        if (preg_match('/^(?:0|94|0094)([1-9][0-9]{8})$/D', $digits, $local)) {
+                            $matches->orWhereRaw("{$phone} IN (?, ?, ?)", [
+                                ...$separators, '0'.$local[1], '94'.$local[1], '0094'.$local[1],
+                            ]);
+                        }
+                    }
+                }
             });
         }
 
@@ -47,7 +64,7 @@ class PartyController extends Controller
                 ->count();
         }
 
-        return view('masters.parties', compact('data'));
+        return view('masters.parties', compact('data', 'search'));
     }
 
     public function store(Request $request)
