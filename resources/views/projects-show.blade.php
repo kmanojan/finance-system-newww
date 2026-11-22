@@ -31,6 +31,9 @@
 @endsection
 
 @section('content')
+@php
+    $projectCurrency = $project->currency ?: ($baseCurrency ?? 'LKR');
+@endphp
 <style>
     /* Creative Dashboard CSS */
     .glass-card {
@@ -225,12 +228,13 @@
                         </td>
                         <td>{{ $inv->issue_date ?? 'N/A' }}</td>
                         <td>{{ $inv->due_date ?? 'N/A' }}</td>
-                        <td style="text-align:right; font-weight:600;">${{ number_format($inv->amount, 2) }}</td>
                         @php
+                            $invoiceCurrency = $inv->currency ?: $projectCurrency;
                             $collected = DB::table('payment_allocations')->where('invoice_id', $inv->id)->sum('amount');
                             $balance = max(0, $inv->amount - $collected);
                         @endphp
-                        <td style="text-align:right; font-weight:600; color: {{ $balance > 0 ? 'var(--danger)' : 'var(--success)' }};">${{ number_format($balance, 2) }}</td>
+                        <td style="text-align:right; font-weight:600;"><x-amount-display :amount="$inv->amount" :currency="$invoiceCurrency" /></td>
+                        <td style="text-align:right; font-weight:600; color: {{ $balance > 0 ? 'var(--danger)' : 'var(--success)' }};"><x-amount-display :amount="$balance" :currency="$invoiceCurrency" /></td>
                         <td style="text-align:center;">
                             <div class="dropdown" style="position:relative; display:inline-block; text-align:left;">
                                 <button type="button" class="btn btn-outline" style="padding:0.2rem 0.5rem; border:none; font-size:1.2rem; cursor:pointer;" onclick="toggleDropdown(this)">
@@ -640,7 +644,7 @@
                                 <span class="badge" style="background:var(--danger); color:#fff; font-size:0.75rem; margin-left:8px;">Due Today</span>
                             @endif
                         </td>
-                        <td style="font-weight:600;"><x-amount-display :amount="$milestone->amount" currency="$" /></td>
+                        <td style="font-weight:600;"><x-amount-display :amount="$milestone->amount" :currency="$projectCurrency" /></td>
                         <td>{{ $milestone->due_date }}</td>
                         <td>
                             @php
@@ -3189,6 +3193,9 @@ function closeApprovalSidebar() {
         </div>
         <div class="sidebar-drawer-body" style="flex:1; overflow-y:auto; padding:1.5rem; display:flex; flex-direction:column; gap:1.25rem;">
             @forelse($draftInvoices as $draft)
+                @php
+                    $draftCurrency = $draft->currency ?: $projectCurrency;
+                @endphp
                 <div style="background:var(--bg-page); border:1px solid var(--border); border-radius:10px; padding:1.25rem; display:flex; flex-direction:column; gap:0.75rem; box-shadow:0 2px 4px rgba(0,0,0,0.01);">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <span style="font-weight:600; color:var(--text-heading); font-size:0.95rem;">
@@ -3200,7 +3207,7 @@ function closeApprovalSidebar() {
                     <div style="font-size:0.85rem; color:var(--text-muted); display:grid; grid-template-columns:1fr 1fr; gap:0.5rem;">
                         <div>Source: <strong style="color:var(--text-main);">{{ $draft->source_name }}</strong></div>
                         <div>Date: <strong style="color:var(--text-main);">{{ $draft->issue_date }}</strong></div>
-                        <div>Amount: <strong style="color:var(--text-main);">${{ number_format($draft->amount, 2) }}</strong></div>
+                        <div>Amount: <strong style="color:var(--text-main);"><x-amount-display :amount="$draft->amount" :currency="$draftCurrency" /></strong></div>
                         <div>Due: <strong style="color:var(--text-main);">{{ $draft->due_date }}</strong></div>
                     </div>
                     
@@ -3210,7 +3217,7 @@ function closeApprovalSidebar() {
                         @foreach($draft->items as $item)
                             <div style="display:flex; justify-content:space-between; color:var(--text-main); margin-bottom:0.15rem;">
                                 <span>{{ $item->description }} (x{{ (int)$item->qty }})</span>
-                                <span>${{ number_format($item->total, 2) }}</span>
+                                <x-amount-display :amount="$item->total" :currency="$item->currency ?: $draftCurrency" />
                             </div>
                         @endforeach
                     </div>
