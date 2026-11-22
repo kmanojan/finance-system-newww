@@ -37,4 +37,27 @@ class PartySearchTest extends TestCase
             ->assertOk()->assertViewHas('data', fn ($page) => $page->total() === 1 && $page->items()[0]->id === $id);
         $this->get('/master/parties?search=%25')->assertOk()->assertViewHas('data', fn ($page) => $page->total() === 0);
     }
+
+    public function test_project_index_search_matches_linked_parties_within_existing_filters(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'admin', 'is_active' => true]));
+        $company = DB::table('companies')->insertGetId(['name' => 'Test Company', 'base_currency' => 'LKR']);
+        $department = DB::table('departments')->insertGetId(['name' => 'Delivery', 'company_id' => $company]);
+        $partner = DB::table('parties')->insertGetId([
+            'name' => 'Sasi Studio', 'types' => 'partner', 'email' => 'Team@Sasi.example', 'phone' => '+94 77 234-5678',
+        ]);
+        $target = DB::table('projects')->insertGetId(['name' => 'Harbor Project', 'company_id' => $company, 'department_id' => $department]);
+        $completed = DB::table('projects')->insertGetId(['name' => 'Old project', 'company_id' => $company, 'department_id' => $department, 'status' => 'completed']);
+        $outside = DB::table('projects')->insertGetId(['name' => 'Other project', 'company_id' => $company]);
+        foreach ([$target, $completed, $outside] as $project) {
+            DB::table('project_party')->insert(['project_id' => $project, 'party_id' => $partner, 'role' => 'partner']);
+        }
+
+        foreach (['harbor project', 'sasi', 'team@sasi.example', '0772345678'] as $search) {
+            $this->get('/projects?'.http_build_query(['status' => 'active', 'department_id' => $department, 'search' => $search]))
+                ->assertOk()
+                ->assertViewHas('projects', fn ($page) => $page->total() === 1 && $page->items()[0]->id === $target);
+        }
+        $this->get('/projects?search=unknown')->assertOk()->assertSee('No projects match');
+    }
 }

@@ -44,8 +44,34 @@ class ProjectController extends Controller
             $query->whereIn('projects.department_id', $deptIds);
         }
 
-        if ($request->filled('search')) {
-            $query->where('projects.name', 'like', '%'.$request->search.'%');
+        $search = $request->query('search');
+        $search = is_string($search) ? trim($search) : '';
+        if ($search !== '') {
+            $pattern = '%'.strtr(mb_strtolower($search), ['!' => '!!', '%' => '!%', '_' => '!_']).'%';
+            $digits = preg_match('/^[0-9+().\p{Pd}\s]+$/uD', $search) ? preg_replace('/[^0-9]/', '', $search) : '';
+            $query->where(function ($matches) use ($pattern, $digits) {
+                $matches->whereRaw("LOWER(projects.name) LIKE ? ESCAPE '!'", [$pattern])
+                    ->orWhereExists(function ($linked) use ($pattern, $digits) {
+                        $linked->selectRaw('1')->from('project_party as search_links')
+                            ->join('parties as search_parties', 'search_parties.id', '=', 'search_links.party_id')
+                            ->whereColumn('search_links.project_id', 'projects.id')
+                            ->where(function ($party) use ($pattern, $digits) {
+                                foreach (['name', 'contact_person', 'email', 'phone'] as $field) {
+                                    $party->orWhereRaw("LOWER(search_parties.{$field}) LIKE ? ESCAPE '!'", [$pattern]);
+                                }
+                                if ($digits !== '') {
+                                    $separators = [' ', '-', '–', '‑', '(', ')', '+', '.', "\u{00A0}", "\u{202F}"];
+                                    $phone = str_repeat('REPLACE(', count($separators)).'search_parties.phone'.str_repeat(", ?, '')", count($separators));
+                                    $party->orWhereRaw("{$phone} LIKE ?", [...$separators, '%'.$digits.'%']);
+                                    if (preg_match('/^(?:0|94|0094)([1-9][0-9]{8})$/D', $digits, $local)) {
+                                        $party->orWhereRaw("{$phone} IN (?, ?, ?)", [
+                                            ...$separators, '0'.$local[1], '94'.$local[1], '0094'.$local[1],
+                                        ]);
+                                    }
+                                }
+                            });
+                    });
+            });
         }
         if ($request->filled('status')) {
             $query->where('projects.status', $request->status);
@@ -66,7 +92,7 @@ class ProjectController extends Controller
         $clients = DB::table('parties')->where('types', 'LIKE', '%client%')->where('status', 'active')->get();
         $partners = DB::table('parties')->where('types', 'LIKE', '%partner%')->where('status', 'active')->get();
 
-        return view('projects', compact('projects', 'companies', 'clients', 'partners', 'departments', 'deptId'));
+        return view('projects', compact('projects', 'companies', 'clients', 'partners', 'departments', 'deptId', 'search'));
     }
 
     public function store(Request $request)

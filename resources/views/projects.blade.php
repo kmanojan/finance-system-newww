@@ -13,6 +13,11 @@
 @endsection
 
 @section('content')
+<link rel="stylesheet" href="{{ asset('project-index-search.css') }}?v={{ hash_file('sha256', public_path('project-index-search.css')) }}">
+@php
+    $clearSearchUrl = url('/projects').(request()->hasAny(['status', 'department_id']) ? '?'.\Illuminate\Support\Arr::query(request()->only(['status', 'department_id'])) : '');
+    $hasProjectFilters = $search !== '' || $deptId || request()->filled('status');
+@endphp
 <header class="page-header">
     <div class="header-titles">
         <h1>Projects Dashboard</h1>
@@ -23,28 +28,50 @@
     </button>
 </header>
 
-<div class="toolbar">
-    <div class="toolbar-left" style="display: flex; gap: 1rem; align-items: center;">
-        <form id="filterForm" action="/projects" method="GET" style="margin: 0; min-width: 250px;">
+<form id="filterForm" action="/projects" method="GET" class="project-index-search" role="search" aria-label="Search the Projects index">
+    @if(request()->filled('status'))
+        <input type="hidden" name="status" value="{{ request('status') }}">
+    @endif
+    <div class="project-index-search-fields">
+        <div class="project-index-search-field">
+            <label for="project-index-query">Search projects and parties</label>
+            <div class="project-index-search-entry">
+                <div class="project-index-search-input">
+                    <ion-icon name="search-outline" aria-hidden="true"></ion-icon>
+                    <input id="project-index-query" type="search" name="search" value="{{ $search }}" placeholder="Name, email or phone">
+                </div>
+                <button class="btn btn-outline" type="submit">Search</button>
+            </div>
+        </div>
+        <div class="project-index-search-field" role="group" aria-labelledby="project-index-department">
+            <span id="project-index-department">Department</span>
             <x-department-selector name="department_id" id="filter_department_id" :departments="$departments" :selected="$deptId ?? null" onchange="document.getElementById('filterForm').submit();" />
-        </form>
-    </div>
-    <div class="toolbar-right">
-        <div class="search-input">
-            <ion-icon name="search-outline"></ion-icon>
-            <input type="search" name="search" form="filterForm" value="{{ request('search') }}" aria-label="Search projects" placeholder="Search projects"><button class="btn btn-outline" type="submit" form="filterForm">Search</button>
         </div>
     </div>
-</div>
+    <div class="project-index-search-results">
+        <span><strong>{{ $projects->total() }}</strong> {{ Str::plural('project', $projects->total()) }}{{ $hasProjectFilters ? ' found' : '' }}</span>
+        @if($search !== '')
+            <a href="{{ $clearSearchUrl }}">Clear search</a>
+        @endif
+    </div>
+</form>
 
 @if($projects->isEmpty())
-    <x-empty-state 
-        icon="briefcase-outline" 
-        title="No Projects Found" 
-        description="Track client deliverables, payment milestones, timesheets, and profitability." 
-        actionModal="createProjectModal" 
-        actionText="Create First Project" 
-    />
+    @if($hasProjectFilters)
+        <div class="project-index-search-empty">
+            <h2>No projects match</h2>
+            <p>Try another name, email or phone, or clear the filters.</p>
+            <a class="btn btn-outline" href="/projects">Clear filters</a>
+        </div>
+    @else
+        <x-empty-state
+            icon="briefcase-outline"
+            title="No Projects Found"
+            description="Track client deliverables, payment milestones, timesheets, and profitability."
+            actionModal="createProjectModal"
+            actionText="Create First Project"
+        />
+    @endif
 @else
 <div class="data-table-container">
     <table class="data-table">
