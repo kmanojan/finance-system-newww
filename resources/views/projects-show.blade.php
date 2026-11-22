@@ -2241,22 +2241,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
                 <div class="form-row" style="margin-top: 1.5rem;">
                     <div class="form-col">
-                        <label class="form-label">Client (Optional)</label>
-                        <select name="client_id" class="form-control">
-                            <option value="">-- No Client --</option>
-                            @foreach($allClients as $c)
-                                <option value="{{ $c->id }}" {{ ($clientPivot && $clientPivot->party_id == $c->id) ? 'selected' : '' }}>{{ $c->name }}</option>
-                            @endforeach
-                        </select>
+                        <label class="form-label" id="edit_project_client_label" for="edit_project_client_trigger">Client (optional)</label>
+                        <x-party-selector name="client_id" id="edit_project_client" :parties="$allClients" :selected="$clientPivot?->party_id" variant="project" placeholder="Select client" />
                     </div>
                     <div class="form-col">
-                        <label class="form-label">Partner (Optional)</label>
-                        <select name="partner_id" class="form-control">
-                            <option value="">-- No Partner --</option>
-                            @foreach($allPartners as $p)
-                                <option value="{{ $p->id }}" {{ ($partnerPivot && $partnerPivot->party_id == $p->id) ? 'selected' : '' }}>{{ $p->name }}</option>
-                            @endforeach
-                        </select>
+                        <label class="form-label" id="edit_project_partner_label" for="edit_project_partner_trigger">Partner (optional)</label>
+                        <x-party-selector name="partner_id" id="edit_project_partner" :parties="$allPartners" :selected="$partnerPivot?->party_id" variant="project" placeholder="Select partner" />
                     </div>
                 </div>
                 
@@ -2312,13 +2302,14 @@ document.addEventListener('DOMContentLoaded', function() {
             @csrf
             <div class="modal-body">
                 <div class="form-group">
-                    <label class="form-label">Recipient Party *</label>
-                    <x-party-selector 
-                        name="party_id" 
-                        id="create_commission_party_selector" 
-                        :parties="$allRecipients" 
-                        placeholder="Search & Select Partner / Vendor / Agent..." 
-                        onchange="onProjectCommissionPartyChange" 
+                    <label class="form-label" id="create_commission_party_selector_label" for="create_commission_party_selector_trigger">Recipient party *</label>
+                    <x-party-selector
+                        name="party_id"
+                        id="create_commission_party_selector"
+                        :parties="$allRecipients"
+                        variant="project"
+                        placeholder="Select recipient"
+                        onchange="onProjectCommissionPartyChange"
                     />
                 </div>
 
