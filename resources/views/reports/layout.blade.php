@@ -54,7 +54,7 @@
 @endsection
 
 @section('content')
-@unless(request()->is('reports/export/*', 'reports/audit-payables'))
+@unless(request()->is('reports/export/*', 'reports/audit-payables', 'reports/party-ledger'))
 <div class="report-export-actions"><a class="btn btn-outline" href="{{ url('/reports/export/'.request()->segment(2).'/xlsx').'?'.http_build_query(request()->query()) }}">Export Excel</a><a class="btn btn-outline" href="{{ url('/reports/export/'.request()->segment(2).'/pdf').'?'.http_build_query(request()->query()) }}">Export PDF</a></div>
 @endunless
 @yield('report-content')

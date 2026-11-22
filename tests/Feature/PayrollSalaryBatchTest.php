@@ -108,9 +108,9 @@ class PayrollSalaryBatchTest extends TestCase
         $this->assertSame(4000000, $this->summary($run)['balance']);
         $this->assertSame([1000000, 1500000, 1500000], PayrollPayablesService::items()->sortBy('id')->pluck('balance_cents')->all());
         $report = $this->get('/reports/party-ledger?role=employee')->assertOk()->assertSee('Salary pending');
-        $manojan = $report->viewData('partySummaries')->firstWhere('id', $this->employees[0]->party_id);
-        $this->assertEquals(10000, $manojan->salary_balance);
-        $this->assertEquals(10000, $manojan->total_payables);
+        $manojan = $report->viewData('parties')->get($this->employees[0]->party_id);
+        $this->assertEquals(1000000, $manojan->balances->get('LKR')['salary']);
+        $this->assertEquals(4000000, $report->viewData('totals')->get('LKR')['salary']);
         $this->get('/reports/party-ledger?role=employee&salary_detail=1&party_id='.$this->employees[0]->party_id)->assertOk()->assertSee('employee payables')->assertSee('Record salary payment');
         $this->get('/payroll/'.$run.'/salary-batches/create?employee_id='.$this->employees[0]->id)->assertOk()->assertSee('value="Manojan"', false);
         $this->post('/payroll/'.$run.'/complete')->assertRedirect();

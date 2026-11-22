@@ -37,7 +37,9 @@ class ReportExportController extends Controller
         $rows = [];
         $title = trim($xpath->query('//main//h1')->item(0)?->textContent ?? Str::headline($report));
         $rows[] = [$title];
-        $rows[] = ['From', $request->input('from', date('Y-m-01')), 'To', $request->input('to', date('Y-m-t'))];
+        $rows[] = $report === 'party-ledger'
+            ? ['Balances through', $view->getData()['asOf']]
+            : ['From', $request->input('from', date('Y-m-01')), 'To', $request->input('to', date('Y-m-t'))];
         foreach ($xpath->query('//main//div[contains(@class,"ds-notice")]') as $notice) {
             $rows[] = [trim($notice->textContent)];
         }

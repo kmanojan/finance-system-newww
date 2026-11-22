@@ -9,10 +9,12 @@ use App\Models\Server;
 use App\Services\AuditPayablesService;
 use App\Services\FinancialReportingService;
 use App\Services\FinancialReportingService as Finance;
-use App\Services\PayrollPayablesService;
+use App\Services\PartyLedgerReport;
 use App\Services\PayrollStatutoryService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
@@ -462,529 +464,53 @@ class ReportController extends Controller
 
     public function partyLedger(Request $request)
     {
-        extract($this->getDateRange($request));
-        $selectedPartyId = $request->query('party_id');
-        $roleFilter = $request->query('role');
-
-        $partiesQuery = DB::table('parties');
-        if ($roleFilter && $roleFilter !== 'all') {
-            $partiesQuery->where('types', 'LIKE', '%'.$roleFilter.'%');
+        $canViewPayroll = $request->user()->isAdmin() || in_array(strtolower($request->user()->role ?? ''), ['manager', 'accountant']);
+        $balanceFilters = ['all', 'open', 'receivable', 'loan', 'other', 'unapplied'];
+        if ($canViewPayroll) {
+            $balanceFilters[] = 'salary';
         }
-        $parties = $partiesQuery->orderBy('name')->get();
+        $data = $request->validate([
+            'q' => 'nullable|string|max:120',
+            'role' => 'nullable|string|max:50',
+            'balance' => ['nullable', Rule::in($balanceFilters)],
+            'party_id' => 'nullable|integer|min:1',
+            'page' => 'nullable|integer|min:1',
+        ]);
+        $asOf = PayrollStatutoryService::today();
+        $report = app(PartyLedgerReport::class)->build($asOf, $canViewPayroll);
+        $parties = $report['parties'];
+        $roleOptions = $parties->flatMap(fn ($party) => $party->roles)->unique()->sort()->values();
+        $query = trim($data['q'] ?? '');
+        $role = $data['role'] ?? 'all';
+        $balance = $data['balance'] ?? 'all';
+        $party = $parties->get($data['party_id'] ?? null);
 
-        $partySummaries = collect();
-        $canViewPayroll = in_array(strtolower($request->user()->role), ['admin', 'manager', 'accountant']);
-        $payrollItems = $canViewPayroll ? PayrollPayablesService::items() : collect();
-        $salaryByParty = $payrollItems->groupBy('party_id');
-        $salaryPaymentsByParty = $canViewPayroll ? PayrollPayablesService::payments()->groupBy('party_id') : collect();
-
-        foreach ($parties as $p) {
-            // 0. Active Client Projects Contract Value (Contracted Project Budgets + Approved CRs)
-            $clientProjects = DB::table('projects')
-                ->join('project_party', 'projects.id', '=', 'project_party.project_id')
-                ->where('project_party.party_id', $p->id)
-                ->where('project_party.role', 'client')
-                ->select('projects.*')
-                ->get();
-
-            $totalContractValueLkr = 0;
-            $contractOrigCurrencies = [];
-
-            foreach ($clientProjects as $cp) {
-                $approvedCR = DB::table('change_requests')
-                    ->where('project_id', $cp->id)
-                    ->whereIn('status', ['approved', 'invoiced'])
-                    ->sum('amount');
-                $projVal = (float) ($cp->budget_limit + $approvedCR);
-                $curr = strtoupper(trim($cp->currency ?? 'LKR'));
-                $valLkr = $this->convertToLkr($projVal, $curr);
-
-                $totalContractValueLkr += $valLkr;
-                if (! isset($contractOrigCurrencies[$curr])) {
-                    $contractOrigCurrencies[$curr] = 0;
-                }
-                $contractOrigCurrencies[$curr] += $projVal;
+        $matching = $parties->filter(function ($row) use ($query, $role, $balance) {
+            $search = implode(' ', [$row->name, $row->contact_person, $row->employeeCodes, implode(' ', $row->roles)]);
+            if (($query !== '' && ! str_contains(mb_strtolower($search), mb_strtolower($query))) || ($role !== 'all' && ! in_array($role, $row->roles))) {
+                return false;
             }
 
-            // 1. AR Invoices & Payments (Client Role)
-            $clientInvoices = DB::table('invoices')->where('client_id', $p->id)->get();
+            return match ($balance) {
+                'all' => true,
+                'open' => $row->balances->contains(fn ($currency) => $currency['receivable'] + $currency['loan'] + $currency['salary'] + $currency['other'] > 0),
+                default => $row->balances->contains(fn ($currency) => $currency[$balance] > 0),
+            };
+        })->values();
+        $totals = PartyLedgerReport::balances($matching->flatMap(fn ($row) => $row->entries->flatten(1)));
+        $statutoryTotals = $report['statutory']->groupBy('currency')->sortKeys()->map->sum('balance_cents');
+        $page = min($data['page'] ?? 1, max(1, (int) ceil($matching->count() / 25)));
+        $export = $request->is('reports/export/*');
+        $registry = new LengthAwarePaginator($export ? $matching : $matching->forPage($page, 25), $matching->count(), 25, $page, [
+            'path' => route('reports.party_ledger'),
+            'query' => $request->except(['page', 'party_id']),
+        ]);
 
-            $totalInvoiced = 0;
-            foreach ($clientInvoices as $cinv) {
-                $cCurr = strtoupper(trim($cinv->currency ?? 'LKR'));
-                $cAmt = (float) ($cinv->grand_total > 0 ? $cinv->grand_total : $cinv->amount);
-                $totalInvoiced += $this->convertToLkr($cAmt, $cCurr);
-            }
-
-            $totalCollected = 0;
-            if ($clientInvoices->isNotEmpty()) {
-                $pmtAllocations = DB::table('payment_allocations')
-                    ->join('invoices', 'payment_allocations.invoice_id', '=', 'invoices.id')
-                    ->whereIn('payment_allocations.invoice_id', $clientInvoices->pluck('id'))
-                    ->select('payment_allocations.amount', 'invoices.currency')
-                    ->get();
-
-                foreach ($pmtAllocations as $pa) {
-                    $paCurr = strtoupper(trim($pa->currency ?? 'LKR'));
-                    $totalCollected += $this->convertToLkr((float) $pa->amount, $paCurr);
-                }
-            }
-
-            $arBalance = max(0, $totalInvoiced - $totalCollected);
-            $unbilledContractValue = max(0, $totalContractValueLkr - $totalInvoiced);
-
-            // Format contract original currency text
-            $contractOrigText = [];
-            foreach ($contractOrigCurrencies as $cCode => $cVal) {
-                $sym = $this->getCurrencySymbol($cCode);
-                $contractOrigText[] = $sym.' '.number_format($cVal, 2).' '.$cCode;
-            }
-            $contractOrigStr = implode(' | ', $contractOrigText);
-
-            // 2. AP Vendor Bills & Bill Payments (Vendor Role)
-            $vendorBills = Schema::hasTable('vendor_bills') ? DB::table('vendor_bills')->where('vendor_id', $p->id)->get() : collect();
-            $totalVendorBills = $vendorBills->sum('amount');
-            $totalVendorPaid = $vendorBills->where('status', 'paid')->sum('amount');
-            $apBillsBalance = max(0, $totalVendorBills - $totalVendorPaid);
-
-            // 3. Loans Borrowings & Settlements (Lender / Director / Bank Role)
-            $partyLoans = Schema::hasTable('loans') ? DB::table('loans')->where('party_id', $p->id)->get() : collect();
-            if ($partyLoans->isEmpty()) {
-                $partyLoans = DB::table('loans')->where('lender_name', 'LIKE', '%'.$p->name.'%')->get();
-            }
-
-            $totalLoanBorrowed = 0;
-            $totalLoanRepaid = 0;
-            $totalInterestPaid = 0;
-            $totalPendingInterest = 0;
-
-            foreach ($partyLoans as $loan) {
-                $repayments = DB::table('loan_principal_records')
-                    ->where('loan_id', $loan->id)
-                    ->where('record_type', 'repayment')
-                    ->sum('amount');
-                $draws = DB::table('loan_principal_records')
-                    ->where('loan_id', $loan->id)
-                    ->where('record_type', 'draw')
-                    ->sum('amount');
-                $totalLoanBorrowed += ($loan->principal_amount + $draws);
-                $totalLoanRepaid += $repayments;
-
-                $intPaid = DB::table('loan_interest_schedule')
-                    ->where('loan_id', $loan->id)
-                    ->sum('paid_amount');
-                $totalInterestPaid += $intPaid;
-
-                $pendingScheds = DB::table('loan_interest_schedule')
-                    ->where('loan_id', $loan->id)
-                    ->whereIn('status', ['pending', 'partially_paid', 'overdue'])
-                    ->get();
-                foreach ($pendingScheds as $ps) {
-                    $totalPendingInterest += max(0, $ps->interest_amount - ($ps->paid_amount ?? 0));
-                }
-            }
-
-            $loanOutstandingPrincipal = max(0, $totalLoanBorrowed - $totalLoanRepaid);
-            $loanTotalPayable = $loanOutstandingPrincipal + $totalPendingInterest;
-            $loanTotalPaid = $totalLoanRepaid + $totalInterestPaid;
-
-            // 4. Project Partner Commissions
-            $partnerCommissions = Schema::hasTable('project_commissions') ? DB::table('project_commissions')->where('party_id', $p->id)->get() : collect();
-            $totalCommissionOwed = 0;
-            $totalCommissionPaid = 0;
-
-            if ($partnerCommissions->isNotEmpty()) {
-                foreach ($partnerCommissions as $comm) {
-                    $proj = DB::table('projects')->where('id', $comm->project_id)->first();
-                    $totInvoiced = DB::table('invoices')->where('project_id', $comm->project_id)->whereNotIn('status', ['draft', 'pending_approval'])->sum('grand_total');
-                    $totCollected = DB::table('payments')->where('project_id', $comm->project_id)->sum('total_amount');
-                    $invCount = DB::table('invoices')->where('project_id', $comm->project_id)->whereNotIn('status', ['draft', 'pending_approval'])->count();
-                    $pmtCount = DB::table('payments')->where('project_id', $comm->project_id)->count();
-
-                    $commOwed = 0;
-                    if ($comm->commission_type === 'percentage') {
-                        $pct = $comm->percentage_value ?? 0;
-                        if ($comm->calculation_basis === 'invoiced') {
-                            $commOwed = $totInvoiced * ($pct / 100);
-                        } elseif ($comm->calculation_basis === 'collected') {
-                            $commOwed = $totCollected * ($pct / 100);
-                        } elseif ($comm->calculation_basis === 'budget') {
-                            $commOwed = ($proj->budget_limit ?? 0) * ($pct / 100);
-                        }
-                    } else { // fixed
-                        $fixed = $comm->fixed_amount ?? 0;
-                        if ($comm->trigger_type === 'invoice') {
-                            $commOwed = $fixed * $invCount;
-                        } elseif ($comm->trigger_type === 'milestone') {
-                            $commOwed = $fixed * $pmtCount;
-                        } else {
-                            $commOwed = $fixed;
-                        }
-                    }
-
-                    $totalCommissionOwed += $commOwed;
-                }
-
-                $totalCommissionPaid = Schema::hasTable('commission_payments')
-                    ? DB::table('commission_payments')->whereIn('project_commission_id', $partnerCommissions->pluck('id'))->sum('amount')
-                    : 0;
-            }
-
-            $commissionBalance = max(0, $totalCommissionOwed - $totalCommissionPaid);
-
-            // Combined Totals
-            $salaries = $salaryByParty->get($p->id, collect());
-            $salaryOwed = $salaries->sum('net_cents') / 100;
-            $salaryPaid = $salaries->sum('paid_cents') / 100;
-            $salaryBalance = $salaries->sum('balance_cents') / 100;
-            $totalPayables = $apBillsBalance + $loanTotalPayable + $commissionBalance + $salaryBalance;
-            $totalPaids = $totalVendorPaid + $loanTotalPaid + $totalCommissionPaid + $salaryPaid;
-            $netBalance = $arBalance - $totalPayables;
-
-            $partySummaries->push((object) [
-                'id' => $p->id,
-                'name' => $p->name,
-                'types' => $p->types,
-                'contact_person' => $p->contact_person,
-                'email' => $p->email,
-                'phone' => $p->phone,
-                'total_contract_value' => $totalContractValueLkr,
-                'unbilled_contract_value' => $unbilledContractValue,
-                'contract_orig_str' => $contractOrigStr,
-                'total_invoiced' => $totalInvoiced,
-                'total_collected' => $totalCollected,
-                'ar_balance' => $arBalance,
-                'total_vendor_bills' => $totalVendorBills,
-                'total_vendor_paid' => $totalVendorPaid,
-                'ap_bills_balance' => $apBillsBalance,
-                'total_loan_borrowed' => $totalLoanBorrowed,
-                'loan_total_paid' => $loanTotalPaid,
-                'loan_total_payable' => $loanTotalPayable,
-                'total_commission_owed' => $totalCommissionOwed,
-                'total_commission_paid' => $totalCommissionPaid,
-                'commission_balance' => $commissionBalance,
-                'salary_owed' => $salaryOwed,
-                'salary_paid' => $salaryPaid,
-                'salary_balance' => $salaryBalance,
-                'total_payables' => $totalPayables,
-                'total_paids' => $totalPaids,
-                'net_balance' => $netBalance,
-            ]);
-        }
-
-        // Pre-generate Full Detail Ledger Timelines for all parties with multi-currency tracking
-        $allPartyTimelines = [];
-        foreach ($parties as $p) {
-            $timeline = collect();
-
-            // 0. Active Client Projects Contracts
-            $clientProjects = DB::table('projects')
-                ->join('project_party', 'projects.id', '=', 'project_party.project_id')
-                ->where('project_party.party_id', $p->id)
-                ->where('project_party.role', 'client')
-                ->select('projects.*')
-                ->get();
-
-            foreach ($clientProjects as $cp) {
-                $approvedCR = DB::table('change_requests')
-                    ->where('project_id', $cp->id)
-                    ->whereIn('status', ['approved', 'invoiced'])
-                    ->sum('amount');
-                $projVal = (float) ($cp->budget_limit + $approvedCR);
-                $curr = strtoupper(trim($cp->currency ?? 'LKR'));
-                $valLkr = $this->convertToLkr($projVal, $curr);
-                $sym = $this->getCurrencySymbol($curr);
-
-                $timeline->push((object) [
-                    'date' => date('Y-m-d', strtotime($cp->start_date ?? $cp->created_at)),
-                    'type' => 'Project Contract',
-                    'reference' => 'PROJ-'.$cp->id,
-                    'currency' => $curr,
-                    'currency_symbol' => $sym,
-                    'original_debit' => $projVal,
-                    'original_credit' => 0.00,
-                    'debit' => $valLkr,
-                    'credit' => 0.00,
-                    'description' => 'Project Contract Value: '.$cp->name.' (Contracted Budget)',
-                ]);
-            }
-
-            // 1. Client Invoices
-            $invs = DB::table('invoices')->where('client_id', $p->id)->get();
-            foreach ($invs as $inv) {
-                $curr = strtoupper(trim($inv->currency ?? 'LKR'));
-                $origAmt = (float) $inv->grand_total;
-                $lkrAmt = $this->convertToLkr($origAmt, $curr);
-                $sym = $this->getCurrencySymbol($curr);
-
-                $timeline->push((object) [
-                    'date' => date('Y-m-d', strtotime($inv->issue_date ?? $inv->created_at)),
-                    'type' => 'Invoice Issued',
-                    'reference' => $inv->invoice_no,
-                    'currency' => $curr,
-                    'currency_symbol' => $sym,
-                    'original_debit' => $origAmt,
-                    'original_credit' => 0.00,
-                    'debit' => $lkrAmt,
-                    'credit' => 0.00,
-                    'description' => 'Client Invoice #'.$inv->invoice_no,
-                ]);
-            }
-
-            // 2. Payments Collected
-            $pmts = DB::table('payments')
-                ->join('payment_allocations', 'payments.id', '=', 'payment_allocations.payment_id')
-                ->join('invoices', 'payment_allocations.invoice_id', '=', 'invoices.id')
-                ->where('invoices.client_id', $p->id)
-                ->select('payments.*', 'payment_allocations.amount as alloc_amount', 'invoices.invoice_no', 'invoices.currency as inv_currency')
-                ->get();
-            foreach ($pmts as $pmt) {
-                $curr = strtoupper(trim($pmt->currency ?? $pmt->inv_currency ?? 'LKR'));
-                $origAmt = (float) $pmt->alloc_amount;
-                $lkrAmt = $this->convertToLkr($origAmt, $curr);
-                $sym = $this->getCurrencySymbol($curr);
-
-                $timeline->push((object) [
-                    'date' => date('Y-m-d', strtotime($pmt->payment_date)),
-                    'type' => 'Payment Received',
-                    'reference' => $pmt->receipt_no ?? ('PMT-'.$pmt->id),
-                    'currency' => $curr,
-                    'currency_symbol' => $sym,
-                    'original_debit' => 0.00,
-                    'original_credit' => $origAmt,
-                    'debit' => 0.00,
-                    'credit' => $lkrAmt,
-                    'description' => 'Client Payment for Invoice #'.$pmt->invoice_no,
-                ]);
-            }
-
-            // 3. Vendor Bills
-            $bills = Schema::hasTable('vendor_bills') ? DB::table('vendor_bills')->where('vendor_id', $p->id)->get() : collect();
-            foreach ($bills as $b) {
-                $curr = strtoupper(trim($b->currency ?? 'LKR'));
-                $origAmt = (float) $b->amount;
-                $lkrAmt = $this->convertToLkr($origAmt, $curr);
-                $sym = $this->getCurrencySymbol($curr);
-
-                $timeline->push((object) [
-                    'date' => date('Y-m-d', strtotime($b->issue_date)),
-                    'type' => 'Vendor Bill',
-                    'reference' => $b->bill_number,
-                    'currency' => $curr,
-                    'currency_symbol' => $sym,
-                    'original_debit' => 0.00,
-                    'original_credit' => $origAmt,
-                    'debit' => 0.00,
-                    'credit' => $lkrAmt,
-                    'description' => 'Vendor Bill #'.$b->bill_number,
-                ]);
-            }
-
-            // 4. Loans & Repayments
-            $loans = Schema::hasTable('loans') ? DB::table('loans')->where('party_id', $p->id)->orWhere('lender_name', 'LIKE', '%'.$p->name.'%')->get() : collect();
-            foreach ($loans as $l) {
-                $curr = strtoupper(trim($l->currency ?? 'LKR'));
-                $origAmt = (float) $l->principal_amount;
-                $lkrAmt = $this->convertToLkr($origAmt, $curr);
-                $sym = $this->getCurrencySymbol($curr);
-
-                $timeline->push((object) [
-                    'date' => date('Y-m-d', strtotime($l->claimed_date ?? $l->created_at)),
-                    'type' => 'Loan Facility Taken',
-                    'reference' => 'LOAN-'.$l->id,
-                    'currency' => $curr,
-                    'currency_symbol' => $sym,
-                    'original_debit' => 0.00,
-                    'original_credit' => $origAmt,
-                    'debit' => 0.00,
-                    'credit' => $lkrAmt,
-                    'description' => 'Loan Borrowed: '.($l->purpose ?? $l->lender_name),
-                ]);
-
-                $repayRecords = DB::table('loan_principal_records')->where('loan_id', $l->id)->get();
-                foreach ($repayRecords as $pr) {
-                    $origPrAmt = (float) $pr->amount;
-                    $lkrPrAmt = $this->convertToLkr($origPrAmt, $curr);
-
-                    $timeline->push((object) [
-                        'date' => date('Y-m-d', strtotime($pr->record_date)),
-                        'type' => 'Loan '.ucfirst($pr->record_type),
-                        'reference' => $pr->reference_no ?? ('LOAN-PRIN-'.$pr->id),
-                        'currency' => $curr,
-                        'currency_symbol' => $sym,
-                        'original_debit' => $pr->record_type === 'repayment' ? $origPrAmt : 0.00,
-                        'original_credit' => $pr->record_type === 'draw' ? $origPrAmt : 0.00,
-                        'debit' => $pr->record_type === 'repayment' ? $lkrPrAmt : 0.00,
-                        'credit' => $pr->record_type === 'draw' ? $lkrPrAmt : 0.00,
-                        'description' => 'Loan Principal '.ucfirst($pr->record_type),
-                    ]);
-                }
-
-                $intScheds = DB::table('loan_interest_schedule')->where('loan_id', $l->id)->where('paid_amount', '>', 0)->get();
-                foreach ($intScheds as $is) {
-                    $origIntAmt = (float) $is->paid_amount;
-                    $lkrIntAmt = $this->convertToLkr($origIntAmt, $curr);
-
-                    $timeline->push((object) [
-                        'date' => date('Y-m-d', strtotime($is->paid_date ?? $is->due_date)),
-                        'type' => 'Loan Interest Paid',
-                        'reference' => 'LOAN-INT-'.$is->id,
-                        'currency' => $curr,
-                        'currency_symbol' => $sym,
-                        'original_debit' => $origIntAmt,
-                        'original_credit' => 0.00,
-                        'debit' => $lkrIntAmt,
-                        'credit' => 0.00,
-                        'description' => 'Loan Interest Settlement',
-                    ]);
-                }
-            }
-
-            // 5. Commission Entitlements & Payments
-            $comms = Schema::hasTable('project_commissions') ? DB::table('project_commissions')->where('party_id', $p->id)->get() : collect();
-            foreach ($comms as $c) {
-                $proj = DB::table('projects')->where('id', $c->project_id)->first();
-                $curr = strtoupper(trim($proj->currency ?? 'LKR'));
-                $sym = $this->getCurrencySymbol($curr);
-
-                $totInvoiced = DB::table('invoices')->where('project_id', $c->project_id)->whereNotIn('status', ['draft', 'pending_approval'])->sum('grand_total');
-                $totCollected = DB::table('payments')->where('project_id', $c->project_id)->sum('total_amount');
-                $invCount = DB::table('invoices')->where('project_id', $c->project_id)->whereNotIn('status', ['draft', 'pending_approval'])->count();
-                $pmtCount = DB::table('payments')->where('project_id', $c->project_id)->count();
-
-                $commOwed = 0;
-                if ($c->commission_type === 'percentage') {
-                    $pct = $c->percentage_value ?? 0;
-                    if ($c->calculation_basis === 'invoiced') {
-                        $commOwed = $totInvoiced * ($pct / 100);
-                    } elseif ($c->calculation_basis === 'collected') {
-                        $commOwed = $totCollected * ($pct / 100);
-                    } elseif ($c->calculation_basis === 'budget') {
-                        $commOwed = ($proj->budget_limit ?? 0) * ($pct / 100);
-                    }
-                } else { // fixed
-                    $fixed = $c->fixed_amount ?? 0;
-                    if ($c->trigger_type === 'invoice') {
-                        $commOwed = $fixed * $invCount;
-                    } elseif ($c->trigger_type === 'milestone') {
-                        $commOwed = $fixed * $pmtCount;
-                    } else {
-                        $commOwed = $fixed;
-                    }
-                }
-
-                if ($commOwed > 0) {
-                    $lkrCommOwed = $this->convertToLkr($commOwed, $curr);
-                    $timeline->push((object) [
-                        'date' => date('Y-m-d', strtotime($c->created_at)),
-                        'type' => 'Commission Entitlement',
-                        'reference' => 'COMM-'.$c->id,
-                        'currency' => $curr,
-                        'currency_symbol' => $sym,
-                        'original_debit' => 0.00,
-                        'original_credit' => (float) $commOwed,
-                        'debit' => 0.00,
-                        'credit' => $lkrCommOwed,
-                        'description' => 'Project Commission ('.($proj->name ?? 'Project #'.$c->project_id).')',
-                    ]);
-                }
-
-                $commPmts = DB::table('commission_payments')->where('project_commission_id', $c->id)->get();
-                foreach ($commPmts as $cp) {
-                    $origCpAmt = (float) $cp->amount;
-                    $lkrCpAmt = $this->convertToLkr($origCpAmt, $curr);
-
-                    $timeline->push((object) [
-                        'date' => date('Y-m-d', strtotime($cp->payment_date)),
-                        'type' => 'Commission Payout',
-                        'reference' => $cp->reference_no ?? ('COMM-PAY-'.$cp->id),
-                        'currency' => $curr,
-                        'currency_symbol' => $sym,
-                        'original_debit' => $origCpAmt,
-                        'original_credit' => 0.00,
-                        'debit' => $lkrCpAmt,
-                        'credit' => 0.00,
-                        'description' => 'Commission Payment Payout',
-                    ]);
-                }
-            }
-
-            foreach ($salaryByParty->get($p->id, collect()) as $salary) {
-                $timeline->push((object) ['date' => Carbon::parse($salary->month)->endOfMonth()->toDateString(), 'type' => 'Salary Entitlement',
-                    'reference' => 'PR-'.$salary->run_id, 'currency' => 'LKR', 'currency_symbol' => 'Rs.',
-                    'original_debit' => 0, 'original_credit' => $salary->net_cents / 100, 'debit' => 0, 'credit' => $salary->net_cents / 100,
-                    'description' => Carbon::parse($salary->month)->format('F Y').' net salary']);
-            }
-            foreach ($salaryPaymentsByParty->get($p->id, collect()) as $payment) {
-                $timeline->push((object) ['date' => $payment->paid_on, 'type' => 'Salary Payment', 'reference' => 'PB-'.$payment->id,
-                    'currency' => 'LKR', 'currency_symbol' => 'Rs.', 'original_debit' => $payment->amount_cents / 100, 'original_credit' => 0,
-                    'debit' => $payment->amount_cents / 100, 'credit' => 0,
-                    'description' => Carbon::parse($payment->month)->format('F Y').' salary · '.$payment->reference]);
-            }
-            $allPartyTimelines[$p->id] = $timeline->sortByDesc('date')->values();
-        }
-
-        $partyDetail = $selectedPartyId ? $partySummaries->firstWhere('id', (int) $selectedPartyId) : null;
-        $partyTimeline = $selectedPartyId ? ($allPartyTimelines[$selectedPartyId] ?? collect()) : collect();
-
-        return view('reports.party_ledger', compact(
-            'canViewPayroll',
-            'payrollItems',
-            'from',
-            'to',
-            'partySummaries',
-            'allPartyTimelines',
-            'partyDetail',
-            'partyTimeline',
-            'selectedPartyId',
-            'roleFilter'
-        ));
-    }
-
-    private function unformatAmount($val)
-    {
-        if (is_numeric($val)) {
-            return (float) $val;
-        }
-        if (empty($val)) {
-            return 0.0;
-        }
-
-        return (float) preg_replace('/[^\d.]/', '', str_replace(',', '', (string) $val));
+        return view('reports.party_ledger', $report + compact('asOf', 'canViewPayroll', 'roleOptions', 'query', 'role', 'balance', 'party', 'totals', 'statutoryTotals', 'registry'));
     }
 
     public function recordPartySettlement(Request $request)
     {
         throw ValidationException::withMessages(['settlement' => 'Select the source invoice, vendor bill, loan or project commission and record its payment there. This keeps currency, allocations and ledger entries together.']);
-    }
-
-    /**
-     * Convert foreign currency amount to LKR base currency
-     */
-    private function convertToLkr(float $amount, ?string $currency): float
-    {
-        return Finance::convert($amount, $currency, request('to', date('Y-m-d')), 'LKR');
-    }
-
-    /**
-     * Get currency symbol
-     */
-    private function getCurrencySymbol(?string $currency): string
-    {
-        $curr = strtoupper(trim($currency ?: 'LKR'));
-        $symbols = [
-            'USD' => '$',
-            'EUR' => '€',
-            'GBP' => '£',
-            'AED' => 'AED',
-            'LKR' => 'Rs.',
-            'INR' => '₹',
-            'AUD' => 'A$',
-            'CAD' => 'C$',
-            'SGD' => 'S$',
-            'JPY' => '¥',
-        ];
-
-        return $symbols[$curr] ?? $curr;
     }
 }

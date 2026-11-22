@@ -1,513 +1,229 @@
 @extends('reports.layout')
-@section('title', 'Party Payables & Full Ledger Report')
+@section('title', 'Party Ledger')
 
 @section('report-content')
-<style>
-.party-kpi-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 1.25rem 1.5rem;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.03);
-    position: relative;
-    overflow: hidden;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-.party-kpi-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.06);
-}
-.party-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    background:var(--bg-card);
-    color: white;
-    font-weight: 800;
-    font-size: 1.1rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-.role-pill {
-    font-size:0.75rem;
-    font-weight: 700;
-    padding: 0.15rem 0.5rem;
-    border-radius: 6px;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    display: inline-block;
-    margin-right: 0.25rem;
-    margin-bottom: 0.2rem;
-}
-.role-pill-client { background: #dbeafe; color: #1e40af; }
-.role-pill-vendor { background: #d1fae5; color: #065f46; }
-.role-pill-lender { background: #fef3c7; color: #92400e; }
-.role-pill-partner { background: #f3e8ff; color: #6b21a8; }
-.role-pill-default { background: var(--bg-page); color: var(--text-muted); border: 1px solid var(--border); }
-
-.role-tab-btn {
-    padding: 0.5rem 1rem;
-    border-radius: 8px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--text-muted);
-    background: var(--bg-page);
-    border: 1px solid var(--border);
-    text-decoration: none;
-    transition: all 0.2s ease;
-}
-.role-tab-btn:hover, .role-tab-btn.active {
-    background: var(--primary);
-    color: white;
-    border-color: var(--primary);
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
-}
-</style>
-
-<!-- Header -->
-<header style="margin-bottom: 1.75rem; display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem;">
-    <div>
-        <h1 style="font-size:1.8rem; font-weight:800; color:var(--text-heading); margin:0; letter-spacing:-0.02em;">
-            Party Payables & Financial Ledger
-        </h1>
-        <p class="subtitle" style="margin-top:0.35rem; color:var(--text-muted); font-size:0.92rem;">
-            Consolidated 360° financial position, transactions, payables, and settlements across all registered parties.
-        </p>
-    </div>
-    <div style="display:flex; gap:0.5rem;">
-        <button class="btn btn-outline" onclick="window.print()">
-            <ion-icon name="print-outline" style="vertical-align:middle; margin-right:0.3rem;"></ion-icon> Print Overview
-        </button>
-    </div>
-</header>
-
-<!-- Consolidated Metric Cards Grid -->
-<div class="ds-summary-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap:1.25rem; margin-bottom:1.75rem;">
-    <div class="party-kpi-card" style="border-left:4px solid #2563eb;">
-        <div style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.05em;">Total Parties Enrolled</div>
-        <div style="font-size:1.65rem; font-weight:800; color:var(--text-heading); margin-top:0.3rem;">{{ $partySummaries->count() }}</div>
-        <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.25rem;">Active Accounts Statement</div>
-    </div>
-
-    <div class="party-kpi-card" style="border-left:4px solid #8b5cf6;">
-        <div style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.05em;">Total Contract Value</div>
-        <div style="font-size:1.65rem; font-weight:800; color:#7c3aed; margin-top:0.3rem;">LKR {{ number_format($partySummaries->sum('total_contract_value'), 2) }}</div>
-        <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.25rem;">Active Project Commitments</div>
-    </div>
-    
-    <div class="party-kpi-card" style="border-left:4px solid #3b82f6;">
-        <div style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.05em;">Total Invoiced (AR)</div>
-        <div style="font-size:1.65rem; font-weight:800; color:#2563eb; margin-top:0.3rem;">LKR {{ number_format($partySummaries->sum('total_invoiced'), 2) }}</div>
-        <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.25rem;">Receivable Client Billings</div>
-    </div>
-
-    <div class="party-kpi-card" style="border-left:4px solid #10b981;">
-        <div style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.05em;">Collections & Paids Settled</div>
-        <div style="font-size:1.65rem; font-weight:800; color:#059669; margin-top:0.3rem;">LKR {{ number_format($partySummaries->sum('total_collected') + $partySummaries->sum('total_paids'), 2) }}</div>
-        <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.25rem;">Settled Funds Flow</div>
-    </div>
-
-    <div class="party-kpi-card" style="border-left:4px solid #ef4444;">
-        <div style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.05em;">Total Net Payables</div>
-        <div style="font-size:1.65rem; font-weight:800; color:#dc2626; margin-top:0.3rem;">LKR {{ number_format($partySummaries->sum('total_payables'), 2) }}</div>
-        <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.25rem;">AP Bills + Loans + Commissions{{ $canViewPayroll ? ' + Salaries' : '' }}</div>
-    </div>
-</div>
-
-@if($canViewPayroll)<p class="ds-notice">Salary payables include approved and completed payrolls, less recorded salary payments. Drafts are excluded. Completing processing does not clear an unpaid salary; EPF, ETF and tax remittances are tracked separately in payroll.</p>@endif
-<!-- Navigation Filter Tabs & Search Bar -->
-<div class="card" style="padding:1rem 1.25rem; margin-bottom:1.5rem; background:var(--bg-card); border:1px solid var(--border); border-radius:14px;">
-    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
-        
-        <!-- Role Filter Tabs -->
-        <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
-            <a href="{{ route('reports.party_ledger', ['role' => 'all']) }}" class="role-tab-btn {{ $roleFilter == 'all' || !$roleFilter ? 'active' : '' }}">
-                All Roles ({{ $partySummaries->count() }})
-            </a>
-            <a href="{{ route('reports.party_ledger', ['role' => 'client']) }}" class="role-tab-btn {{ $roleFilter == 'client' ? 'active' : '' }}">
-                Clients (AR)
-            </a>
-            <a href="{{ route('reports.party_ledger', ['role' => 'vendor']) }}" class="role-tab-btn {{ $roleFilter == 'vendor' ? 'active' : '' }}">
-                Vendors (AP)
-            </a>
-            <a href="{{ route('reports.party_ledger', ['role' => 'lender']) }}" class="role-tab-btn {{ $roleFilter == 'lender' ? 'active' : '' }}">
-                Lenders & Loans
-            </a>
-            @if($canViewPayroll)<a href="{{ route('reports.party_ledger', ['role' => 'employee']) }}" class="role-tab-btn {{ $roleFilter == 'employee' ? 'active' : '' }}">Employees</a>@endif
-            <a href="{{ route('reports.party_ledger', ['role' => 'partner']) }}" class="role-tab-btn {{ $roleFilter == 'partner' ? 'active' : '' }}">
-                Project Partners
-            </a>
-        </div>
-
-        <!-- Real-Time Search Bar -->
-        <div style="position:relative; width:280px;">
-            <ion-icon name="search-outline" style="position:absolute; left:0.75rem; top:50%; transform:translateY(-50%); color:var(--text-muted); font-size:1.1rem;"></ion-icon>
-            <input type="text" id="partyTableSearch" class="form-control" placeholder="Search party name or contact..." onkeyup="filterPartyMasterTable(this.value)" style="padding-left:2.4rem; font-size:0.85rem; border-radius:8px;">
-        </div>
-
-    </div>
-</div>
-
-@if($canViewPayroll && $selectedPartyId)
+<link rel="stylesheet" href="{{ asset('party-ledger.css') }}?v={{ hash_file('sha256', public_path('party-ledger.css')) }}">
 @php
-    $salaryParty = $partySummaries->firstWhere('id', (int) $selectedPartyId);
-    $outstandingSalaries = $payrollItems->where('party_id', (int) $selectedPartyId)->where('balance_cents', '>', 0);
+    $date = fn ($value) => $value ? \Carbon\CarbonImmutable::parse($value)->format('j M Y') : '—';
+    $money = fn ($cents, $currency) => $currency.' '.number_format($cents / 100, 2);
+    $filters = array_filter(['q' => $query, 'role' => $role, 'balance' => $balance], fn ($value) => $value !== '' && $value !== 'all');
+    $exportQuery = http_build_query($filters + ($party ? ['party_id' => $party->id] : []));
+    $labels = ['receivable' => 'Project receivables', 'loan' => 'Loan payable', 'salary' => 'Salary pending', 'other' => 'Other payables', 'unapplied' => 'Unapplied receipts'];
+    if (!$canViewPayroll) unset($labels['salary']);
+    $selectedTotals = $party ? $party->balances : $totals;
+    $sections = [
+        'receivable' => ['Project invoices', 'document-text-outline', 'Invoiced', 'Applied', 'Receivable'],
+        'unapplied' => ['Unapplied receipts', 'wallet-outline', 'Received', 'Applied', 'Unapplied'],
+        'loan' => ['Loans', 'cash-outline', 'Obligation', 'Paid toward obligation', 'Payable'],
+        'salary' => ['Employee salaries', 'person-outline', 'Net salary', 'Paid', 'Salary pending'],
+        'vendor' => ['Vendor bills', 'receipt-outline', 'Billed', 'Paid', 'Payable'],
+        'commission' => ['Commissions', 'briefcase-outline', 'Earned', 'Paid', 'Payable'],
+    ];
+    if (!$canViewPayroll) unset($sections['salary']);
+    $totalsFor = fn ($key) => $selectedTotals->map(fn ($values) => $values[$key])->filter();
+    $payable = $selectedTotals->map(fn ($values) => $values['loan'] + $values['salary'] + $values['other'])->filter();
+    $metrics = [
+        ['Receivable from clients', 'arrow-down-outline', $totalsFor('receivable'), 'Issued invoices less allocated receipts'],
+        ['Payable to parties', 'arrow-up-outline', $payable, 'Loans, '.($canViewPayroll ? 'salary, ' : '').'bills and commissions'],
+        ['Unapplied receipts', 'wallet-outline', $totalsFor('unapplied'), 'Received and awaiting invoice allocation'],
+    ];
+    if ($canViewPayroll && !$party) $metrics[] = ['EPF, ETF & tax payable', 'business-outline', $statutoryTotals->filter(), 'Company remittances', '#statutory-payables'];
 @endphp
-@if($salaryParty)
-<section class="card" id="salary-payables" style="padding:20px;margin-bottom:24px;overflow:auto">
-<h2 style="font-size:18px;margin:0 0 8px">{{ $salaryParty->name }} · employee payables</h2>
-<p>Salary pending: LKR {{ number_format($salaryParty->salary_balance,2) }} · Loan payable: LKR {{ number_format($salaryParty->loan_total_payable,2) }}</p>
-<table class="data-table"><thead><tr><th>Payroll month / company</th><th style="text-align:right">Net salary</th><th style="text-align:right">Salary paid</th><th style="text-align:right">Salary remaining</th><th>Payment status</th><th>Action</th></tr></thead><tbody>
-@forelse($outstandingSalaries as $salary)<tr><td><a href="/payroll/{{ $salary->run_id }}/employees/{{ $salary->id }}">{{ \Carbon\Carbon::parse($salary->month)->format('F Y') }}</a><small style="display:block">{{ $salary->company_name }} · {{ ucfirst($salary->status) }}</small></td><td style="text-align:right;font-variant-numeric:tabular-nums">{{ number_format($salary->net_cents/100,2) }}</td><td style="text-align:right;font-variant-numeric:tabular-nums">{{ number_format($salary->paid_cents/100,2) }}</td><td style="text-align:right;font-variant-numeric:tabular-nums">{{ number_format($salary->balance_cents/100,2) }}</td><td>{{ $salary->paid_cents ? 'Partially paid' : 'Unpaid' }}</td><td><a href="/payroll/{{ $salary->run_id }}/salary-batches/create?employee_id={{ $salary->employee_id }}">Record salary payment</a></td></tr>@empty<tr><td colspan="6">No unpaid salaries from approved or completed payrolls.</td></tr>@endforelse
-</tbody></table><p style="color:var(--text-muted);font-size:13px">Amounts in LKR. Recording a salary payment updates this original payroll balance. Loan repayments remain under the loan record.</p></section>
-@endif
-@endif
 
-<!-- Master Party Summary Table -->
-<div class="card" style="padding:0; overflow-x:auto; border-radius:14px; border:1px solid var(--border); box-shadow:0 4px 20px rgba(0,0,0,0.02);">
-    <table class="data-table" id="masterPartyTable" style="width:100%; margin:0; border-collapse:collapse;">
-        <thead style="background:var(--bg-page); border-bottom:1px solid var(--border);">
-            <tr>
-                <th style="padding:1rem 1.25rem; text-align:left; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-muted);">Party Profile</th>
-                <th style="padding:1rem; text-align:left; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-muted);">Roles & Types</th>
-                <th style="padding:1rem; text-align:right; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.04em; color:#7c3aed;">Project Contract Value</th>
-                <th style="padding:1rem; text-align:right; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-muted);">Client Invoiced</th>
-                <th style="padding:1rem; text-align:right; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-muted);">Collections</th>
-                @if($canViewPayroll)<th style="padding:1rem;text-align:right;color:var(--text-muted)">Salary pending</th>@endif
-                <th style="padding:1rem; text-align:right; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-muted);">Total payables</th>
-                <th style="padding:1rem; text-align:right; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.04em; color:var(--success);">Paids Settled</th>
-                <th style="padding:1rem; text-align:right; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-heading);">Net Balance Position</th>
-                <th style="padding:1rem 1.25rem; text-align:center; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-muted);">Action</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach($partySummaries as $ps)
-            @php
-                $initial = strtoupper(substr($ps->name, 0, 1));
-                $roles = explode(',', $ps->types);
-            @endphp
-            <tr class="party-row-item" data-search="{{ strtolower($ps->name . ' ' . $ps->contact_person . ' ' . $ps->types) }}" style="border-bottom: 1px solid var(--border-light); transition:background 0.15s ease;">
-                <td style="padding:1rem 1.25rem;">
-                    <div style="display:flex; align-items:center; gap:0.75rem;">
-                        <div class="party-avatar">{{ $initial }}</div>
-                        <div>
-                            <strong style="color:var(--text-heading); font-size:0.95rem; display:block;">{{ $ps->name }}</strong>
-                            <span style="font-size:0.78rem; color:var(--text-muted);">{{ $ps->contact_person ?: 'No contact person' }}</span>
-                        </div>
+<div class="party-ledger">
+    @if($party)
+        <a class="party-ledger-back" href="{{ route('reports.party_ledger', $filters) }}">
+            <ion-icon name="arrow-back-outline" aria-hidden="true"></ion-icon> All parties
+        </a>
+    @endif
+    <header class="party-ledger-header">
+        <div>
+            <h1>{{ $party ? $party->name : 'Party ledger' }}</h1>
+            <p>Balances through {{ $date($asOf) }}@if($party && $party->employeeCodes) · {{ $party->employeeCodes }}@endif</p>
+        </div>
+        @unless(request()->is('reports/export/*'))
+            <div class="party-ledger-actions" aria-label="Export party ledger">
+                <a class="btn btn-outline" href="{{ url('/reports/export/party-ledger/xlsx').'?'.$exportQuery }}">
+                    <ion-icon name="download-outline" aria-hidden="true"></ion-icon> Excel
+                </a>
+                <a class="btn btn-outline" href="{{ url('/reports/export/party-ledger/pdf').'?'.$exportQuery }}">
+                    <ion-icon name="document-outline" aria-hidden="true"></ion-icon> PDF
+                </a>
+            </div>
+        @endunless
+    </header>
+
+    <section class="party-ledger-metrics" aria-label="Outstanding balances">
+        @foreach($metrics as [$label, $icon, $amounts, $help])
+            <div class="party-ledger-metric work-row">
+                <div class="party-ledger-metric-title">
+                    <ion-icon name="{{ $icon }}" aria-hidden="true"></ion-icon>
+                    @if($icon === 'business-outline')
+                        <a href="#statutory-payables">{{ $label }}</a>
+                    @else
+                        <span>{{ $label }}</span>
+                    @endif
+                </div>
+                <div>
+                    @forelse($amounts as $currency => $amount)
+                        <strong class="party-ledger-number">{{ $money($amount, $currency) }}</strong>
+                    @empty
+                        <strong class="party-ledger-number">—</strong>
+                    @endforelse
+                    <small>{{ $help }}</small>
+                </div>
+            </div>
+        @endforeach
+    </section>
+
+    @if(!$party)
+        <section class="party-ledger-panel" aria-labelledby="party-register-title">
+            <div class="party-ledger-panel-header">
+                <div>
+                    <h2 id="party-register-title">Parties</h2>
+                    <p>{{ number_format($registry->total()) }} {{ Str::plural('party', $registry->total()) }} found</p>
+                </div>
+                @if($canViewPayroll)
+                    <a class="party-ledger-jump" href="#statutory-payables">EPF, ETF & tax <ion-icon name="arrow-down-outline" aria-hidden="true"></ion-icon></a>
+                @endif
+            </div>
+            @unless(request()->is('reports/export/*'))
+            <form method="get" class="party-ledger-filters">
+                <div>
+                    <label for="party-ledger-search">Find a party</label>
+                    <input id="party-ledger-search" type="search" name="q" value="{{ $query }}" placeholder="{{ $canViewPayroll ? 'Name or employee code' : 'Party name' }}">
+                </div>
+                <div>
+                    <label for="party-ledger-role">Role</label>
+                    <select id="party-ledger-role" name="role">
+                        <option value="all">All roles</option>
+                        @foreach($roleOptions as $option)<option value="{{ $option }}" @selected($role === $option)>{{ Str::headline($option) }}</option>@endforeach
+                    </select>
+                </div>
+                <div>
+                    <label for="party-ledger-balance">Show</label>
+                    <select id="party-ledger-balance" name="balance">
+                        <option value="all" @selected($balance === 'all')>All parties</option>
+                        <option value="open" @selected($balance === 'open')>With outstanding balances</option>
+                        @foreach($labels as $key => $label)<option value="{{ $key }}" @selected($balance === $key)>{{ $label }}</option>@endforeach
+                    </select>
+                </div>
+                <div class="party-ledger-filter-actions">
+                    <button class="btn btn-primary" type="submit">Apply filters</button>
+                    @if($filters)<a href="{{ route('reports.party_ledger') }}" class="btn btn-outline">Reset</a>@endif
+                </div>
+            </form>
+            @endunless
+
+            <div class="party-ledger-scroll" role="region" aria-label="Party balances" tabindex="0">
+                <table class="party-ledger-table party-ledger-register">
+                    <thead><tr><th scope="col">Party</th>@foreach($labels as $label)<th class="party-ledger-numeric" scope="col">{{ $label }}</th>@endforeach</tr></thead>
+                    <tbody>
+                        @forelse($registry as $row)
+                            <tr>
+                                <th scope="row">
+                                    <a class="party-ledger-name" href="{{ route('reports.party_ledger', $filters + ['party_id' => $row->id]) }}">
+                                        {{ $row->name }}<ion-icon name="chevron-forward-outline" aria-hidden="true"></ion-icon>
+                                    </a>
+                                    <small>{{ collect($row->roles)->map(fn ($value) => Str::headline($value))->implode(' · ') }}@if($row->employeeCodes) · {{ $row->employeeCodes }}@endif @if($row->deleted_at) · Archived @endif</small>
+                                </th>
+                                @foreach($labels as $key => $label)
+                                    <td class="party-ledger-numeric" data-label="{{ $label }}">
+                                        @forelse($row->balances->map(fn ($values) => $values[$key])->filter() as $currency => $amount)
+                                            <span class="party-ledger-number">{{ $money($amount, $currency) }}</span>
+                                        @empty
+                                            <span class="party-ledger-dash">—</span>
+                                        @endforelse
+                                    </td>
+                                @endforeach
+                            </tr>
+                        @empty
+                            <tr><td class="party-ledger-empty" colspan="{{ 1 + count($labels) }}">No parties match these filters.</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+
+            @if($registry->hasPages() && !request()->is('reports/export/*'))
+                <nav class="party-ledger-pagination" aria-label="Party pages">
+                    <span>{{ $registry->firstItem() }}–{{ $registry->lastItem() }} of {{ $registry->total() }}</span>
+                    <div>
+                        @if($registry->previousPageUrl())<a class="btn btn-outline" rel="prev" href="{{ $registry->previousPageUrl() }}">Previous</a>@endif
+                        @if($registry->nextPageUrl())<a class="btn btn-outline" rel="next" href="{{ $registry->nextPageUrl() }}">Next</a>@endif
                     </div>
-                </td>
-                
-                <td style="padding:1rem;">
-                    @foreach($roles as $role)
-                        @php
-                            $roleClean = trim($role);
-                            $pillClass = 'role-pill-default';
-                            if (str_contains($roleClean, 'client')) $pillClass = 'role-pill-client';
-                            elseif (str_contains($roleClean, 'vendor')) $pillClass = 'role-pill-vendor';
-                            elseif (str_contains($roleClean, 'lender') || str_contains($roleClean, 'director') || str_contains($roleClean, 'bank')) $pillClass = 'role-pill-lender';
-                            elseif (str_contains($roleClean, 'partner')) $pillClass = 'role-pill-partner';
-                        @endphp
-                        <span class="role-pill {{ $pillClass }}">{{ $roleClean }}</span>
-                    @endforeach
-                </td>
-
-                <td style="padding:1rem; text-align:right;">
-                    @if($ps->total_contract_value > 0)
-                        <div style="font-weight:700; color:#7c3aed; font-size:0.9rem;">LKR {{ number_format($ps->total_contract_value, 2) }}</div>
-                        @if($ps->contract_orig_str)
-                            <div style="font-size:0.72rem; color:var(--text-muted); font-weight:600;">({{ $ps->contract_orig_str }})</div>
-                        @endif
-                        @if($ps->unbilled_contract_value > 0)
-                            <div style="font-size:0.75rem; color:#d97706; font-weight:700; margin-top:0.15rem;">Unbilled: LKR {{ number_format($ps->unbilled_contract_value, 2) }}</div>
-                        @endif
-                    @else
-                        <span style="color:var(--text-muted);">-</span>
-                    @endif
-                </td>
-
-                <td style="padding:1rem; text-align:right; font-weight:600; color:var(--text-heading);">
-                    {{ $ps->total_invoiced > 0 ? 'LKR ' . number_format($ps->total_invoiced, 2) : '-' }}
-                </td>
-                
-                <td style="padding:1rem; text-align:right; font-weight:600; color:#059669;">
-                    {{ $ps->total_collected > 0 ? 'LKR ' . number_format($ps->total_collected, 2) : '-' }}
-                </td>
-                
-                @if($canViewPayroll)<td style="padding:1rem;text-align:right;font-variant-numeric:tabular-nums"><a href="{{ route('reports.party_ledger', ['role'=>'employee','party_id'=>$ps->id,'salary_detail'=>1]) }}#salary-payables">{{ number_format($ps->salary_balance, 2) }}</a><small style="display:block;color:var(--text-muted)">Paid {{ number_format($ps->salary_paid, 2) }}</small></td>@endif
-                <td style="padding:1rem; text-align:right; font-weight:700; color:#dc2626;">
-                    {{ $ps->total_payables > 0 ? 'LKR ' . number_format($ps->total_payables, 2) : '-' }}
-                </td>
-
-                <td style="padding:1rem; text-align:right; font-weight:600; color:#059669;">
-                    {{ $ps->total_paids > 0 ? 'LKR ' . number_format($ps->total_paids, 2) : '-' }}
-                </td>
-
-                <td style="padding:1rem; text-align:right;">
-                    @if($ps->net_balance >= 0)
-                        <span style="font-weight:800; color:#059669; font-size:0.95rem; background:rgba(16, 185, 129, 0.1); padding:0.25rem 0.6rem; border-radius:6px;">
-                            LKR {{ number_format(abs($ps->net_balance), 2) }} DR
-                        </span>
-                    @else
-                        <span style="font-weight:800; color:#dc2626; font-size:0.95rem; background:rgba(239, 68, 68, 0.1); padding:0.25rem 0.6rem; border-radius:6px;">
-                            LKR {{ number_format(abs($ps->net_balance), 2) }} CR
-                        </span>
-                    @endif
-                </td>
-
-                <td style="padding:1rem 1.25rem; text-align:center;">
-                    <button type="button" class="btn btn-primary-gradient" style="padding:0.4rem 0.85rem; font-size:0.8rem; border-radius:8px;" onclick="openPartyLedgerModal({{ $ps->id }})">
-
-                        Full Statement &rarr;
-                    </button>
-                </td>
-            </tr>
-            @endforeach
-            
-            @if($partySummaries->isEmpty())
-            <tr>
-                <td colspan="{{ $canViewPayroll ? 10 : 9 }}" style="text-align:center; padding:3rem 1rem; color:var(--text-muted);">
-                    <ion-icon name="documents-outline" style="font-size:2.5rem; opacity:0.4; margin-bottom:0.5rem;"></ion-icon><br>
-                    No financial party records found for the selected filter role.
-                </td>
-            </tr>
+                </nav>
             @endif
-        </tbody>
-    </table>
-</div>
+        </section>
 
-<!-- Full View Party Financial Ledger Modal Popup -->
-<div class="modal-backdrop" id="partyLedgerModal">
-    <div class="modal-card" style="max-width: 980px; width: 94vw; border-radius: 20px; box-shadow: 0 25px 60px rgba(0,0,0,0.3);">
-        <div class="modal-header" style="border-bottom: 1px solid var(--border); padding-bottom: 1rem;">
-            <div style="display:flex; align-items:center; gap:0.85rem;">
-                <div class="party-avatar" id="modalPartyAvatar" style="width:48px; height:48px; font-size:1.3rem;">P</div>
+        @if($canViewPayroll)
+        <section class="party-ledger-panel" id="statutory-payables" aria-labelledby="statutory-title">
+            <div class="party-ledger-panel-header">
                 <div>
-                    <h3 class="modal-title" id="ledgerModalTitle" style="font-size: 1.35rem; font-weight: 800; color: var(--text-heading); margin: 0;">Full Financial Ledger Statement</h3>
-                    <p style="font-size: 0.82rem; color: var(--text-muted); margin: 0.2rem 0 0 0;" id="ledgerModalSubtitle">Detailed chronological debit/credit transaction history</p>
+                    <h2 id="statutory-title">EPF, ETF & tax</h2>
+                    <p>Company remittances by payroll month. Submission and payment have separate statuses.</p>
                 </div>
+                <a href="/payroll/statutory" class="party-ledger-jump">Open remittances <ion-icon name="arrow-forward-outline" aria-hidden="true"></ion-icon></a>
             </div>
-            <button type="button" class="btn-close" onclick="closeModal('partyLedgerModal')">&times;</button>
-        </div>
-        
-        <div class="modal-body" style="padding: 1.25rem 0;" id="ledgerModalBody">
-            <!-- Dynamically populated by JS -->
-        </div>
-
-        <div class="modal-footer" style="border-top: 1px solid var(--border); padding-top: 0.85rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
-            <button type="button" class="btn btn-outline" onclick="window.print()">
-                <ion-icon name="print-outline" style="vertical-align:middle; margin-right:0.3rem;"></ion-icon> Print Financial Statement
-            </button>
-            <div style="display:flex; gap:0.5rem;">
-                <button type="button" class="btn btn-primary-gradient" onclick="openPartyPaymentModal()">
-                    <ion-icon name="cash-outline" style="vertical-align:middle; margin-right:0.3rem;"></ion-icon> Record Settlement / Pay
-                </button>
-                <button type="button" class="btn btn-primary" onclick="closeModal('partyLedgerModal')">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Record Party Settlement Payment Modal -->
-<div class="modal-backdrop" id="recordPartyPaymentModal">
-    <div class="modal-card" style="max-width: 680px; width: 92vw; border-radius: 18px;">
-        <div class="modal-header" style="border-bottom: 1px solid var(--border); padding-bottom: 1rem;">
-            <div>
-                <h3 class="modal-title" id="paymentModalPartyTitle" style="font-size: 1.25rem; font-weight: 800; color: var(--text-heading); margin: 0;">Record Party Settlement Payment</h3>
-                <p style="font-size:0.8rem; color:var(--text-muted); margin:0.2rem 0 0 0;">Choose the document you are settling.</p>
-            </div>
-            <button type="button" class="btn-close" onclick="closeModal('recordPartyPaymentModal')">&times;</button>
-        </div>
-        <div class="modal-body ds-stack">
-            <p>Select the source document to record a payment in its currency and preserve its allocation history.</p>
-            <a class="btn btn-outline" id="settleInvoices" href="/invoices">Client invoices and receipts</a>
-            <a class="btn btn-outline" id="settleVendors" href="/payables/vendor-bills">Vendor bill payments</a>
-            <a class="btn btn-outline" id="settleLoans" href="/loans">Loan repayments and interest</a>
-            <a class="btn btn-outline" href="/projects">Project commission payouts</a>
-            @if($canViewPayroll)<a class="btn btn-outline" href="/payroll">Employee salary batches</a>@endif
-        </div>
-    </div>
-</div>
-
-
-<script>
-const partySummariesData = @json($partySummaries);
-const allPartyTimelinesData = @json($allPartyTimelines);
-const selectedPartyIdOnLoad = "{{ $selectedPartyId }}";
-let currentModalParty = null;
-const ledgerEscape = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-
-function filterPartyMasterTable(query) {
-    const q = query.toLowerCase().trim();
-    document.querySelectorAll('#masterPartyTable .party-row-item').forEach(row => {
-        const searchData = row.getAttribute('data-search') || '';
-        if (searchData.includes(q) || !q) {
-            row.style.display = '';
-        } else {
-            row.style.display = 'none';
-        }
-    });
-}
-
-function openPartyLedgerModal(partyId) {
-    partyId = parseInt(partyId);
-    const party = partySummariesData.find(p => p.id === partyId);
-    if (!party) return;
-    currentModalParty = party;
-
-    const timeline = allPartyTimelinesData[partyId] || [];
-
-
-    document.getElementById('modalPartyAvatar').innerText = party.name.charAt(0).toUpperCase();
-    document.getElementById('ledgerModalTitle').innerText = party.name + ' — Financial Ledger Statement';
-    document.getElementById('ledgerModalSubtitle').innerText = 'Roles: ' + party.types.replace(/,/g, ', ') + ' | Contact: ' + (party.contact_person || 'N/A') + ' (' + (party.phone || party.email || 'N/A') + ')';
-
-    const netBalFormatted = 'LKR ' + (Math.abs(party.net_balance)).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ' + (party.net_balance >= 0 ? 'DR (Receivable)' : 'CR (Payable)');
-    const netBalColor = party.net_balance >= 0 ? '#059669' : '#dc2626';
-
-    // Calculate original currency totals for this party
-    const currMap = {};
-    timeline.forEach(tx => {
-        const c = tx.currency || 'LKR';
-        if (!currMap[c]) currMap[c] = { debit: 0, credit: 0, sym: tx.currency_symbol || c };
-        currMap[c].debit += (tx.original_debit || 0);
-        currMap[c].credit += (tx.original_credit || 0);
-    });
-
-    const currBreakdownStr = Object.keys(currMap).map(c => {
-        const item = currMap[c];
-        const net = Math.abs(item.debit - item.credit);
-        return `${item.sym} ${net.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} ${c}`;
-    }).join(' &nbsp;|&nbsp; ');
-
-    let html = `
-        <div style="background:var(--bg-page); border:1px solid var(--border); border-radius:14px; padding:1.25rem; margin-bottom:1.25rem;">
-            <div class="ds-summary-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:1.25rem; align-items:center;">
-                <div>
-                    <div style="font-size:0.72rem; text-transform:uppercase; color:var(--text-muted); font-weight:700; letter-spacing:0.04em;">Invoices / Loans / Salary Entitlements</div>
-                    <div style="font-size:1.3rem; font-weight:800; color:var(--text-heading); margin-top:0.2rem;">
-                        LKR ${(party.total_invoiced + party.total_loan_borrowed + party.total_commission_owed + party.salary_owed).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                    </div>
-                </div>
-                <div>
-                    <div style="font-size:0.72rem; text-transform:uppercase; color:var(--text-muted); font-weight:700; letter-spacing:0.04em;">Collections / Paids Settled</div>
-                    <div style="font-size:1.3rem; font-weight:800; color:#059669; margin-top:0.2rem;">
-                        LKR ${(party.total_collected + party.total_paids).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                    </div>
-                </div>
-                <div style="text-align:right;">
-                    <div style="font-size:0.72rem; text-transform:uppercase; color:var(--text-muted); font-weight:700; letter-spacing:0.04em;">Net Account Position (LKR Base)</div>
-                    <div style="font-size:1.4rem; font-weight:800; color:${netBalColor}; margin-top:0.2rem;">
-                        ${netBalFormatted}
-                    </div>
-                    <div style="font-size:0.73rem; color:var(--text-muted); font-weight:600; margin-top:0.25rem;">
-                        Original: ${currBreakdownStr}
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div style="max-height: 480px; overflow-y: auto; border: 1px solid var(--border); border-radius: 12px; box-shadow:0 4px 15px rgba(0,0,0,0.02);">
-            <table class="data-table" style="width:100%; margin:0; border-collapse:collapse;">
-                <thead style="position:sticky; top:0; background:var(--bg-page); z-index:10; border-bottom:1px solid var(--border);">
-                    <tr>
-                        <th style="padding:0.85rem 1rem; text-align:left; font-size:0.78rem; color:var(--text-muted);">Date</th>
-                        <th style="padding:0.85rem 1rem; text-align:left; font-size:0.78rem; color:var(--text-muted);">Transaction Type</th>
-                        <th style="padding:0.85rem 1rem; text-align:left; font-size:0.78rem; color:var(--text-muted);">Reference #</th>
-                        <th style="padding:0.85rem 1rem; text-align:left; font-size:0.78rem; color:var(--text-muted);">Description</th>
-                        <th style="padding:0.85rem 1rem; text-align:right; font-size:0.78rem; color:var(--primary);">Debit (DR)</th>
-                        <th style="padding:0.85rem 1rem; text-align:right; font-size:0.78rem; color:var(--success);">Credit (CR)</th>
-                    </tr>
-                </thead>
-                <tbody>
-    `;
-
-    if (timeline.length === 0) {
-        html += `
-            <tr>
-                <td colspan="6" style="text-align:center; padding:3rem 1rem; color:var(--text-muted);">
-                    No financial ledger transactions recorded for ${ledgerEscape(party.name)}.
-                </td>
-            </tr>
-        `;
-    } else {
-        timeline.forEach(tx => {
-            let typeBadgeStyle = 'background:var(--bg-page); color:var(--text-muted); border:1px solid var(--border);';
-            if (tx.type.includes('Contract')) {
-                typeBadgeStyle = 'background:#f3e8ff; color:#6b21a8; font-weight:700; border:1px solid #e9d5ff;';
-            } else if (tx.type.includes('Invoice') || tx.type.includes('Draw')) {
-                typeBadgeStyle = 'background:#dbeafe; color:#1e40af;';
-            } else if (tx.type.includes('Payment') || tx.type.includes('Repayment') || tx.type.includes('Paid')) {
-                typeBadgeStyle = 'background:#d1fae5; color:#065f46;';
-            } else if (tx.type.includes('Bill') || tx.type.includes('Taken') || tx.type.includes('Entitlement')) {
-                typeBadgeStyle = 'background:#fef3c7; color:#92400e;';
-            }
-
-            let debitCell = '-';
-            if (tx.debit > 0) {
-                debitCell = `<div style="font-weight:700; color:var(--primary); font-size:0.9rem;">LKR ${tx.debit.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>`;
-                if (tx.currency && tx.currency !== 'LKR') {
-                    debitCell += `<div style="font-size:0.73rem; color:var(--text-muted); font-weight:600;">(${tx.currency_symbol || tx.currency} ${tx.original_debit.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} ${tx.currency})</div>`;
-                }
-            }
-
-            let creditCell = '-';
-            if (tx.credit > 0) {
-                creditCell = `<div style="font-weight:700; color:#059669; font-size:0.9rem;">LKR ${tx.credit.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>`;
-                if (tx.currency && tx.currency !== 'LKR') {
-                    creditCell += `<div style="font-size:0.73rem; color:var(--text-muted); font-weight:600;">(${tx.currency_symbol || tx.currency} ${tx.original_credit.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} ${tx.currency})</div>`;
-                }
-            }
-
-            html += `
-                <tr style="border-bottom: 1px solid var(--border-light);">
-                    <td style="padding:0.85rem 1rem; font-weight:600; font-size:0.88rem;">${ledgerEscape(tx.date)}</td>
-                    <td style="padding:0.85rem 1rem;">
-                        <span style="font-size:0.75rem; font-weight:700; padding:0.15rem 0.45rem; border-radius:5px; ${typeBadgeStyle}">
-                            ${ledgerEscape(tx.type)}
+            @foreach(\App\Services\PayrollStatutoryService::KINDS as $kind => $label)
+                @php
+                    $months = $statutory->where('kind', $kind);
+                    $outstanding = $months->groupBy('currency')->sortKeys()->map->sum('balance_cents')->filter();
+                @endphp
+                <details class="party-ledger-disclosure" @if($loop->first) open @endif>
+                    <summary>
+                        <span>{{ $kind === 'apit' ? 'Tax (APIT)' : $label }}<small>{{ $months->count() }} payroll months</small></span>
+                        <span class="party-ledger-disclosure-values">
+                            @forelse($outstanding as $currency => $amount)<strong>{{ $money($amount, $currency) }}</strong>@empty<span>—</span>@endforelse
+                            <ion-icon name="chevron-down-outline" aria-hidden="true"></ion-icon>
                         </span>
-                    </td>
-                    <td style="padding:0.85rem 1rem; font-weight:700; color:var(--text-heading); font-size:0.88rem;">${ledgerEscape(tx.reference)}</td>
-                    <td style="padding:0.85rem 1rem; font-size:0.88rem;">${ledgerEscape(tx.description)}</td>
-                    <td style="padding:0.85rem 1rem; text-align:right;">
-                        ${debitCell}
-                    </td>
-                    <td style="padding:0.85rem 1rem; text-align:right;">
-                        ${creditCell}
-                    </td>
-                </tr>
-            `;
-        });
-    }
+                    </summary>
+                    <div class="party-ledger-scroll" role="region" aria-label="{{ $label }} payroll remittances" tabindex="0">
+                        <table class="party-ledger-table">
+                            <thead><tr><th scope="col">Payroll month</th><th scope="col">Due date</th><th scope="col" class="party-ledger-numeric">Due</th><th scope="col" class="party-ledger-numeric">Paid</th><th scope="col" class="party-ledger-numeric">Remaining</th><th scope="col">Payment</th><th scope="col">Submission</th></tr></thead>
+                            <tbody>
+                            @forelse($months as $month)
+                                <tr>
+                                    <th scope="row"><a href="/payroll/{{ $month->run_id }}/statutory/{{ $kind }}">{{ \Carbon\CarbonImmutable::parse($month->month)->format('F Y') }}</a><small>{{ $month->company_name }}</small></th>
+                                    <td>{{ $date($month->due_on) }}</td>
+                                    <td class="party-ledger-numeric">{{ $money($month->due_cents, $month->currency) }}</td>
+                                    <td class="party-ledger-numeric">{{ $money($month->paid_cents, $month->currency) }}</td>
+                                    <td class="party-ledger-numeric">{{ $money($month->balance_cents, $month->currency) }}</td>
+                                    <td><span @class(['party-ledger-status', 'is-open' => $month->balance_cents > 0])>{{ $month->payment_status }}</span></td>
+                                    <td>{{ $month->submission }}@if($month->action === 'submitted')<small>{{ $date($month->event_on) }}</small>@endif</td>
+                                </tr>
+                            @empty
+                                <tr><td class="party-ledger-empty" colspan="7">No {{ $label }} obligations from approved payroll.</td></tr>
+                            @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </details>
+            @endforeach
+        </section>
+        @endif
 
-
-    html += `
-                </tbody>
-            </table>
-        </div>
-    `;
-
-    document.getElementById('ledgerModalBody').innerHTML = html;
-    openModal('partyLedgerModal');
-}
-
-function openPartyPaymentModal() {
-    if (!currentModalParty) return;
-
-    document.getElementById('paymentModalPartyTitle').textContent = 'Settle: ' + currentModalParty.name;
-    document.getElementById('settleInvoices').href = '/invoices?client_id=' + currentModalParty.id;
-    document.getElementById('settleVendors').href = '/payables/vendor-bills?vendor_id=' + currentModalParty.id;
-    document.getElementById('settleLoans').href = '/loans?party_id=' + currentModalParty.id;
-    openModal('recordPartyPaymentModal');
-}
-
-// Auto open modal if selectedPartyId is passed in URL
-document.addEventListener('DOMContentLoaded', function() {
-    if (!@json((bool) request('salary_detail')) && selectedPartyIdOnLoad && selectedPartyIdOnLoad !== '') {
-        openPartyLedgerModal(selectedPartyIdOnLoad);
-    }
-});
-</script>
-@endsection
-
+        @if($unlinkedLoans->isNotEmpty() || $unassignedReceipts->isNotEmpty())
+            <section class="party-ledger-panel" aria-labelledby="unlinked-title">
+                <div class="party-ledger-panel-header"><div><h2 id="unlinked-title">Unlinked records</h2><p>These records could not be matched to one party.</p></div></div>
+                @foreach(['Loans without a linked party' => $unlinkedLoans, 'Receipts without a linked client' => $unassignedReceipts] as $label => $rows)
+                    @continue($rows->isEmpty())
+                    <details class="party-ledger-disclosure">
+                        <summary><span>{{ $label }}</span><span>{{ $rows->count() }}</span></summary>
+                        <div class="party-ledger-scroll" role="region" aria-label="{{ $label }}" tabindex="0">
+                            <table class="party-ledger-table">
+                                <thead><tr><th scope="col">Source</th><th scope="col">Date</th><th class="party-ledger-numeric" scope="col">Remaining</th></tr></thead>
+                                <tbody>
+                                    @foreach($rows as $row)
+                                        <tr><th scope="row"><a href="{{ $row->url }}">{{ $row->label }}</a><small>{{ $row->context ?? $row->project?->name ?? '' }}</small></th><td>{{ $date($row->date) }}</td><td class="party-ledger-numeric">{{ $money($row->balance, $row->currency) }}</td></tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </details>
+                @endforeach
+            </section>
+        @endif
+    @else
+        @include('reports.partials.party-ledger-detail')
+    @endif
+</div>
