@@ -31,6 +31,22 @@ class PartyLedgerReportTest extends TestCase
         DB::table('project_party')->insert(['project_id' => $this->project, 'party_id' => $this->client, 'role' => 'client']);
     }
 
+    public function test_overview_and_party_detail_render_inside_the_report_layout(): void
+    {
+        foreach (['', '?party_id='.$this->client] as $query) {
+            $response = $this->get('/reports/party-ledger'.$query)->assertOk();
+
+            $this->assertStringStartsWith('<!DOCTYPE html>', ltrim($response->getContent()));
+            $response->assertSeeInOrder([
+                'id="sidebarPrimary"',
+                'id="sidebarSecondary"',
+                'id="main-content"',
+                'class="party-ledger ds-stack"',
+                '</main>',
+            ], false);
+        }
+    }
+
     public function test_currencies_receipts_and_loan_types_keep_separate_balances(): void
     {
         $invoice = ['project_id' => $this->project, 'client_id' => $this->client, 'department_id' => 1, 'issue_date' => '2026-08-01'];

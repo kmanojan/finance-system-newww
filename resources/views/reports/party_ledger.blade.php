@@ -222,3 +222,4 @@
         @include('reports.partials.party-ledger-detail')
     @endif
 </div>
+@endsection
