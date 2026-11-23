@@ -95,13 +95,21 @@ class PayrollStatutoryService
     /** One row per payroll month/authority, with a shared outstanding-balance calculation. */
     public static function register(array $filters = [])
     {
-        $totals = DB::table('payroll_items')->select('payroll_run_id')->selectRaw('SUM(epf_cents) as epf, SUM(etf_cents) as etf, SUM(apit_cents) as apit')->groupBy('payroll_run_id');
-        $paid = DB::table('payroll_payments')->where('status', 'posted')->whereIn('kind', array_keys(self::KINDS))
+        $kinds = self::KINDS;
+        if ($filters['include_other'] ?? false) {
+            $kinds['other'] = PayrollService::KINDS['other'];
+        }
+        $totals = DB::table('payroll_items')->select('payroll_run_id')->selectRaw('SUM(epf_cents) as epf, SUM(etf_cents) as etf, SUM(apit_cents) as apit, SUM(other_cents) as other')->groupBy('payroll_run_id');
+        $paid = DB::table('payroll_payments')->where('status', 'posted')->whereIn('kind', array_keys($kinds))
             ->select('payroll_run_id', 'kind')->selectRaw('SUM(amount_cents) as paid_cents')->groupBy('payroll_run_id', 'kind');
         $latest = DB::table('payroll_statutory_events')->select('payroll_run_id', 'kind')->selectRaw('MAX(id) as id')->groupBy('payroll_run_id', 'kind');
         $union = null;
-        foreach (self::KINDS as $kind => $label) {
-            $deadline = $kind === 'apit' ? 'tax_due_date' : 'statutory_due_date';
+        foreach (array_keys($kinds) as $kind) {
+            $deadline = match ($kind) {
+                'apit' => 'r.tax_due_date',
+                'other' => 'NULL',
+                default => 'r.statutory_due_date',
+            };
             $query = DB::table('payroll_runs as r')->join('companies as c', 'c.id', '=', 'r.company_id')
                 ->joinSub($totals, 't', fn ($join) => $join->on('t.payroll_run_id', '=', 'r.id'))
                 ->leftJoinSub($paid, 'p', fn ($join) => $join->on('p.payroll_run_id', '=', 'r.id')->where('p.kind', $kind))
@@ -109,7 +117,7 @@ class PayrollStatutoryService
                 ->leftJoin('payroll_statutory_events as e', 'e.id', '=', 'latest.id')
                 ->whereIn('r.status', PayrollService::POSTED_STATUSES)->where('t.'.$kind, '>', 0)
                 ->select('r.id as run_id', 'r.month', 'r.status as run_status', 'r.company_id', 'c.name as company_name', 'r.currency', 'e.id as event_id', 'e.action', 'e.event_on', 'e.prepared_on', 'e.reference')
-                ->selectRaw("? as kind, t.{$kind} as due_cents, COALESCE(p.paid_cents, 0) as paid_cents, t.{$kind} - COALESCE(p.paid_cents, 0) as balance_cents, COALESCE(e.payment_due_on, r.{$deadline}) as due_on", [$kind]);
+                ->selectRaw("? as kind, t.{$kind} as due_cents, COALESCE(p.paid_cents, 0) as paid_cents, t.{$kind} - COALESCE(p.paid_cents, 0) as balance_cents, COALESCE(e.payment_due_on, {$deadline}) as due_on", [$kind]);
             $union ? $union->unionAll($query) : $union = $query;
         }
         $query = DB::query()->fromSub($union, 's')->when(! empty($filters['company_id']), fn ($q) => $q->where('company_id', $filters['company_id']))

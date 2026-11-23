@@ -289,9 +289,9 @@ See [statutory workflow](32-monthly-payroll.md#statutory-preparation-actual-remi
 
 Purchase orders support list/create and approval. Vendor bills capture vendor/amount/date/company-attribution information and associated accounting. Actual vendor payments support partial settlement, remaining-balance checks, company/currency-compatible banks and payment journals. The implementation is not a complete procurement request/quotation/goods-receipt suite, nor a full AP credit-note/aging module.
 
-### Party payable statements
+### Party ledger and statements
 
-`/reports/party-ledger` combines supported loan, vendor, commission and employee salary obligations and movements. Employee salary balances come from approved/completed payroll net amounts and actual batch allocations, with source drilldowns and payroll privacy checks. The former aggregate settlement writer is disabled: record payments through the originating loan, bill, commission or payroll workflow.
+`/reports/party-ledger` shows open receivables, payables, and unapplied client receipts by recorded currency. Payables cover borrowed loans, vendor bills, commissions, approved salary balances, and company payroll remittances. Receivables cover issued invoices, posted salary advances, and recorded employee loan openings less linked payroll recoveries. Pending ledger movements are shown separately from posted balances. Search and balance filters apply to the party register. Company totals include unlinked records, which appear in their own section. Payroll figures are limited to authorized finance staff. Open individual party statements for source records, payment history, and Excel/PDF exports. Record settlements in their originating workflows.
 
 ### Bank reconciliation
 

@@ -465,9 +465,10 @@ class ReportController extends Controller
     public function partyLedger(Request $request)
     {
         $canViewPayroll = $request->user()->isAdmin() || in_array(strtolower($request->user()->role ?? ''), ['manager', 'accountant']);
-        $balanceFilters = ['all', 'open', 'receivable', 'loan', 'other', 'unapplied'];
+        $balanceFilters = ['all', 'open', 'receivables', 'payables', 'receivable', 'loan', 'other', 'unapplied', 'pending_in', 'pending_out'];
         if ($canViewPayroll) {
             $balanceFilters[] = 'salary';
+            $balanceFilters[] = 'staff_receivable';
         }
         $data = $request->validate([
             'q' => 'nullable|string|max:120',
@@ -493,7 +494,9 @@ class ReportController extends Controller
 
             return match ($balance) {
                 'all' => true,
-                'open' => $row->balances->contains(fn ($currency) => $currency['receivable'] + $currency['loan'] + $currency['salary'] + $currency['other'] > 0),
+                'open' => $row->balances->contains(fn ($currency) => $currency['receivable'] + $currency['staff_receivable'] + $currency['loan'] + $currency['salary'] + $currency['other'] > 0),
+                'receivables' => $row->balances->contains(fn ($currency) => $currency['receivable'] + $currency['staff_receivable'] > 0),
+                'payables' => $row->balances->contains(fn ($currency) => $currency['loan'] + $currency['salary'] + $currency['other'] > 0),
                 default => $row->balances->contains(fn ($currency) => $currency[$balance] > 0),
             };
         })->values();

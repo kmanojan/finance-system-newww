@@ -123,9 +123,20 @@ class PartyLedgerReport
             $entries = $entries->concat($this->commissions($projects, $invoices->groupBy('project_id'), $payments->groupBy('project_id'), $asOf));
         }
 
+        $unlinkedStaff = collect();
         $statutory = $employeeCodes = collect();
         if ($canViewPayroll) {
-            $employeeCodes = DB::table('employees')->whereNotNull('party_id')->get(['party_id', 'employee_code'])->groupBy('party_id');
+            $employees = DB::table('employees')->get(['id', 'party_id', 'employee_code', 'full_name']);
+            $employeeCodes = $employees->whereNotNull('party_id')->groupBy('party_id');
+            $employeesByCode = $employees->filter(fn ($employee) => filled($employee->employee_code))
+                ->groupBy(fn ($employee) => mb_strtolower(trim($employee->employee_code)));
+            foreach ($this->staffReceivables($asOf, $employeesByCode) as $row) {
+                if ($parties->has($row->party_id)) {
+                    $entries->push($row);
+                } else {
+                    $unlinkedStaff->push($row);
+                }
+            }
             $salaryPayments = PayrollPayablesService::payments($asOf)->groupBy('item_id');
             foreach (PayrollPayablesService::items($asOf) as $item) {
                 $row = self::row('salary', $item->party_id, CarbonImmutable::parse($item->month)->format('F Y').' net salary',
@@ -144,7 +155,7 @@ class PartyLedgerReport
                 ])->sortByDesc('date');
                 $entries->push($row);
             }
-            $statutory = PayrollStatutoryService::register(['status' => 'all'])->whereDate('month', '<=', $asOf)
+            $statutory = PayrollStatutoryService::register(['status' => 'all', 'include_other' => true])->whereDate('month', '<=', $asOf)
                 ->orderByDesc('month')->orderBy('company_name')->get()->each(function ($row) {
                     $row->balance_cents = max(0, (int) $row->balance_cents);
                     $row->payment_status = self::state($row->balance_cents, (int) $row->paid_cents, 'Paid');
@@ -157,6 +168,22 @@ class PartyLedgerReport
                 });
         }
 
+        $unlinkedPending = collect();
+        foreach (DB::table('transactions')->where('payment_status', 'pending')->whereIn('type', ['income', 'expense'])
+            ->get(['id', 'party_id', 'type', 'amount', 'currency', 'transaction_date', 'description', 'reference_no', 'due_date']) as $tx) {
+            $row = self::row($tx->type === 'income' ? 'pending_in' : 'pending_out', $tx->party_id,
+                $tx->reference_no ?: 'TX-'.$tx->id, $tx->currency, self::cents($tx->amount), 0,
+                $tx->transaction_date, '/transactions?transaction_id='.$tx->id);
+            $row->context = $tx->description;
+            $row->due = $tx->due_date;
+            $row->status = 'Pending ledger entry';
+            if ($parties->has($row->party_id)) {
+                $entries->push($row);
+            } else {
+                $unlinkedPending->push($row);
+            }
+        }
+
         $contracts = $this->contracts($projects, $links);
         $byParty = $entries->groupBy('party_id');
         $parties->each(function ($party) use ($byParty, $employeeCodes, $contracts) {
@@ -167,18 +194,51 @@ class PartyLedgerReport
             $party->employeeCodes = $employeeCodes->get($party->id, collect())->pluck('employee_code')->filter()->unique()->implode(', ');
         });
 
-        return compact('parties', 'statutory', 'unlinkedLoans', 'unassignedReceipts');
+        $workspaceTotals = self::balances($entries->concat($unlinkedLoans)->concat($unassignedReceipts)->concat($unlinkedStaff)->concat($unlinkedPending));
+
+        return compact('parties', 'statutory', 'unlinkedLoans', 'unassignedReceipts', 'unlinkedStaff', 'unlinkedPending', 'workspaceTotals');
     }
 
     public static function balances(Collection $rows): Collection
     {
         return $rows->groupBy('currency')->sortKeys()->map(fn ($currency) => [
             'receivable' => $currency->where('category', 'receivable')->sum('balance'),
+            'staff_receivable' => $currency->whereIn('category', ['advance', 'staff_loan'])->sum('balance'),
             'loan' => $currency->where('category', 'loan')->sum('balance'),
             'salary' => $currency->where('category', 'salary')->sum('balance'),
             'other' => $currency->whereIn('category', ['vendor', 'commission'])->sum('balance'),
             'unapplied' => $currency->where('category', 'unapplied')->sum('balance'),
+            'pending_in' => $currency->where('category', 'pending_in')->sum('balance'),
+            'pending_out' => $currency->where('category', 'pending_out')->sum('balance'),
         ]);
+    }
+
+    private function staffReceivables(string $asOf, Collection $employeesByCode): Collection
+    {
+        $advances = SalaryAdvanceService::payments()->join('employees as e', 'e.id', '=', 'p.employee_id')
+            ->addSelect('e.party_id', 'e.full_name', 'e.employee_code')
+            ->where('p.status', 'posted')->whereDate('p.paid_on', '<=', $asOf)->get()
+            ->map(function ($advance) {
+                $row = self::row('advance', $advance->party_id, $advance->reference ?: 'ADV-'.$advance->id, $advance->currency,
+                    (int) $advance->amount_cents, (int) $advance->recovered_cents, $advance->paid_on,
+                    '/payroll/advances?'.http_build_query(['q' => $advance->employee_code ?: $advance->full_name]));
+                $row->context = $advance->full_name;
+                $row->due = $advance->recovery_month ?? null;
+
+                return $row;
+            });
+        $loans = HistoricalEmployeeLoanService::receivables($asOf)->map(function ($entry) use ($employeesByCode) {
+            $matching = $employeesByCode->get(mb_strtolower($entry->employee_code), collect());
+            $employee = $matching->count() === 1 ? $matching->first() : null;
+            $row = self::row('staff_loan', $employee?->party_id, $entry->entry_no, $entry->currency,
+                self::cents($entry->debit), (int) $entry->recovered_cents, $entry->entry_date,
+                $employee ? '/employees/'.$employee->id : '/journal-entries');
+            $row->context = $employee?->full_name ?? $entry->employee_code;
+
+            return $row;
+        });
+
+        return $advances->concat($loans);
     }
 
     private function contracts(Collection $projects, Collection $links): Collection

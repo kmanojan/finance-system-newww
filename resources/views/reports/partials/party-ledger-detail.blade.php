@@ -1,10 +1,10 @@
 @if($party->entries->isEmpty() && $party->contracts->isEmpty())
-    <section class="party-ledger-panel party-ledger-empty">No financial records are linked to {{ $party->name }}.</section>
+    <section class="ds-panel party-ledger-panel party-ledger-empty">No financial records are linked to {{ $party->name }}.</section>
 @endif
 
 @if($party->contracts->isNotEmpty())
-    <section class="party-ledger-panel" aria-labelledby="party-contracts-title">
-        <div class="party-ledger-panel-header">
+    <section class="ds-panel party-ledger-panel" aria-labelledby="party-contracts-title">
+        <div class="ds-panel party-ledger-panel-header">
             <div><h2 id="party-contracts-title">Project contracts</h2><p>Budget and approved changes for each project.</p></div>
         </div>
         <div class="party-ledger-scroll" role="region" aria-label="Project contracts" tabindex="0">
@@ -42,8 +42,8 @@
         $results = $party->entries->get($key, collect());
     @endphp
     @continue($results->isEmpty())
-    <section class="party-ledger-panel" id="{{ $key === 'salary' ? 'salary-payables' : 'party-'.$key }}" aria-labelledby="party-{{ $key }}-title">
-        <div class="party-ledger-panel-header">
+    <section class="ds-panel party-ledger-panel" id="{{ $key === 'salary' ? 'salary-payables' : 'party-'.$key }}" aria-labelledby="party-{{ $key }}-title">
+        <div class="ds-panel party-ledger-panel-header">
             <div>
                 <h2 id="party-{{ $key }}-title"><ion-icon name="{{ $icon }}" aria-hidden="true"></ion-icon> {{ $title }}</h2>
                 @if($key === 'salary')
@@ -52,6 +52,10 @@
                     <p>Interest paid separately appears alongside the principal balance.</p>
                 @elseif($key === 'unapplied')
                     <p>These receipts are available for allocation to invoices.</p>
+                @elseif($key === 'staff_loan')
+                    <p>Posted opening balances and recoveries linked to approved payroll.</p>
+                @elseif($key === 'advance')
+                    <p>Posted advances and amounts recovered through payroll.</p>
                 @endif
             </div>
         </div>
@@ -81,7 +85,7 @@
                             @endif
                         </th>
                         <td>{{ $date($key === 'salary' ? $row->due : $row->date) }}
-                            @if($key !== 'salary' && !empty($row->due))<small>Due {{ $date($row->due) }}</small>@endif
+                            @if($key !== 'salary' && !empty($row->due))<small>{{ $key === 'advance' ? 'Deduction month' : 'Due' }} {{ $key === 'advance' ? \Carbon\CarbonImmutable::parse($row->due)->format('F Y') : $date($row->due) }}</small>@endif
                         </td>
                         <td class="party-ledger-numeric">{{ !empty($row->unpriced) ? '—' : $money($row->amount, $row->currency) }}</td>
                         <td class="party-ledger-numeric">{{ $money($row->paid, $row->currency) }}</td>

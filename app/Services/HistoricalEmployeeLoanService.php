@@ -13,6 +13,34 @@ class HistoricalEmployeeLoanService
 
     private const ACCOUNT_NAME = 'employee loans receivable';
 
+    /** Posted employee loan openings and their linked, approved payroll recoveries. */
+    public static function receivables(string $asOf): Collection
+    {
+        $recoveries = DB::table(self::TABLE.' as link')
+            ->join('payroll_items as i', 'i.id', '=', 'link.payroll_item_id')
+            ->join('payroll_runs as r', 'r.id', '=', 'i.payroll_run_id')
+            ->whereIn('r.status', PayrollService::POSTED_STATUSES)->whereDate('r.month', '<=', $asOf)
+            ->groupBy('link.journal_line_id')
+            ->selectRaw('link.journal_line_id, SUM(link.deduction_cents) AS recovered_cents');
+
+        return DB::table('journal_entry_lines as l')
+            ->join('journal_entries as j', 'j.id', '=', 'l.journal_entry_id')
+            ->join('accounts as a', 'a.id', '=', 'l.account_id')
+            ->leftJoinSub($recoveries, 'recovered', 'recovered.journal_line_id', '=', 'l.id')
+            ->whereRaw('LOWER(a.name) = ?', [self::ACCOUNT_NAME])->where('a.type', 'asset')
+            ->where('j.status', 'posted')->whereDate('j.entry_date', '<=', $asOf)
+            ->where('l.debit', '>', 0)->where('l.credit', 0)
+            ->get(['l.id', 'l.debit', 'l.currency', 'j.entry_no', 'j.description', 'j.entry_date', 'recovered.recovered_cents'])
+            ->filter(function ($entry) {
+                if (! preg_match('/^Employee loan opening \[([^\]]+)\]/i', trim($entry->description ?? ''), $matches)) {
+                    return false;
+                }
+                $entry->employee_code = trim($matches[1]);
+
+                return true;
+            });
+    }
+
     public static function rows(object $run, Collection $items): Collection
     {
         $items = self::deductions($items);
