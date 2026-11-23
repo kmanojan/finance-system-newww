@@ -317,6 +317,8 @@ html.secondary-navigation-closed {--section-space:0px;}
 .primary-navigation-close {margin:0 auto;}
 .section-navigation-header {display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:20px;}
 .section-navigation-header .sidebar-title {margin:0;padding:0;line-height:1.4;}
+.reports-navigation-group + .reports-navigation-group {margin-top:20px;}
+.reports-navigation-heading {margin:0 0 4px;padding-inline:10px;font-size:12px;font-weight:600;color:var(--text-muted);}
 .sidebar-secondary .nav-link {display:flex!important;align-items:flex-start!important;justify-content:flex-start!important;gap:10px;padding:10px;min-height:40px;line-height:1.5;font-size:14px;}
 .sidebar-secondary .nav-link>ion-icon {width:18px;height:18px;font-size:18px!important;flex:0 0 18px;margin-top:2px;}
 .section-navigation-label {min-width:0;overflow-wrap:anywhere;}
@@ -326,7 +328,9 @@ html.secondary-navigation-closed {--section-space:0px;}
 html.secondary-navigation-closed .secondary-navigation-reopen {display:inline-flex;}
 html.secondary-navigation-closed .sidebar-secondary {display:none!important;}
 @media(min-width:1101px) {
-    .sidebar-secondary {left:var(--rail-space);}
+    .sidebar-secondary {left:var(--rail-space);display:flex;flex-direction:column;height:100dvh;overflow:hidden;}
+    .section-navigation-header {flex-shrink:0;}
+    .section-navigation-content {min-height:0;overflow-y:auto;scrollbar-width:thin;}
     .main-content {margin-left:calc(var(--rail-space) + var(--section-space));width:calc(100% - var(--rail-space) - var(--section-space));}
     .main-content.full-width {margin-left:var(--rail-space);width:calc(100% - var(--rail-space));}
     html.primary-navigation-closed .sidebar-primary {visibility:hidden;transform:translateX(-100%);}
@@ -339,6 +343,8 @@ html.secondary-navigation-closed .sidebar-secondary {display:none!important;}
     .section-navigation-header .sidebar-title {display:none;}
     .section-navigation-content {display:flex;gap:12px;min-width:0;overflow-x:auto;}
     .section-navigation-content>div {display:flex;flex-shrink:0;margin-bottom:0!important;}
+    .reports-navigation-group + .reports-navigation-group {margin-top:0;}
+    .reports-navigation-heading {display:none;}
     .sidebar-secondary .nav-link {min-height:44px;align-items:center!important;}
     .sidebar-secondary .nav-link>ion-icon {margin-top:0;}
     .section-navigation-label {white-space:nowrap;}

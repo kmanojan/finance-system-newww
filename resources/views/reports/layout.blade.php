@@ -9,9 +9,9 @@
 @section('secondary-sidebar')
 <x-secondary-sidebar title="Reports">
     
-    <div style="margin-bottom: 1.5rem;">
-        <h3 style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-light); margin-bottom: 0.5rem; padding-left: 0.75rem; font-weight: 600;">Finance & Accounting</h3>
-        <nav class="nav-links">
+    <div class="reports-navigation-group">
+        <h3 class="reports-navigation-heading">Finance & Accounting</h3>
+        <nav class="nav-links" aria-label="Finance and accounting reports">
             @if(auth()->user()?->isAdmin() || in_array(strtolower(auth()->user()?->role ?? ''), ['manager', 'accountant']))
             <a href="{{ route('reports.audit_payables') }}" class="nav-link {{ Route::currentRouteName() === 'reports.audit_payables' ? 'active' : '' }}"><ion-icon aria-hidden="true" name="clipboard-outline"></ion-icon><span class="section-navigation-label">Auditor Payables</span></a>
             @endif
@@ -29,23 +29,23 @@
         </nav>
     </div>
 
-    <div style="margin-bottom: 1.5rem;">
-        <h3 style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-light); margin-bottom: 0.5rem; padding-left: 0.75rem; font-weight: 600;">Projects & Delivery</h3>
-        <nav class="nav-links">
+    <div class="reports-navigation-group">
+        <h3 class="reports-navigation-heading">Projects & Delivery</h3>
+        <nav class="nav-links" aria-label="Projects and delivery reports">
             <a href="{{ route('reports.project_status', ['month' => $month ?? date('m'), 'year' => $year ?? date('Y')]) }}" class="nav-link {{ Route::currentRouteName() === 'reports.project_status' ? 'active' : '' }}">
                 <ion-icon name="albums-outline" aria-hidden="true"></ion-icon><span class="section-navigation-label">Project Status</span></a>
             <a href="{{ route('reports.project_profitability') }}" class="nav-link {{ Route::currentRouteName() === 'reports.project_profitability' ? 'active' : '' }}"><ion-icon aria-hidden="true" name="trending-up-outline"></ion-icon><span class="section-navigation-label">Project Profitability</span></a>
         </nav>
     </div>
 
-    <div style="margin-bottom: 1.5rem;">
-        <h3 style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-light); margin-bottom: 0.5rem; padding-left: 0.75rem; font-weight: 600;">Client & Account</h3>
-        <nav class="nav-links">
+    <div class="reports-navigation-group">
+        <h3 class="reports-navigation-heading">Client & Account</h3>
+        <nav class="nav-links" aria-label="Client and account reports">
             <a href="{{ route('reports.client_health', ['month' => $month ?? date('m'), 'year' => $year ?? date('Y')]) }}" class="nav-link {{ Route::currentRouteName() === 'reports.client_health' ? 'active' : '' }}">
                 <ion-icon name="heart-half-outline" aria-hidden="true"></ion-icon><span class="section-navigation-label">Client Health</span></a>
             <a href="{{ route('reports.ar_aging') }}" class="nav-link {{ Route::currentRouteName() === 'reports.ar_aging' ? 'active' : '' }}"><ion-icon aria-hidden="true" name="time-outline"></ion-icon><span class="section-navigation-label">AR Aging Report</span></a>
             <a href="{{ route('reports.client_statement') }}" class="nav-link {{ Route::currentRouteName() === 'reports.client_statement' ? 'active' : '' }}"><ion-icon aria-hidden="true" name="receipt-outline"></ion-icon><span class="section-navigation-label">Client Statement</span></a>
-            <a href="{{ route('reports.party_ledger') }}" class="nav-link {{ Route::currentRouteName() === 'reports.party_ledger' ? 'active' : '' }}"><ion-icon aria-hidden="true" name="people-circle-outline"></ion-icon><span class="section-navigation-label">Party Payables & Full Ledger</span></a>
+            <a href="{{ route('reports.party_ledger') }}" class="nav-link {{ Route::currentRouteName() === 'reports.party_ledger' ? 'active' : '' }}"><ion-icon aria-hidden="true" name="people-circle-outline"></ion-icon><span class="section-navigation-label">Party Ledger</span></a>
         </nav>
     </div>
 
